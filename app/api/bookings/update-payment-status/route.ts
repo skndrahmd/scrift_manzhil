@@ -124,9 +124,11 @@ export async function POST(request: NextRequest) {
         if (!templateSent) {
           console.warn("BOOKING_PAYMENT_CONFIRMED_TEMPLATE_SID not configured or failed, using freeform message")
           const messageLines = [
+            "Hello, this is Manzhil by Scrift.",
+            "",
             "✅ PAYMENT CONFIRMED!",
             "",
-            `Your payment of Rs. ${amount} has been received.`,
+            `Hi ${residentName}, your payment of Rs. ${amount} has been received.`,
             "",
             `Booking Date: ${bookingDate}`,
             `Time: ${startTime} - ${endTime}`,
@@ -134,7 +136,7 @@ export async function POST(request: NextRequest) {
             `📄 View Paid Invoice: ${invoiceUrl}`,
             "",
             "Thank you for your payment!",
-            "- Greens Three Management",
+            "- Manzhil by Scrift Team",
           ]
           await sendWhatsAppMessage(booking.profiles.phone_number, messageLines.join("\n"))
         }

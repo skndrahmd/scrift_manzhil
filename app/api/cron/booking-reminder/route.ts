@@ -97,9 +97,11 @@ export async function POST(request: NextRequest) {
           if (!templateSent) {
             console.warn("BOOKING_CANCELLED_TEMPLATE_SID not configured or failed, using freeform message")
             const cancelLines = [
-              `Your booking on ${bookingDate} (${startTime} - ${endTime}) has been cancelled due to non-payment within 3 days of booking.`,
+              `Hello, this is Manzhil by Scrift.`,
+              ``,
+              `Hi ${residentName}, your booking on ${bookingDate} (${startTime} - ${endTime}) has been cancelled due to non-payment within 3 days of booking.`,
               `Invoice: ${invoiceLink}`,
-              "- Greens Three Management",
+              "- Manzhil by Scrift Team",
             ]
             await sendWhatsAppMessage(b.profiles.phone_number, cancelLines.join("\n"))
           }
@@ -140,11 +142,14 @@ export async function POST(request: NextRequest) {
         // Fallback to freeform message if template not sent
         if (!templateSent) {
           console.warn("BOOKING_PAYMENT_REMINDER_TEMPLATE_SID not configured or failed, using freeform message")
+          const residentName = b.profiles.name || "Resident"
           const reminderLines = [
-            `Reminder: Please pay Rs. ${amount} for your booking on ${bookingDate} (${startTime} - ${endTime}).`,
+            `Hello, this is Manzhil by Scrift.`,
+            ``,
+            `Hi ${residentName}, reminder: your booking payment of Rs. ${amount} for ${bookingDate} (${startTime} - ${endTime}) is due.`,
             `Payment is due within 3 days of booking. Day ${daysSince} of 3.`,
             `Invoice: ${invoiceLink}`,
-            "- Greens Three Management",
+            "- Manzhil by Scrift Team",
           ]
           await sendWhatsAppMessage(b.profiles.phone_number, reminderLines.join("\n"))
         }

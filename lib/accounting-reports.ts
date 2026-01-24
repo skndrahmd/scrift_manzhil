@@ -2,7 +2,7 @@
 
 import type { FinancialSummary, Expense, ExpenseCategory } from "@/lib/supabase"
 
-const BRAND_NAME = "Greens Three"
+const BRAND_NAME = "Manzhil by Scrift"
 const BRAND_PRIMARY = "#047857"
 
 type PdfLibs = {

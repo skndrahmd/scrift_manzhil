@@ -13,7 +13,7 @@ const dmSans = DM_Sans({
 })
 
 export const metadata: Metadata = {
-  title: "Greens Three BMS",
+  title: "Manzhil by Scrift",
   description: "Admin panel for managing WhatsApp booking bot",
     generator: 'v0.dev'
 }

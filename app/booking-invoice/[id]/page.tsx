@@ -480,7 +480,7 @@ export default function BookingInvoicePage() {
           <p className="text-gray-600">
             For any queries regarding this booking, please contact the administration office.
           </p>
-          <p className="text-gray-500 text-sm mt-2">Greens Three Community Management System</p>
+          <p className="text-gray-500 text-sm mt-2">Manzhil by Scrift</p>
         </div>
       </div>
     </div>

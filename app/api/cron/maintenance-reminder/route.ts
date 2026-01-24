@@ -92,7 +92,9 @@ export async function POST(request: NextRequest) {
             // Fallback to freeform message if template SID not configured
             console.warn("MAINTENANCE_INVOICE_TEMPLATE_SID not configured, using freeform message")
             const messageLines = [
-              `📋 Your ${monthYearLabel} maintenance invoice is ready.`,
+              `Hello, this is Manzhil by Scrift.`,
+              "",
+              `Hi ${prof.name || "Resident"}, your ${monthYearLabel} maintenance invoice is ready.`,
               "",
               `Amount: Rs. ${amount}`,
               `Due Date: ${dueDate}`,
@@ -100,7 +102,7 @@ export async function POST(request: NextRequest) {
               `📄 View Invoice: ${invoiceLink}`,
               "",
               "Please pay at your earliest convenience.",
-              "- Greens Three Management",
+              "- Manzhil by Scrift Team",
             ]
             await sendWhatsAppMessage(prof.phone_number, messageLines.join("\n"))
           }
@@ -156,7 +158,9 @@ export async function POST(request: NextRequest) {
           // Fallback to freeform message if template SID not configured
           console.warn("MAINTENANCE_PAYMENT_REMINDER_TEMPLATE_SID not configured, using freeform message")
           const messageLines = [
-            "⚠️ Reminder: Your maintenance payment is due.",
+            "Hello, this is Manzhil by Scrift.",
+            "",
+            `Hi ${prof.name || "Resident"}, ⚠️ reminder: your maintenance payment is due.`,
             "",
             `Due months: ${monthsList}`,
             `Total amount: Rs. ${totalDue.toLocaleString()}`,
@@ -164,7 +168,7 @@ export async function POST(request: NextRequest) {
             `📄 View Invoice: ${invoiceLink}`,
             "",
             "Please pay as soon as possible. Thank you.",
-            "- Greens Three Management",
+            "- Manzhil by Scrift Team",
           ]
           await sendWhatsAppMessage(prof.phone_number, messageLines.join("\n"))
         }

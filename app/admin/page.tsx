@@ -1180,7 +1180,7 @@ export default function AdminPanel() {
               />
               <div className="flex-1 min-w-0">
                 <h1 className="text-2xl sm:text-3xl lg:text-4xl font-medium bg-gradient-to-r from-manzhil-dark to-manzhil-teal bg-clip-text text-transparent truncate">
-                  Manzhil for Greens Three
+                  Manzhil by Scrift
                 </h1>
                 <p className="text-gray-600 text-sm sm:text-base lg:text-lg mt-1 font-light">Admin Panel</p>
               </div>

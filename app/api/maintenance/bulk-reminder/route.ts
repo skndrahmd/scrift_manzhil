@@ -78,11 +78,11 @@ export async function POST(request: NextRequest) {
 
         const totalDue = overdueMonths > 0 ? monthlyCharges * overdueMonths : monthlyCharges
 
-        const message = `👋 Hi ${residentName}!
+        const message = `Hello, this is Manzhil by Scrift.
 
 💰 Maintenance Payment Reminder
 
-This is a payment reminder from Greens Three Management.${lastPaymentText}
+Hi ${residentName}, this is a payment reminder.${lastPaymentText}
 
 📋 Payment Details:
 💵 Monthly Charges: Rs. ${monthlyCharges.toLocaleString()}${overdueMonths > 0 ? `\n⚠️ Overdue Months: ${overdueMonths}\n💸 Total Due: Rs. ${totalDue.toLocaleString()}` : ''}
@@ -92,7 +92,7 @@ Please make your payment at your earliest convenience to avoid any service inter
 If you've already paid, please disregard this message.
 
 Thank you for your cooperation!
-- Greens Three Management`
+- Manzhil by Scrift Team`
 
         const result = await sendWhatsAppMessage(profile.phone_number, message)
         

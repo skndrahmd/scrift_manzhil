@@ -110,11 +110,12 @@ export async function POST(request: NextRequest) {
           // Fallback to freeform message if template SID not configured
           console.warn("MAINTENANCE_PAYMENT_CONFIRMED_TEMPLATE_SID not configured, using freeform message")
           const message = [
-            `Hello ${residentName},`,
-            `Your maintenance payment for ${month} (Rs. ${amount}) has been received and confirmed.`,
+            `Hello, this is Manzhil by Scrift.`,
+            ``,
+            `Hi ${residentName}, your maintenance payment for ${month} (Rs. ${amount}) has been received and confirmed.`,
             `Thank you for keeping your dues current.`,
             `Invoice: ${invoiceLink}`,
-            "- Greens Three Management",
+            "- Manzhil by Scrift Team",
           ].join("\n")
           await sendWhatsAppMessage(payment.profiles.phone_number, message)
         }

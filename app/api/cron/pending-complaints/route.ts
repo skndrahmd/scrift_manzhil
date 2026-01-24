@@ -1,6 +1,6 @@
 import type { NextRequest } from "next/server"
 import { supabase } from "@/lib/supabase"
-import { sendWhatsAppTemplate } from "@/lib/twilio"
+import { sendWhatsAppTemplate, sendWhatsAppMessage } from "@/lib/twilio"
 
 const APP_BASE_URL = (process.env.NEXT_PUBLIC_APP_URL || "https://com3-bms.vercel.app").replace(/\/$/, "")
 const PENDING_COMPLAINT_TEMPLATE_SID = process.env.TWILIO_PENDING_COMPLAINT_TEMPLATE_SID || "HXxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
@@ -98,7 +98,32 @@ export async function POST(request: NextRequest) {
             await sendWhatsAppTemplate(recipient, PENDING_COMPLAINT_TEMPLATE_SID, templateVariables)
             console.log(`[PENDING COMPLAINTS] Reminder sent to ${recipient} for ${complaint.complaint_id} (${hoursPending}h pending)`)
           } catch (error) {
-            console.error(`[PENDING COMPLAINTS] Failed to send to ${recipient}:`, error)
+            console.error(`[PENDING COMPLAINTS] Failed to send template to ${recipient}:`, error)
+            // Fallback to plain text message
+            try {
+              const fallbackMessage = `Hello, this is Manzhil by Scrift.
+
+⚠️ Pending Complaint Alert
+
+Complaint ID: ${complaint.complaint_id}
+Resident: ${complaint.profiles?.name || "Unknown"} (${complaint.profiles?.apartment_number || "N/A"})
+Category: ${categoryText} - ${subcategoryText}
+Description: ${sanitizedDescription}
+
+Registered: ${formattedDate}
+Pending for: ${hoursPending} hours
+
+Please review and address this complaint.
+
+View in Admin Panel: ${APP_BASE_URL}/admin
+
+- Manzhil by Scrift Team`
+
+              await sendWhatsAppMessage(recipient, fallbackMessage)
+              console.log(`[PENDING COMPLAINTS] Sent fallback message to ${recipient} for ${complaint.complaint_id}`)
+            } catch (fallbackError) {
+              console.error(`[PENDING COMPLAINTS] Failed to send fallback to ${recipient}:`, fallbackError)
+            }
           }
         }
         sentCount++

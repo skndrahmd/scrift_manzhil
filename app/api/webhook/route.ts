@@ -131,9 +131,9 @@ Please send a text message, or type 0 to return to the main menu.`
     const profile = await getProfile(phoneNumber)
     if (!profile) {
       return new Response(
-        `<?xml version="1.0" encoding="UTF-8"?><Response><Message>👋 Welcome to Greens Three Building Management System.
+        `<?xml version="1.0" encoding="UTF-8"?><Response><Message>Hello, this is Manzhil by Scrift.
 
-❌ Your number is not registered in the system. Please contact the administration to register your number for access to services.
+❌ This number is not registered in the system. Please contact the administration to register for access to services.
 
 📞 Admin Contact: [Contact Admin]</Message></Response>`,
         {
@@ -521,9 +521,9 @@ Reply with the number (1-5) or type 'B' or 'back' to go back`
 }
 
 function getMainMenu(name: string) {
-  return `👋 Welcome to Greens Three, ${name}.
+  return `Hello, this is Manzhil by Scrift.
 
-Please select a service from the menu below:
+Welcome ${name}! Please select a service from the menu below:
 
 1. 📝 Register Complaint
 2. 🔍 Check Complaint Status
@@ -1140,9 +1140,9 @@ Type your message below:`
       return getEmergencyContacts()
 
     default:
-      return `❓ I didn't understand that option.
+      return `❓ This option was not understood.
 
-👋 Welcome to Greens Three, ${profile.name}.
+Hello, this is Manzhil by Scrift. Welcome ${profile.name}!
 
 Please select a service from the menu below:
 
@@ -2462,19 +2462,46 @@ async function sendNewComplaintNotification(complaint: any, profile: any) {
       "9": `${baseUrl}/admin`
     }
 
-    // Only send if template SID is configured
-    if (!NEW_COMPLAINT_TEMPLATE_SID) {
-      console.warn("[NEW COMPLAINT] Template SID not configured, skipping notifications")
-      return
-    }
-
     // Send to all notification recipients
     for (const recipient of COMPLAINT_NOTIFICATION_NUMBERS) {
-      try {
-        await sendWhatsAppTemplate(recipient, NEW_COMPLAINT_TEMPLATE_SID, templateVariables)
-        console.log(`[NEW COMPLAINT] Notification sent to ${recipient} for ${complaint.complaint_id}`)
-      } catch (error) {
-        console.error(`[NEW COMPLAINT] Failed to send to ${recipient}:`, error)
+      let templateSent = false
+
+      // Try template if configured
+      if (NEW_COMPLAINT_TEMPLATE_SID) {
+        try {
+          await sendWhatsAppTemplate(recipient, NEW_COMPLAINT_TEMPLATE_SID, templateVariables)
+          templateSent = true
+          console.log(`[NEW COMPLAINT] Template sent to ${recipient} for ${complaint.complaint_id}`)
+        } catch (error) {
+          console.error(`[NEW COMPLAINT] Failed to send template to ${recipient}:`, error)
+        }
+      }
+
+      // Fallback to plain text message
+      if (!templateSent) {
+        try {
+          const fallbackMessage = `Hello, this is Manzhil by Scrift.
+
+🆕 New Complaint Registered
+
+Complaint ID: ${complaint.complaint_id || "N/A"}
+Resident: ${profile.name || "Unknown"} (${profile.apartment_number || "N/A"})
+Category: ${categoryText} - ${subcategoryText}
+Description: ${sanitizedDescription}
+
+Registered: ${formattedDate} at ${formattedTime}
+
+Please review and address this complaint.
+
+View in Admin Panel: ${baseUrl}/admin
+
+- Manzhil by Scrift Team`
+
+          await sendWhatsAppMessage(recipient, fallbackMessage)
+          console.log(`[NEW COMPLAINT] Fallback message sent to ${recipient} for ${complaint.complaint_id}`)
+        } catch (fallbackError) {
+          console.error(`[NEW COMPLAINT] Failed to send fallback to ${recipient}:`, fallbackError)
+        }
       }
     }
   } catch (error) {

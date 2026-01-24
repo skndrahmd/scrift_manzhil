@@ -2,7 +2,7 @@ import type { NextRequest } from "next/server"
 import { supabase, supabaseAdmin } from "@/lib/supabase"
 import jsPDF from "jspdf"
 import autoTable from "jspdf-autotable"
-import { sendWhatsAppTemplate } from "@/lib/twilio"
+import { sendWhatsAppTemplate, sendWhatsAppMessage } from "@/lib/twilio"
 
 const APP_BASE_URL = (process.env.NEXT_PUBLIC_APP_URL || "https://greensthree-bms.vercel.app").replace(/\/$/, "")
 const DAILY_REPORT_TEMPLATE_SID = process.env.TWILIO_DAILY_REPORT_TEMPLATE_SID || "HXe150ee7863ea59b5077930c67d61b68c"
@@ -148,7 +148,35 @@ export async function POST(request: NextRequest) {
         sentCount++
         console.log(`[DAILY REPORTS] Sent to ${recipient}`)
       } catch (error) {
-        console.error(`[DAILY REPORTS] Failed to send to ${recipient}:`, error)
+        console.error(`[DAILY REPORTS] Failed to send template to ${recipient}:`, error)
+        // Fallback to plain text message
+        try {
+          const fallbackMessage = `Hello, this is Manzhil by Scrift.
+
+📊 Daily Report Summary
+
+Last 24 Hours:
+📝 ${recentComplaints?.length || 0} new complaints
+🏛️ ${recentBookings?.length || 0} new bookings
+
+Open Issues:
+⚠️ ${pendingCount} pending complaints
+🔄 ${inProgressCount} complaints in progress
+
+📄 View Reports:
+Activity Report: ${activityReportLink}
+Complaints Report: ${complaintsReportLink}
+
+Generated at: ${generationTime}
+
+- Manzhil by Scrift Team`
+
+          await sendWhatsAppMessage(recipient, fallbackMessage)
+          sentCount++
+          console.log(`[DAILY REPORTS] Sent fallback message to ${recipient}`)
+        } catch (fallbackError) {
+          console.error(`[DAILY REPORTS] Failed to send fallback to ${recipient}:`, fallbackError)
+        }
       }
     }
     
@@ -191,7 +219,7 @@ async function generate24HourReport(complaints: any[], bookings: any[]): Promise
   doc.setTextColor(255, 255, 255)
   doc.setFontSize(24)
   doc.setFont("helvetica", "bold")
-  doc.text("Greens Three Building Management", 105, 20, { align: "center" })
+  doc.text("Manzhil by Scrift", 105, 20, { align: "center" })
   
   doc.setFontSize(14)
   doc.setFont("helvetica", "normal")
@@ -318,7 +346,7 @@ async function generate24HourReport(complaints: any[], bookings: any[]): Promise
     doc.setFontSize(8)
     doc.setTextColor(128, 128, 128)
     doc.text(
-      `Page ${i} of ${pageCount} | Greens Three Building Management System`,
+      `Page ${i} of ${pageCount} | Manzhil by Scrift`,
       105,
       290,
       { align: "center" }
@@ -339,7 +367,7 @@ async function generateOpenComplaintsReport(complaints: any[]): Promise<Buffer> 
   doc.setTextColor(255, 255, 255)
   doc.setFontSize(24)
   doc.setFont("helvetica", "bold")
-  doc.text("Greens Three Building Management", 105, 20, { align: "center" })
+  doc.text("Manzhil by Scrift", 105, 20, { align: "center" })
   
   doc.setFontSize(14)
   doc.setFont("helvetica", "normal")
@@ -418,7 +446,7 @@ async function generateOpenComplaintsReport(complaints: any[]): Promise<Buffer> 
     doc.setFontSize(8)
     doc.setTextColor(128, 128, 128)
     doc.text(
-      `Page ${i} of ${pageCount} | Greens Three Building Management System`,
+      `Page ${i} of ${pageCount} | Manzhil by Scrift`,
       105,
       290,
       { align: "center" }

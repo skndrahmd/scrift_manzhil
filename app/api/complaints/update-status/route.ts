@@ -188,38 +188,46 @@ export async function POST(request: NextRequest) {
           let fullMessage = ""
           
           if (status === "completed") {
-            fullMessage = `✅ Complaint Resolved
+            fullMessage = `Hello, this is Manzhil by Scrift.
 
-Your ${subcategoryDisplay} complaint (${complaintId}) registered on ${createdTime} has been resolved at ${resolvedTime}.
+✅ Complaint Resolved
 
-If you require further assistance, please contact the management.
+Hi ${residentName}, your ${subcategoryDisplay} complaint (${complaintId}) registered on ${createdTime} has been resolved at ${resolvedTime}.
 
-- Greens Three Management`
+If you require further assistance, please contact us.
+
+- Manzhil by Scrift Team`
           } else if (status === "in-progress") {
-            fullMessage = `🔄 Complaint In Progress
+            fullMessage = `Hello, this is Manzhil by Scrift.
 
-Your ${subcategoryDisplay} complaint (${complaintId}) registered on ${createdTime} is now in progress.
+🔄 Complaint In Progress
+
+Hi ${residentName}, your ${subcategoryDisplay} complaint (${complaintId}) registered on ${createdTime} is now in progress.
 
 The maintenance team is actively working to resolve this matter.
 
-- Greens Three Management`
+- Manzhil by Scrift Team`
           } else if (status === "cancelled") {
-            fullMessage = `❌ Complaint Cancelled
+            fullMessage = `Hello, this is Manzhil by Scrift.
 
-Your ${subcategoryDisplay} complaint (${complaintId}) registered on ${createdTime} has been cancelled.
+❌ Complaint Cancelled
 
-If this was unexpected or you require further assistance, please contact the management.
+Hi ${residentName}, your ${subcategoryDisplay} complaint (${complaintId}) registered on ${createdTime} has been cancelled.
 
-- Greens Three Management`
+If this was unexpected or you require further assistance, please contact us.
+
+- Manzhil by Scrift Team`
           } else {
             // pending status
-            fullMessage = `📋 Complaint Status Update
+            fullMessage = `Hello, this is Manzhil by Scrift.
 
-Your ${subcategoryDisplay} complaint (${complaintId}) registered on ${createdTime} is currently pending review.
+📋 Complaint Status Update
 
-The management team will address this matter shortly.
+Hi ${residentName}, your ${subcategoryDisplay} complaint (${complaintId}) registered on ${createdTime} is currently pending review.
 
-- Greens Three Management`
+The team will address this matter shortly.
+
+- Manzhil by Scrift Team`
           }
           
           await sendWhatsAppMessage(profile.phone_number, fullMessage)
