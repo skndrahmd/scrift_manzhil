@@ -163,8 +163,8 @@ export function TransactionsTable({
                 />
             </div>
 
-            {/* Table */}
-            <div className="border border-manzhil-teal/10 rounded-lg overflow-hidden">
+            {/* Desktop Table View */}
+            <div className="hidden md:block border border-manzhil-teal/10 rounded-lg overflow-hidden">
                 <Table>
                     <TableHeader>
                         <TableRow className="bg-gradient-to-r from-manzhil-teal/5 to-transparent">
@@ -238,6 +238,68 @@ export function TransactionsTable({
                         )}
                     </TableBody>
                 </Table>
+            </div>
+
+            {/* Mobile Card View */}
+            <div className="md:hidden space-y-4">
+                {loading ? (
+                    [...Array(3)].map((_, i) => (
+                        <div key={i} className="bg-white rounded-lg border border-manzhil-teal/10 p-4 shadow-sm animate-pulse space-y-3">
+                            <div className="flex justify-between">
+                                <div className="h-4 w-24 bg-gray-200 rounded" />
+                                <div className="h-4 w-16 bg-gray-200 rounded" />
+                            </div>
+                            <div className="h-4 w-full bg-gray-200 rounded" />
+                            <div className="flex justify-between pt-2">
+                                <div className="h-4 w-20 bg-gray-200 rounded" />
+                                <div className="h-4 w-24 bg-gray-200 rounded" />
+                            </div>
+                        </div>
+                    ))
+                ) : transactions.length === 0 ? (
+                    <div className="text-center py-8 bg-white rounded-lg border border-dashed border-gray-200">
+                        <p className="text-muted-foreground">No transactions found</p>
+                    </div>
+                ) : (
+                    transactions.map((transaction) => (
+                        <div key={transaction.id} className="bg-white rounded-xl border border-manzhil-teal/10 shadow-sm p-4 space-y-3 overflow-hidden">
+                            <div className="flex justify-between items-start">
+                                <div>
+                                    <p className="text-xs text-muted-foreground mb-1">{formatDate(transaction.transaction_date)}</p>
+                                    <Badge variant={getTypeBadgeVariant(transaction.transaction_type)} className="text-xs">
+                                        {getTypeLabel(transaction.transaction_type)}
+                                    </Badge>
+                                </div>
+                                <div className={`flex items-center font-bold text-lg ${transaction.amount >= 0 ? 'text-manzhil-teal' : 'text-amber-600'}`}>
+                                    {transaction.amount >= 0 ? "+" : ""}
+                                    {formatCurrency(transaction.amount)}
+                                </div>
+                            </div>
+
+                            <div>
+                                <p className="text-sm text-gray-800 font-medium">{transaction.description || '-'}</p>
+                                {transaction.profiles && (
+                                    <p className="text-xs text-gray-500 mt-1">
+                                        {transaction.profiles.name} • {transaction.profiles.apartment_number}
+                                    </p>
+                                )}
+                            </div>
+
+                            <div className="pt-2 border-t border-gray-50 flex justify-between items-center text-xs text-gray-500">
+                                <span>{getPaymentMethodLabel(transaction.payment_method)}</span>
+                                {transaction.amount < 0 ? (
+                                    <span className="flex items-center text-amber-600">
+                                        <ArrowDownRight className="h-3 w-3 mr-1" /> Expense
+                                    </span>
+                                ) : (
+                                    <span className="flex items-center text-manzhil-teal">
+                                        <ArrowUpRight className="h-3 w-3 mr-1" /> Income
+                                    </span>
+                                )}
+                            </div>
+                        </div>
+                    ))
+                )}
             </div>
 
             {/* Pagination */}

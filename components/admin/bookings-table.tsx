@@ -258,8 +258,8 @@ export function BookingsTable() {
                 </Button>
             </div>
 
-            {/* Table */}
-            <Card className="border-0 shadow-lg shadow-manzhil-teal/5 hover:shadow-xl transition-shadow">
+            {/* Desktop Table View */}
+            <Card className="hidden md:block border-0 shadow-lg shadow-manzhil-teal/5 hover:shadow-xl transition-shadow">
                 <CardContent className="p-0">
                     <Table>
                         <TableHeader>
@@ -358,6 +358,99 @@ export function BookingsTable() {
                     </Table>
                 </CardContent>
             </Card>
+
+            {/* Mobile Card View */}
+            <div className="md:hidden space-y-4">
+                {paginatedBookings.length === 0 ? (
+                    <Card className="border-manzhil-teal/10">
+                        <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+                            <Calendar className="h-12 w-12 text-gray-300 mb-4" />
+                            <p className="text-gray-500">No bookings found</p>
+                        </CardContent>
+                    </Card>
+                ) : (
+                    paginatedBookings.map((booking) => (
+                        <Card key={booking.id} className="border-manzhil-teal/10 shadow-sm">
+                            <CardContent className="p-4 space-y-4">
+                                <div className="flex justify-between items-start">
+                                    <div>
+                                        <h3 className="font-semibold text-manzhil-dark">{booking.profiles?.name || "N/A"}</h3>
+                                        <p className="text-xs text-muted-foreground">ID: {booking.id.slice(0, 8)}</p>
+                                    </div>
+                                    <Badge variant={getStatusBadgeVariant(booking.status)}>
+                                        {booking.status}
+                                    </Badge>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-3 text-sm">
+                                    <div>
+                                        <span className="text-gray-500 block text-xs">Date</span>
+                                        <span className="font-medium text-gray-700">{formatDateForDisplay(booking.booking_date)}</span>
+                                    </div>
+                                    <div>
+                                        <span className="text-gray-500 block text-xs">Time</span>
+                                        <span className="font-medium text-gray-700">{formatTime(booking.start_time)}</span>
+                                    </div>
+                                    <div>
+                                        <span className="text-gray-500 block text-xs">Apartment</span>
+                                        <span className="font-medium text-gray-700">{booking.profiles?.apartment_number}</span>
+                                    </div>
+                                    <div>
+                                        <span className="text-gray-500 block text-xs">Amount</span>
+                                        <span className="font-medium text-gray-700">Rs. {booking.booking_charges.toLocaleString()}</span>
+                                    </div>
+                                </div>
+
+                                <div className="flex justify-between items-center pt-3 border-t border-gray-100">
+                                    <Badge
+                                        variant={getStatusBadgeVariant(booking.payment_status)}
+                                        className={booking.payment_status === "paid" ? "bg-manzhil-teal/20 text-manzhil-dark" : "bg-amber-100 text-amber-700"}
+                                    >
+                                        {booking.payment_status === "paid" ? "Paid" : "Pending"}
+                                    </Badge>
+
+                                    <div className="flex gap-2">
+                                        {booking.payment_status === "pending" && (
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={() => updateBookingPaymentStatus(booking.id, "paid")}
+                                                disabled={updatingPaymentId === booking.id}
+                                                className="h-8 text-xs text-manzhil-teal border-manzhil-teal/30 hover:bg-manzhil-teal/5"
+                                            >
+                                                {updatingPaymentId === booking.id ? (
+                                                    <div className="h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                                                ) : "Mark Paid"}
+                                            </Button>
+                                        )}
+                                        {booking.payment_status === "paid" && (
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={() => updateBookingPaymentStatus(booking.id, "pending")}
+                                                disabled={updatingPaymentId === booking.id}
+                                                className="h-8 text-xs text-red-600 border-red-200 hover:bg-red-50"
+                                            >
+                                                Mark Unpaid
+                                            </Button>
+                                        )}
+                                        {booking.status === "confirmed" && (
+                                            <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                onClick={() => cancelBooking(booking.id)}
+                                                className="h-8 w-8 text-red-600 hover:bg-red-50"
+                                            >
+                                                <X className="h-4 w-4" />
+                                            </Button>
+                                        )}
+                                    </div>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    ))
+                )}
+            </div>
 
             {/* Pagination */}
             {totalPages > 1 && (

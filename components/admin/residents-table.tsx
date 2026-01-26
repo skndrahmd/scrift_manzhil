@@ -436,8 +436,8 @@ export function ResidentsTable() {
                 </Dialog>
             </div>
 
-            {/* Table */}
-            <Card className="border-0 shadow-lg shadow-manzhil-teal/5 hover:shadow-xl transition-shadow">
+            {/* Desktop Table View */}
+            <Card className="hidden md:block border-0 shadow-lg shadow-manzhil-teal/5 hover:shadow-xl transition-shadow">
                 <CardContent className="p-0">
                     <Table>
                         <TableHeader>
@@ -539,6 +539,97 @@ export function ResidentsTable() {
                     </Table>
                 </CardContent>
             </Card>
+
+            {/* Mobile Card View */}
+            <div className="md:hidden space-y-4">
+                {paginatedResidents.length === 0 ? (
+                    <Card className="border-manzhil-teal/10">
+                        <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+                            <Users className="h-12 w-12 text-gray-300 mb-4" />
+                            <p className="text-gray-500">No residents found</p>
+                        </CardContent>
+                    </Card>
+                ) : (
+                    paginatedResidents.map((profile) => (
+                        <Card key={profile.id} className="border-manzhil-teal/10 shadow-sm">
+                            <CardContent className="p-4 space-y-4">
+                                <div className="flex justify-between items-start">
+                                    <div>
+                                        <h3 className="font-semibold text-manzhil-dark">{profile.name}</h3>
+                                        <p className="text-sm text-gray-500">{profile.apartment_number}</p>
+                                    </div>
+                                    <Checkbox
+                                        checked={selectedResidents.includes(profile.id)}
+                                        onCheckedChange={() => toggleResidentSelection(profile.id)}
+                                        disabled={profile.maintenance_paid}
+                                    />
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-2 text-sm">
+                                    <div>
+                                        <span className="text-gray-500 block">Phone</span>
+                                        <span className="font-medium text-gray-700">{profile.phone_number}</span>
+                                    </div>
+                                    <div>
+                                        <span className="text-gray-500 block">Maintenance</span>
+                                        <span className="font-medium text-gray-700">Rs. {profile.maintenance_charges.toLocaleString()}</span>
+                                    </div>
+                                </div>
+
+                                <div className="flex justify-between items-center pt-2 border-t border-gray-100">
+                                    <Badge
+                                        variant={profile.maintenance_paid ? "default" : "destructive"}
+                                        className={profile.maintenance_paid ? "bg-manzhil-teal/20 text-manzhil-dark" : "bg-red-100 text-red-700"}
+                                    >
+                                        {profile.maintenance_paid ? "Paid" : "Unpaid"}
+                                    </Badge>
+                                    <div className="flex gap-2">
+                                        <Link href={`/admin/residents/${profile.id}`}>
+                                            <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-500">
+                                                <Eye className="h-4 w-4" />
+                                            </Button>
+                                        </Link>
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-8 w-8 text-gray-500"
+                                            onClick={() => {
+                                                setEditingUser(profile)
+                                                setIsEditUserOpen(true)
+                                            }}
+                                        >
+                                            <Edit className="h-4 w-4" />
+                                        </Button>
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-8 w-8"
+                                            onClick={() => updateMaintenanceStatus(profile.id, !profile.maintenance_paid)}
+                                            disabled={updatingMaintenanceId === profile.id}
+                                        >
+                                            {updatingMaintenanceId === profile.id ? (
+                                                <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                                            ) : profile.maintenance_paid ? (
+                                                <XCircle className="h-4 w-4 text-red-600" />
+                                            ) : (
+                                                <CheckCircle className="h-4 w-4 text-manzhil-teal" />
+                                            )}
+                                        </Button>
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-8 w-8 text-red-600"
+                                            onClick={() => deleteUser(profile.id, profile.name)}
+                                        >
+                                            <Trash2 className="h-4 w-4" />
+                                        </Button>
+                                    </div>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    ))
+                )}
+            </div>
 
             {/* Pagination */}
             {totalPages > 1 && (

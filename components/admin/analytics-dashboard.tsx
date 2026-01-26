@@ -354,7 +354,7 @@ export function AnalyticsDashboard() {
             </div>
 
             {/* KPI Summary Row */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 {/* Occupancy Rate */}
                 <Card className="border-0 shadow-lg shadow-manzhil-teal/10 bg-[#0F766E] text-white hover:shadow-xl hover:-translate-y-0.5 transition-all relative overflow-hidden group">
                     <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
@@ -428,31 +428,31 @@ export function AnalyticsDashboard() {
             {/* Tabbed Analytics Sections */}
             <Tabs defaultValue="financial" className="space-y-6">
 
-                <TabsList className="bg-white h-auto w-fit justify-start rounded-xl shadow-lg shadow-manzhil-teal/5 border border-manzhil-teal/10 p-1.5 gap-1">
+                <TabsList className="bg-white h-auto w-full md:w-fit overflow-x-auto justify-start rounded-xl shadow-lg shadow-manzhil-teal/5 border border-manzhil-teal/10 p-1.5 gap-1 scrollbar-hide">
                     <TabsTrigger
                         value="financial"
-                        className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-manzhil-dark data-[state=active]:to-manzhil-teal data-[state=active]:text-white rounded-lg text-sm px-4 py-2.5 transition-all flex items-center gap-2"
+                        className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-manzhil-dark data-[state=active]:to-manzhil-teal data-[state=active]:text-white rounded-lg text-sm px-4 py-2.5 transition-all flex items-center gap-2 flex-shrink-0"
                     >
                         <DollarSign className="h-4 w-4" />
                         Financial
                     </TabsTrigger>
                     <TabsTrigger
                         value="complaints"
-                        className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-manzhil-dark data-[state=active]:to-manzhil-teal data-[state=active]:text-white rounded-lg text-sm px-4 py-2.5 transition-all flex items-center gap-2"
+                        className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-manzhil-dark data-[state=active]:to-manzhil-teal data-[state=active]:text-white rounded-lg text-sm px-4 py-2.5 transition-all flex items-center gap-2 flex-shrink-0"
                     >
                         <AlertTriangle className="h-4 w-4" />
                         Complaints
                     </TabsTrigger>
                     <TabsTrigger
                         value="bookings"
-                        className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-manzhil-dark data-[state=active]:to-manzhil-teal data-[state=active]:text-white rounded-lg text-sm px-4 py-2.5 transition-all flex items-center gap-2"
+                        className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-manzhil-dark data-[state=active]:to-manzhil-teal data-[state=active]:text-white rounded-lg text-sm px-4 py-2.5 transition-all flex items-center gap-2 flex-shrink-0"
                     >
                         <Calendar className="h-4 w-4" />
                         Bookings
                     </TabsTrigger>
                     <TabsTrigger
                         value="residents"
-                        className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-manzhil-dark data-[state=active]:to-manzhil-teal data-[state=active]:text-white rounded-lg text-sm px-4 py-2.5 transition-all flex items-center gap-2"
+                        className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-manzhil-dark data-[state=active]:to-manzhil-teal data-[state=active]:text-white rounded-lg text-sm px-4 py-2.5 transition-all flex items-center gap-2 flex-shrink-0"
                     >
                         <Users className="h-4 w-4" />
                         Residents
@@ -580,7 +580,7 @@ export function AnalyticsDashboard() {
                 {/* Complaints Tab */}
                 <TabsContent value="complaints" className="space-y-6">
                     {/* Status Overview */}
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                         {Object.entries(complaintData.byStatus).map(([status, count]) => (
                             <Card key={status} className="border-0 shadow-lg shadow-manzhil-teal/5">
                                 <CardContent className="p-4">

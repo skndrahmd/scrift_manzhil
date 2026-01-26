@@ -202,8 +202,8 @@ export function ComplaintsTable() {
                 </Button>
             </div>
 
-            {/* Table */}
-            <Card className="border-0 shadow-lg shadow-manzhil-teal/5 hover:shadow-xl transition-shadow">
+            {/* Desktop Table View */}
+            <Card className="hidden md:block border-0 shadow-lg shadow-manzhil-teal/5 hover:shadow-xl transition-shadow">
                 <CardContent className="p-0">
                     <Table>
                         <TableHeader>
@@ -278,6 +278,80 @@ export function ComplaintsTable() {
                     </Table>
                 </CardContent>
             </Card>
+
+            {/* Mobile Card View */}
+            <div className="md:hidden space-y-4">
+                {paginatedComplaints.length === 0 ? (
+                    <Card className="border-manzhil-teal/10">
+                        <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+                            <AlertTriangle className="h-12 w-12 text-gray-300 mb-4" />
+                            <p className="text-gray-500">No complaints found</p>
+                        </CardContent>
+                    </Card>
+                ) : (
+                    paginatedComplaints.map((complaint) => (
+                        <Card key={complaint.id} className="border-manzhil-teal/10 shadow-sm">
+                            <CardContent className="p-4 space-y-4">
+                                <div className="flex justify-between items-start">
+                                    <div>
+                                        <h3 className="font-semibold text-manzhil-dark text-sm font-mono">{complaint.complaint_id}</h3>
+                                        <p className="text-xs text-muted-foreground">{formatDateTime(complaint.created_at)}</p>
+                                    </div>
+                                    <Badge className={`${getStatusBadgeClass(complaint.status)} text-xs`}>
+                                        {complaint.status}
+                                    </Badge>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-3 text-sm">
+                                    <div>
+                                        <span className="text-gray-500 block text-xs">Resident</span>
+                                        <span className="font-medium text-gray-700">{complaint.profiles?.name || "N/A"}</span>
+                                    </div>
+                                    <div>
+                                        <span className="text-gray-500 block text-xs">Apartment</span>
+                                        <span className="font-medium text-gray-700">{complaint.profiles?.apartment_number}</span>
+                                    </div>
+                                    <div className="col-span-2">
+                                        <span className="text-gray-500 block text-xs">Category</span>
+                                        <div className="flex items-center text-gray-700">
+                                            <span className="capitalize">{complaint.category}</span>
+                                            <span className="text-gray-400 mx-2">•</span>
+                                            <span className="capitalize">{complaint.subcategory.replace(/_/g, " ")}</span>
+                                        </div>
+                                    </div>
+                                    <div className="col-span-2">
+                                        <span className="text-gray-500 block text-xs">Description</span>
+                                        <p className="text-gray-700 mt-1 line-clamp-2 text-sm">{complaint.description || "-"}</p>
+                                    </div>
+                                </div>
+
+                                <div className="pt-3 border-t border-gray-100">
+                                    <span className="text-gray-500 block text-xs mb-2">Update Status</span>
+                                    <Select
+                                        value={complaint.status}
+                                        onValueChange={(value) => updateComplaintStatus(complaint.id, value)}
+                                        disabled={updatingComplaintId === complaint.id}
+                                    >
+                                        <SelectTrigger className="w-full h-9">
+                                            {updatingComplaintId === complaint.id ? (
+                                                <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent mx-auto" />
+                                            ) : (
+                                                <SelectValue />
+                                            )}
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="pending">Pending</SelectItem>
+                                            <SelectItem value="in-progress">In Progress</SelectItem>
+                                            <SelectItem value="completed">Completed</SelectItem>
+                                            <SelectItem value="cancelled">Cancelled</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    ))
+                )}
+            </div>
 
             {/* Pagination */}
             {totalPages > 1 && (
