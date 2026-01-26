@@ -246,15 +246,27 @@ export default function DashboardPage() {
                                                 </p>
                                             </div>
                                         </div>
-                                        <Badge
-                                            variant="secondary"
-                                            className={`text-xs capitalize ${booking.status === 'confirmed' ? 'bg-manzhil-teal/20 text-manzhil-dark' :
-                                                booking.status === 'cancelled' ? 'bg-red-100 text-red-700' :
-                                                    'bg-amber-100 text-amber-700'
-                                                }`}
-                                        >
-                                            {booking.status.replace('_', ' ')}
-                                        </Badge>
+                                        <div className="flex items-center gap-2">
+                                            <Badge
+                                                variant="secondary"
+                                                className={`text-xs ${booking.payment_status === 'paid' ? 'bg-manzhil-teal/20 text-manzhil-dark' : 'bg-amber-100 text-amber-700'}`}
+                                            >
+                                                {booking.payment_status === 'paid' ? (
+                                                    <><DollarSign className="w-3 h-3 mr-1" />Paid</>
+                                                ) : (
+                                                    <><Clock className="w-3 h-3 mr-1" />Unpaid</>
+                                                )}
+                                            </Badge>
+                                            <Badge
+                                                variant="secondary"
+                                                className={`text-xs capitalize ${booking.status === 'confirmed' ? 'bg-manzhil-teal/20 text-manzhil-dark' :
+                                                    booking.status === 'cancelled' ? 'bg-red-100 text-red-700' :
+                                                        'bg-amber-100 text-amber-700'
+                                                    }`}
+                                            >
+                                                {booking.status.replace('_', ' ')}
+                                            </Badge>
+                                        </div>
                                     </div>
                                 ))}
                             </div>
