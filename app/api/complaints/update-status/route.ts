@@ -105,17 +105,17 @@ export async function POST(request: NextRequest) {
     if (profile?.phone_number) {
       const residentName = profile.name || "Resident"
       const complaintId = complaint.complaint_id
-      
+
       // Format subcategory for display
       const subcategoryDisplay = complaint.subcategory
         .split('_')
         .map((word: string) => word.charAt(0).toUpperCase() + word.slice(1))
         .join(' ')
-      
+
       // Format timestamps
       const createdAt = new Date(complaint.created_at || Date.now())
       const resolvedAt = new Date()
-      
+
       const formatTime = (date: Date) => {
         return date.toLocaleString('en-US', {
           month: 'short',
@@ -126,10 +126,10 @@ export async function POST(request: NextRequest) {
           timeZone: 'Asia/Karachi'
         })
       }
-      
+
       const createdTime = formatTime(createdAt)
       const resolvedTime = formatTime(resolvedAt)
-      
+
       console.log("[COMPLAINT UPDATE] Attempting to send WhatsApp message:", {
         to: profile.phone_number,
         complaintId,
@@ -138,57 +138,9 @@ export async function POST(request: NextRequest) {
       })
 
       try {
-        let templateSent = false
-        
-        // Try to send template based on status
-        if (status === "completed" && COMPLAINT_COMPLETED_TEMPLATE_SID) {
-          try {
-            // Template variables: 1=Name, 2=Subcategory, 3=ComplaintID, 4=RegisteredTime, 5=ResolvedTime
-            await sendWhatsAppTemplate(profile.phone_number, COMPLAINT_COMPLETED_TEMPLATE_SID, {
-              "1": residentName,
-              "2": subcategoryDisplay,
-              "3": complaintId,
-              "4": createdTime,
-              "5": resolvedTime,
-            })
-            templateSent = true
-          } catch (templateError) {
-            console.error("[COMPLAINT UPDATE] Template failed, using fallback:", templateError)
-          }
-        } else if (status === "in-progress" && COMPLAINT_IN_PROGRESS_TEMPLATE_SID) {
-          try {
-            // Template variables: 1=Name, 2=Subcategory, 3=ComplaintID, 4=RegisteredTime
-            await sendWhatsAppTemplate(profile.phone_number, COMPLAINT_IN_PROGRESS_TEMPLATE_SID, {
-              "1": residentName,
-              "2": subcategoryDisplay,
-              "3": complaintId,
-              "4": createdTime,
-            })
-            templateSent = true
-          } catch (templateError) {
-            console.error("[COMPLAINT UPDATE] Template failed, using fallback:", templateError)
-          }
-        } else if (status === "cancelled" && COMPLAINT_REJECTED_TEMPLATE_SID) {
-          try {
-            // Template variables: 1=Name, 2=Subcategory, 3=ComplaintID, 4=RegisteredTime
-            await sendWhatsAppTemplate(profile.phone_number, COMPLAINT_REJECTED_TEMPLATE_SID, {
-              "1": residentName,
-              "2": subcategoryDisplay,
-              "3": complaintId,
-              "4": createdTime,
-            })
-            templateSent = true
-          } catch (templateError) {
-            console.error("[COMPLAINT UPDATE] Template failed, using fallback:", templateError)
-          }
-        }
-        
-        // Fallback to freeform message if template not sent
-        if (!templateSent) {
-          let fullMessage = ""
-          
-          if (status === "completed") {
-            fullMessage = `Hello, this is Manzhil by Scrift.
+        // Prepare fallback messages for each status
+        const fallbackMessages: Record<string, string> = {
+          completed: `Hello, this is Manzhil by Scrift.
 
 ✅ Complaint Resolved
 
@@ -196,9 +148,8 @@ Hi ${residentName}, your ${subcategoryDisplay} complaint (${complaintId}) regist
 
 If you require further assistance, please contact us.
 
-- Manzhil by Scrift Team`
-          } else if (status === "in-progress") {
-            fullMessage = `Hello, this is Manzhil by Scrift.
+- Manzhil by Scrift Team`,
+          "in-progress": `Hello, this is Manzhil by Scrift.
 
 🔄 Complaint In Progress
 
@@ -206,9 +157,8 @@ Hi ${residentName}, your ${subcategoryDisplay} complaint (${complaintId}) regist
 
 The maintenance team is actively working to resolve this matter.
 
-- Manzhil by Scrift Team`
-          } else if (status === "cancelled") {
-            fullMessage = `Hello, this is Manzhil by Scrift.
+- Manzhil by Scrift Team`,
+          cancelled: `Hello, this is Manzhil by Scrift.
 
 ❌ Complaint Cancelled
 
@@ -216,10 +166,8 @@ Hi ${residentName}, your ${subcategoryDisplay} complaint (${complaintId}) regist
 
 If this was unexpected or you require further assistance, please contact us.
 
-- Manzhil by Scrift Team`
-          } else {
-            // pending status
-            fullMessage = `Hello, this is Manzhil by Scrift.
+- Manzhil by Scrift Team`,
+          pending: `Hello, this is Manzhil by Scrift.
 
 📋 Complaint Status Update
 
@@ -228,11 +176,38 @@ Hi ${residentName}, your ${subcategoryDisplay} complaint (${complaintId}) regist
 The team will address this matter shortly.
 
 - Manzhil by Scrift Team`
-          }
-          
-          await sendWhatsAppMessage(profile.phone_number, fullMessage)
         }
-        
+
+        const fallbackMessage = fallbackMessages[status] || fallbackMessages.pending
+
+        // Send template with built-in fallback
+        if (status === "completed" && COMPLAINT_COMPLETED_TEMPLATE_SID) {
+          await sendWhatsAppTemplate(profile.phone_number, COMPLAINT_COMPLETED_TEMPLATE_SID, {
+            "1": residentName,
+            "2": subcategoryDisplay,
+            "3": complaintId,
+            "4": createdTime,
+            "5": resolvedTime,
+          }, fallbackMessage)
+        } else if (status === "in-progress" && COMPLAINT_IN_PROGRESS_TEMPLATE_SID) {
+          await sendWhatsAppTemplate(profile.phone_number, COMPLAINT_IN_PROGRESS_TEMPLATE_SID, {
+            "1": residentName,
+            "2": subcategoryDisplay,
+            "3": complaintId,
+            "4": createdTime,
+          }, fallbackMessage)
+        } else if (status === "cancelled" && COMPLAINT_REJECTED_TEMPLATE_SID) {
+          await sendWhatsAppTemplate(profile.phone_number, COMPLAINT_REJECTED_TEMPLATE_SID, {
+            "1": residentName,
+            "2": subcategoryDisplay,
+            "3": complaintId,
+            "4": createdTime,
+          }, fallbackMessage)
+        } else {
+          // No template configured, send fallback directly
+          await sendWhatsAppMessage(profile.phone_number, fallbackMessage)
+        }
+
         console.log("[COMPLAINT UPDATE] WhatsApp notification sent successfully")
       } catch (notifyError) {
         console.error("[COMPLAINT UPDATE] Failed to send complaint status notification:", notifyError)

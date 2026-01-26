@@ -113,11 +113,13 @@ export async function sendWhatsAppMessage(to: string, body: string) {
  * @param to - Phone number in E.164 format (e.g., +923001234567)
  * @param contentSid - Twilio Content Template SID (e.g., HXda7e0429d7de4202519775e4f77ce366)
  * @param variables - Object mapping variable numbers to values (e.g., { "1": "November 2025", "2": "25,000" })
+ * @param fallbackMessage - Optional plain text message to send if template fails
  */
 export async function sendWhatsAppTemplate(
   to: string,
   contentSid: string,
-  variables: Record<string, string>
+  variables: Record<string, string>,
+  fallbackMessage?: string
 ) {
   console.log('=== SEND WHATSAPP TEMPLATE ===')
   console.log('Environment check:', {
@@ -139,6 +141,7 @@ export async function sendWhatsAppTemplate(
     to: formattedTo,
     contentSid,
     variables,
+    hasFallback: !!fallbackMessage,
   })
 
   if (!client || !from) {
@@ -150,6 +153,11 @@ export async function sendWhatsAppTemplate(
 
   if (!contentSid) {
     console.error("[Twilio ERROR] Missing contentSid for template message")
+    // Try fallback if available
+    if (fallbackMessage) {
+      console.log("📤 Attempting fallback message (no contentSid)...")
+      return sendWhatsAppMessage(to, fallbackMessage)
+    }
     return { ok: false, error: "Missing contentSid" }
   }
 
@@ -170,6 +178,20 @@ export async function sendWhatsAppTemplate(
     console.error("Error code:", err?.code)
     console.error("Error details:", err?.moreInfo)
     console.error("Full error:", JSON.stringify(err, null, 2))
+    
+    // Try fallback message if template fails
+    if (fallbackMessage) {
+      console.log("📤 Template failed, attempting fallback message...")
+      const fallbackResult = await sendWhatsAppMessage(to, fallbackMessage)
+      if (fallbackResult.ok) {
+        console.log("✅ Fallback message sent successfully!")
+        return { ok: true, sid: fallbackResult.sid, usedFallback: true }
+      } else {
+        console.error("❌ Fallback message also failed:", fallbackResult.error)
+        return { ok: false, error: err?.message || "unknown", fallbackError: fallbackResult.error }
+      }
+    }
+    
     return { ok: false, error: err?.message || "unknown" }
   }
 }

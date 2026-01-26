@@ -383,7 +383,7 @@ export function ExpensesManager({
                     if (!open) resetForm()
                 }}>
                     <DialogTrigger asChild>
-                        <Button className="gap-2">
+                        <Button className="gap-2 bg-gradient-to-r from-manzhil-dark to-manzhil-teal hover:shadow-lg hover:shadow-manzhil-teal/30 transition-all">
                             <Plus className="h-4 w-4" />
                             Add Expense
                         </Button>
@@ -397,7 +397,7 @@ export function ExpensesManager({
                             <Button variant="outline" onClick={() => setIsAddOpen(false)}>
                                 Cancel
                             </Button>
-                            <Button onClick={() => handleSubmit(false)} disabled={submitting}>
+                            <Button onClick={() => handleSubmit(false)} disabled={submitting} className="bg-gradient-to-r from-manzhil-dark to-manzhil-teal hover:shadow-lg transition-all">
                                 {submitting ? "Saving..." : "Add Expense"}
                             </Button>
                         </DialogFooter>
@@ -406,10 +406,10 @@ export function ExpensesManager({
             </div>
 
             {/* Expenses Table */}
-            <div className="border rounded-lg">
+            <div className="border border-manzhil-teal/10 rounded-lg overflow-hidden">
                 <Table>
                     <TableHeader>
-                        <TableRow>
+                        <TableRow className="bg-gradient-to-r from-manzhil-teal/5 to-transparent">
                             <TableHead>Date</TableHead>
                             <TableHead>Category</TableHead>
                             <TableHead>Description</TableHead>
@@ -440,7 +440,7 @@ export function ExpensesManager({
                             expenses.map((expense) => {
                                 const category = getCategoryById(expense.category_id)
                                 return (
-                                    <TableRow key={expense.id}>
+                                    <TableRow key={expense.id} className="hover:bg-manzhil-teal/5 transition-colors">
                                         <TableCell className="font-medium">
                                             {formatDate(expense.expense_date)}
                                         </TableCell>
@@ -468,7 +468,7 @@ export function ExpensesManager({
                                         <TableCell className="capitalize">
                                             {expense.payment_method?.replace('_', ' ') || '-'}
                                         </TableCell>
-                                        <TableCell className="text-right font-semibold text-red-600">
+                                        <TableCell className="text-right font-semibold text-amber-600">
                                             {formatCurrency(expense.amount)}
                                         </TableCell>
                                         <TableCell>
@@ -544,7 +544,7 @@ export function ExpensesManager({
                         <Button variant="outline" onClick={() => setIsEditOpen(false)}>
                             Cancel
                         </Button>
-                        <Button onClick={() => handleSubmit(true)} disabled={submitting}>
+                        <Button onClick={() => handleSubmit(true)} disabled={submitting} className="bg-gradient-to-r from-manzhil-dark to-manzhil-teal hover:shadow-lg transition-all">
                             {submitting ? "Saving..." : "Update Expense"}
                         </Button>
                     </DialogFooter>

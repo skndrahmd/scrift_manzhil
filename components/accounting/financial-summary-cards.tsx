@@ -33,7 +33,7 @@ export function FinancialSummaryCards({ summary, loading }: FinancialSummaryCard
         return (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                 {[...Array(4)].map((_, i) => (
-                    <Card key={i} className="animate-pulse">
+                    <Card key={i} className="animate-pulse border-0 shadow-lg shadow-manzhil-teal/5">
                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                             <div className="h-4 w-24 bg-gray-200 rounded" />
                             <div className="h-8 w-8 bg-gray-200 rounded" />
@@ -55,8 +55,8 @@ export function FinancialSummaryCards({ summary, loading }: FinancialSummaryCard
             icon: DollarSign,
             description: "All income collected",
             trend: "up",
-            color: "text-green-600",
-            bgColor: "bg-green-100"
+            color: "text-manzhil-teal",
+            bgColor: "bg-manzhil-teal/20"
         },
         {
             title: "Net Income",
@@ -64,8 +64,8 @@ export function FinancialSummaryCards({ summary, loading }: FinancialSummaryCard
             icon: summary?.netIncome && summary.netIncome >= 0 ? TrendingUp : TrendingDown,
             description: "Revenue minus expenses",
             trend: summary?.netIncome && summary.netIncome >= 0 ? "up" : "down",
-            color: summary?.netIncome && summary.netIncome >= 0 ? "text-green-600" : "text-red-600",
-            bgColor: summary?.netIncome && summary.netIncome >= 0 ? "bg-green-100" : "bg-red-100"
+            color: summary?.netIncome && summary.netIncome >= 0 ? "text-manzhil-dark" : "text-red-600",
+            bgColor: summary?.netIncome && summary.netIncome >= 0 ? "bg-manzhil-dark/10" : "bg-red-100"
         },
         {
             title: "Total Expenses",
@@ -73,8 +73,8 @@ export function FinancialSummaryCards({ summary, loading }: FinancialSummaryCard
             icon: Wallet,
             description: "All expenses recorded",
             trend: "neutral",
-            color: "text-orange-600",
-            bgColor: "bg-orange-100"
+            color: "text-amber-600",
+            bgColor: "bg-amber-100"
         },
         {
             title: "Outstanding Dues",
@@ -82,15 +82,15 @@ export function FinancialSummaryCards({ summary, loading }: FinancialSummaryCard
             icon: PiggyBank,
             description: `${summary?.collectionRate?.toFixed(1) || 0}% collection rate`,
             trend: "neutral",
-            color: "text-blue-600",
-            bgColor: "bg-blue-100"
+            color: "text-manzhil-teal",
+            bgColor: "bg-manzhil-teal/10"
         }
     ]
 
     return (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
             {cards.map((card, index) => (
-                <Card key={index} className="hover:shadow-md transition-shadow">
+                <Card key={index} className="border-0 shadow-lg shadow-manzhil-teal/5 hover:shadow-xl hover:-translate-y-0.5 transition-all">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-sm font-medium text-muted-foreground">
                             {card.title}
@@ -104,7 +104,7 @@ export function FinancialSummaryCards({ summary, loading }: FinancialSummaryCard
                             {formatCurrency(card.value)}
                         </div>
                         <p className="text-xs text-muted-foreground flex items-center mt-1">
-                            {card.trend === "up" && <ArrowUpRight className="h-3 w-3 mr-1 text-green-600" />}
+                            {card.trend === "up" && <ArrowUpRight className="h-3 w-3 mr-1 text-manzhil-teal" />}
                             {card.trend === "down" && <ArrowDownRight className="h-3 w-3 mr-1 text-red-600" />}
                             {card.description}
                         </p>
@@ -147,34 +147,34 @@ export function RevenueBreakdownCards({ summary, loading }: FinancialSummaryCard
 
     return (
         <div className="grid gap-4 md:grid-cols-2">
-            <Card className="border-l-4 border-l-emerald-500">
+            <Card className="border-l-4 border-l-manzhil-teal shadow-lg shadow-manzhil-teal/5">
                 <CardContent className="pt-6">
                     <div className="flex items-center justify-between">
                         <div>
                             <p className="text-sm font-medium text-muted-foreground">Booking Revenue</p>
-                            <p className="text-2xl font-bold text-emerald-600">
+                            <p className="text-2xl font-bold text-manzhil-dark">
                                 {formatCurrency(summary?.bookingRevenue || 0)}
                             </p>
                         </div>
                         <div className="text-right">
-                            <span className="text-lg font-semibold text-emerald-600">{bookingPercent}%</span>
+                            <span className="text-lg font-semibold text-manzhil-teal">{bookingPercent}%</span>
                             <p className="text-xs text-muted-foreground">of total</p>
                         </div>
                     </div>
                 </CardContent>
             </Card>
 
-            <Card className="border-l-4 border-l-blue-500">
+            <Card className="border-l-4 border-l-manzhil-dark shadow-lg shadow-manzhil-teal/5">
                 <CardContent className="pt-6">
                     <div className="flex items-center justify-between">
                         <div>
                             <p className="text-sm font-medium text-muted-foreground">Maintenance Revenue</p>
-                            <p className="text-2xl font-bold text-blue-600">
+                            <p className="text-2xl font-bold text-manzhil-teal">
                                 {formatCurrency(summary?.maintenanceRevenue || 0)}
                             </p>
                         </div>
                         <div className="text-right">
-                            <span className="text-lg font-semibold text-blue-600">{maintenancePercent}%</span>
+                            <span className="text-lg font-semibold text-manzhil-dark">{maintenancePercent}%</span>
                             <p className="text-xs text-muted-foreground">of total</p>
                         </div>
                     </div>

@@ -58,6 +58,8 @@ export function filterByPeriod<T extends { date?: string; created_at?: string; b
   })
 }
 
+import { drawModernHeader, drawPageFooter, hexToRgb, loadPdfLibs, PDF_COLORS } from "./pdf-theme"
+
 export async function exportToPdf({
   title,
   periodLabel: periodText,
@@ -73,25 +75,42 @@ export async function exportToPdf({
   filtersSummary?: string
   fileName: string
 }) {
-  const [{ default: jsPDF }, { default: autoTable }] = await Promise.all([import("jspdf"), import("jspdf-autotable")])
+  const { jsPDF, autoTable } = await loadPdfLibs()
 
   const doc = new jsPDF()
-  doc.setFontSize(16)
-  doc.text(title, 14, 16)
 
-  doc.setFontSize(10)
-  doc.text(`Period: ${periodText}`, 14, 24)
+  // Use current date for the "Generated" field in header
+  const nextY = await drawModernHeader(doc, title, periodText, `Generated ${new Date().toLocaleDateString("en-GB")}`)
+
   if (filtersSummary) {
-    doc.text(`Filters: ${filtersSummary}`, 14, 30)
+    doc.setFontSize(9)
+    doc.setTextColor(...hexToRgb(PDF_COLORS.text.tertiary))
+    doc.text(`Filters: ${filtersSummary}`, 14, nextY + 5)
   }
 
   autoTable(doc, {
-    startY: filtersSummary ? 36 : 32,
+    startY: filtersSummary ? nextY + 12 : nextY + 8,
     head: [columns.map((c) => c.header)],
     body: rows.map((r) => columns.map((c) => String(r[c.dataKey] ?? ""))),
-    styles: { fontSize: 9 },
-    headStyles: { fillColor: [20, 120, 220] },
+    styles: {
+      fontSize: 10,
+      textColor: hexToRgb(PDF_COLORS.text.secondary),
+      cellPadding: 4,
+      lineColor: hexToRgb(PDF_COLORS.border.light),
+      lineWidth: 0.1
+    },
+    headStyles: {
+      fillColor: [255, 255, 255],
+      textColor: hexToRgb(PDF_COLORS.text.tertiary),
+      fontStyle: "bold",
+      lineWidth: 0
+    },
+    alternateRowStyles: {
+      fillColor: "#F9FAFB"
+    }
   })
+
+  drawPageFooter(doc)
 
   doc.save(fileName.endsWith(".pdf") ? fileName : `${fileName}.pdf`)
 }

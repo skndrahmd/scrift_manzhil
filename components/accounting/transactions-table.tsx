@@ -164,10 +164,10 @@ export function TransactionsTable({
             </div>
 
             {/* Table */}
-            <div className="border rounded-lg">
+            <div className="border border-manzhil-teal/10 rounded-lg overflow-hidden">
                 <Table>
                     <TableHeader>
-                        <TableRow>
+                        <TableRow className="bg-gradient-to-r from-manzhil-teal/5 to-transparent">
                             <TableHead>Date</TableHead>
                             <TableHead>Type</TableHead>
                             <TableHead>Description</TableHead>
@@ -195,7 +195,7 @@ export function TransactionsTable({
                             </TableRow>
                         ) : (
                             transactions.map((transaction) => (
-                                <TableRow key={transaction.id}>
+                                <TableRow key={transaction.id} className="hover:bg-manzhil-teal/5 transition-colors">
                                     <TableCell className="font-medium">
                                         {formatDate(transaction.transaction_date)}
                                     </TableCell>
@@ -223,7 +223,7 @@ export function TransactionsTable({
                                         {getPaymentMethodLabel(transaction.payment_method)}
                                     </TableCell>
                                     <TableCell className="text-right">
-                                        <div className={`flex items-center justify-end font-semibold ${transaction.amount >= 0 ? 'text-green-600' : 'text-red-600'
+                                        <div className={`flex items-center justify-end font-semibold ${transaction.amount >= 0 ? 'text-manzhil-teal' : 'text-amber-600'
                                             }`}>
                                             {transaction.amount >= 0 ? (
                                                 <ArrowUpRight className="h-4 w-4 mr-1" />

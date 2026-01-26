@@ -254,11 +254,11 @@ export function AccountingTab() {
     ]
 
     const colorClasses: Record<string, { bg: string; text: string }> = {
-        green: { bg: "bg-green-100", text: "text-green-600" },
-        blue: { bg: "bg-blue-100", text: "text-blue-600" },
-        purple: { bg: "bg-purple-100", text: "text-purple-600" },
-        orange: { bg: "bg-orange-100", text: "text-orange-600" },
-        teal: { bg: "bg-teal-100", text: "text-teal-600" }
+        green: { bg: "bg-manzhil-teal/20", text: "text-manzhil-dark" },
+        blue: { bg: "bg-manzhil-dark/10", text: "text-manzhil-dark" },
+        purple: { bg: "bg-manzhil-teal/10", text: "text-manzhil-teal" },
+        orange: { bg: "bg-amber-100", text: "text-amber-600" },
+        teal: { bg: "bg-manzhil-teal/20", text: "text-manzhil-teal" }
     }
 
     return (
@@ -266,7 +266,10 @@ export function AccountingTab() {
             {/* Header */}
             <div className="flex items-center justify-between">
                 <div>
-                    <h2 className="text-2xl font-bold tracking-tight">Accounting</h2>
+                    <h2 className="text-2xl font-bold tracking-tight text-manzhil-dark flex items-center gap-2">
+                        <Wallet className="h-6 w-6 text-manzhil-teal" />
+                        Accounting
+                    </h2>
                     <p className="text-muted-foreground">
                         Track income, expenses, and financial health
                     </p>
@@ -291,6 +294,7 @@ export function AccountingTab() {
                         variant="outline"
                         onClick={handleRefresh}
                         disabled={refreshing}
+                        className="border-manzhil-teal/30 text-manzhil-dark hover:bg-manzhil-teal/5 transition-colors"
                     >
                         <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
                         Refresh
@@ -331,7 +335,7 @@ export function AccountingTab() {
 
                 {/* Transactions Tab */}
                 <TabsContent value="transactions">
-                    <Card>
+                    <Card className="border-0 shadow-lg shadow-manzhil-teal/5">
                         <CardHeader>
                             <CardTitle>Transaction Ledger</CardTitle>
                         </CardHeader>
@@ -350,7 +354,7 @@ export function AccountingTab() {
 
                 {/* Expenses Tab */}
                 <TabsContent value="expenses">
-                    <Card>
+                    <Card className="border-0 shadow-lg shadow-manzhil-teal/5">
                         <CardHeader>
                             <CardTitle>Expense Management</CardTitle>
                         </CardHeader>
@@ -373,7 +377,7 @@ export function AccountingTab() {
 
                 {/* Reports Tab */}
                 <TabsContent value="reports">
-                    <Card>
+                    <Card className="border-0 shadow-lg shadow-manzhil-teal/5">
                         <CardHeader>
                             <CardTitle>Financial Reports</CardTitle>
                         </CardHeader>
@@ -387,7 +391,7 @@ export function AccountingTab() {
                                     return (
                                         <Card
                                             key={report.id}
-                                            className={`cursor-pointer hover:bg-muted/50 transition-colors ${isGenerating ? 'opacity-75' : ''}`}
+                                            className={`cursor-pointer border-0 shadow-lg shadow-manzhil-teal/5 hover:shadow-xl hover:-translate-y-0.5 transition-all ${isGenerating ? 'opacity-75' : ''}`}
                                             onClick={() => !isGenerating && handleGenerateReport(report.id)}
                                         >
                                             <CardContent className="pt-6">

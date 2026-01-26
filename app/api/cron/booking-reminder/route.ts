@@ -73,37 +73,24 @@ export async function POST(request: NextRequest) {
           const startTime = fmtTime(b.start_time)
           const endTime = fmtTime(b.end_time)
 
-          let templateSent = false
-          
+          // Fallback message
+          const fallbackMessage = `Hello, this is Manzhil by Scrift.
+
+Hi ${residentName}, your booking on ${bookingDate} (${startTime} - ${endTime}) has been cancelled due to non-payment within 3 days of booking.
+Invoice: ${invoiceLink}
+- Manzhil by Scrift Team`
+
           if (BOOKING_CANCELLED_TEMPLATE_SID) {
-            try {
-              // Use WhatsApp template for cancellation notice
-              // Template has 6 variables: 1=Name, 2=Date, 3=StartTime, 4=EndTime, 5=BookingID, 6=ReceiptLink
-              await sendWhatsAppTemplate(b.profiles.phone_number, BOOKING_CANCELLED_TEMPLATE_SID, {
-                "1": residentName,      // Name (Sikander Ahmed)
-                "2": bookingDate,       // Date (December 13, 2025)
-                "3": startTime,         // Start Time (11:00 AM)
-                "4": endTime,           // End Time (12:00 PM)
-                "5": b.id,              // Booking ID (full UUID)
-                "6": invoiceLink,       // Cancellation Receipt Link
-              })
-              templateSent = true
-            } catch (templateError) {
-              console.error("Template failed, using fallback:", templateError)
-            }
-          }
-          
-          // Fallback to freeform message if template not sent
-          if (!templateSent) {
-            console.warn("BOOKING_CANCELLED_TEMPLATE_SID not configured or failed, using freeform message")
-            const cancelLines = [
-              `Hello, this is Manzhil by Scrift.`,
-              ``,
-              `Hi ${residentName}, your booking on ${bookingDate} (${startTime} - ${endTime}) has been cancelled due to non-payment within 3 days of booking.`,
-              `Invoice: ${invoiceLink}`,
-              "- Manzhil by Scrift Team",
-            ]
-            await sendWhatsAppMessage(b.profiles.phone_number, cancelLines.join("\n"))
+            await sendWhatsAppTemplate(b.profiles.phone_number, BOOKING_CANCELLED_TEMPLATE_SID, {
+              "1": residentName,
+              "2": bookingDate,
+              "3": startTime,
+              "4": endTime,
+              "5": b.id,
+              "6": invoiceLink,
+            }, fallbackMessage)
+          } else {
+            await sendWhatsAppMessage(b.profiles.phone_number, fallbackMessage)
           }
         }
         continue
@@ -116,42 +103,30 @@ export async function POST(request: NextRequest) {
 
       if (b.profiles?.phone_number) {
         const amount = Number(b.booking_charges).toLocaleString()
+        const residentName = b.profiles.name || "Resident"
         const bookingDate = fmtDate(b.booking_date)
         const startTime = fmtTime(b.start_time)
         const endTime = fmtTime(b.end_time)
 
-        let templateSent = false
-        
+        // Fallback message
+        const fallbackMessage = `Hello, this is Manzhil by Scrift.
+
+Hi ${residentName}, reminder: your booking payment of Rs. ${amount} for ${bookingDate} (${startTime} - ${endTime}) is due.
+Payment is due within 3 days of booking. Day ${daysSince} of 3.
+Invoice: ${invoiceLink}
+- Manzhil by Scrift Team`
+
         if (BOOKING_PAYMENT_REMINDER_TEMPLATE_SID) {
-          try {
-            // Use WhatsApp template for payment reminder
-            await sendWhatsAppTemplate(b.profiles.phone_number, BOOKING_PAYMENT_REMINDER_TEMPLATE_SID, {
-              "1": amount,
-              "2": bookingDate,
-              "3": startTime,
-              "4": endTime,
-              "5": String(daysSince),
-              "6": invoiceLink,
-            })
-            templateSent = true
-          } catch (templateError) {
-            console.error("Template failed, using fallback:", templateError)
-          }
-        }
-        
-        // Fallback to freeform message if template not sent
-        if (!templateSent) {
-          console.warn("BOOKING_PAYMENT_REMINDER_TEMPLATE_SID not configured or failed, using freeform message")
-          const residentName = b.profiles.name || "Resident"
-          const reminderLines = [
-            `Hello, this is Manzhil by Scrift.`,
-            ``,
-            `Hi ${residentName}, reminder: your booking payment of Rs. ${amount} for ${bookingDate} (${startTime} - ${endTime}) is due.`,
-            `Payment is due within 3 days of booking. Day ${daysSince} of 3.`,
-            `Invoice: ${invoiceLink}`,
-            "- Manzhil by Scrift Team",
-          ]
-          await sendWhatsAppMessage(b.profiles.phone_number, reminderLines.join("\n"))
+          await sendWhatsAppTemplate(b.profiles.phone_number, BOOKING_PAYMENT_REMINDER_TEMPLATE_SID, {
+            "1": amount,
+            "2": bookingDate,
+            "3": startTime,
+            "4": endTime,
+            "5": String(daysSince),
+            "6": invoiceLink,
+          }, fallbackMessage)
+        } else {
+          await sendWhatsAppMessage(b.profiles.phone_number, fallbackMessage)
         }
       }
 

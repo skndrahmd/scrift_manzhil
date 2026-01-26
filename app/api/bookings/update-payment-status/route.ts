@@ -99,46 +99,35 @@ export async function POST(request: NextRequest) {
         const startTime = formatTime(booking.start_time)
         const endTime = formatTime(booking.end_time)
 
-        let templateSent = false
+        // Fallback message
+        const fallbackMessage = `Hello, this is Manzhil by Scrift.
+
+✅ PAYMENT CONFIRMED!
+
+Hi ${residentName}, your payment of Rs. ${amount} has been received.
+
+Booking Date: ${bookingDate}
+Time: ${startTime} - ${endTime}
+
+📄 View Paid Invoice: ${invoiceUrl}
+
+Thank you for your payment!
+- Manzhil by Scrift Team`
 
         if (BOOKING_PAYMENT_CONFIRMED_TEMPLATE_SID) {
-          try {
-            // Use WhatsApp template for payment confirmation
-            // Template has 7 variables: 1=Name, 2=Date, 3=StartTime, 4=EndTime, 5=Amount, 6=BookingID, 7=ReceiptLink
-            await sendWhatsAppTemplate(booking.profiles.phone_number, BOOKING_PAYMENT_CONFIRMED_TEMPLATE_SID, {
-              "1": residentName,      // Name (Sikander Ahmed)
-              "2": bookingDate,       // Date (December 15, 2024)
-              "3": startTime,         // Start Time (09:00 AM)
-              "4": endTime,           // End Time (01:00 PM)
-              "5": amount,            // Amount (25,000)
-              "6": booking.id,        // Booking ID (UUID)
-              "7": invoiceUrl,        // Receipt Link
-            })
-            templateSent = true
-          } catch (templateError) {
-            console.error("Template failed, using fallback:", templateError)
-          }
-        }
-
-        // Fallback to freeform message if template not sent
-        if (!templateSent) {
-          console.warn("BOOKING_PAYMENT_CONFIRMED_TEMPLATE_SID not configured or failed, using freeform message")
-          const messageLines = [
-            "Hello, this is Manzhil by Scrift.",
-            "",
-            "✅ PAYMENT CONFIRMED!",
-            "",
-            `Hi ${residentName}, your payment of Rs. ${amount} has been received.`,
-            "",
-            `Booking Date: ${bookingDate}`,
-            `Time: ${startTime} - ${endTime}`,
-            "",
-            `📄 View Paid Invoice: ${invoiceUrl}`,
-            "",
-            "Thank you for your payment!",
-            "- Manzhil by Scrift Team",
-          ]
-          await sendWhatsAppMessage(booking.profiles.phone_number, messageLines.join("\n"))
+          // Use WhatsApp template with fallback
+          await sendWhatsAppTemplate(booking.profiles.phone_number, BOOKING_PAYMENT_CONFIRMED_TEMPLATE_SID, {
+            "1": residentName,
+            "2": bookingDate,
+            "3": startTime,
+            "4": endTime,
+            "5": amount,
+            "6": booking.id,
+            "7": invoiceUrl,
+          }, fallbackMessage)
+        } else {
+          // No template configured, send fallback directly
+          await sendWhatsAppMessage(booking.profiles.phone_number, fallbackMessage)
         }
         console.log("WhatsApp notification sent successfully")
       } catch (whatsappError) {

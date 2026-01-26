@@ -21,12 +21,12 @@ interface RevenueChartProps {
     loading?: boolean
 }
 
-const COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444']
+const COLORS = ['#075E54', '#128C7E', '#25D366', '#f59e0b']
 
 export function MonthlyRevenueChart({ summary, loading }: RevenueChartProps) {
     if (loading) {
         return (
-            <Card>
+            <Card className="border-0 shadow-lg shadow-manzhil-teal/5">
                 <CardHeader>
                     <CardTitle>Monthly Revenue & Expenses</CardTitle>
                 </CardHeader>
@@ -85,13 +85,13 @@ export function MonthlyRevenueChart({ summary, loading }: RevenueChartProps) {
                             <Bar
                                 dataKey="bookingIncome"
                                 name="Booking Income"
-                                fill="#10b981"
+                                fill="#075E54"
                                 radius={[4, 4, 0, 0]}
                             />
                             <Bar
                                 dataKey="maintenanceIncome"
                                 name="Maintenance Income"
-                                fill="#3b82f6"
+                                fill="#128C7E"
                                 radius={[4, 4, 0, 0]}
                             />
                             <Bar
@@ -111,7 +111,7 @@ export function MonthlyRevenueChart({ summary, loading }: RevenueChartProps) {
 export function RevenueBreakdownPieChart({ summary, loading }: RevenueChartProps) {
     if (loading) {
         return (
-            <Card>
+            <Card className="border-0 shadow-lg shadow-manzhil-teal/5">
                 <CardHeader>
                     <CardTitle>Revenue Breakdown</CardTitle>
                 </CardHeader>
@@ -125,8 +125,8 @@ export function RevenueBreakdownPieChart({ summary, loading }: RevenueChartProps
     }
 
     const data = [
-        { name: 'Booking Revenue', value: summary?.bookingRevenue || 0, color: '#10b981' },
-        { name: 'Maintenance Revenue', value: summary?.maintenanceRevenue || 0, color: '#3b82f6' }
+        { name: 'Booking Revenue', value: summary?.bookingRevenue || 0, color: '#075E54' },
+        { name: 'Maintenance Revenue', value: summary?.maintenanceRevenue || 0, color: '#128C7E' }
     ].filter(d => d.value > 0)
 
     const formatCurrency = (value: number) => {

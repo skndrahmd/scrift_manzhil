@@ -214,84 +214,192 @@ export default function ResidentProfilePage({ params }: { params: { id: string }
     [complaints, complaintsPeriod],
   )
 
+  // Calculate stats
+  const paidPayments = payments.filter(p => p.status === "paid").length
+  const unpaidPayments = payments.filter(p => p.status === "unpaid").length
+  const confirmedBookings = bookings.filter(b => b.status === "confirmed").length
+  const pendingBookings = bookings.filter(b => b.payment_status === "pending").length
+  const resolvedComplaints = complaints.filter(c => c.status === "completed").length
+  const pendingComplaints = complaints.filter(c => c.status === "pending" || c.status === "in-progress").length
+
   if (loading) {
     return (
-      <div className="min-h-screen p-6">
-        <Button variant="ghost" className="mb-4" onClick={() => router.back()}>
+      <div className="min-h-screen bg-gradient-to-br from-manzhil-teal/5 via-white to-manzhil-dark/5 p-6">
+        <Button variant="ghost" className="mb-4 text-manzhil-dark" onClick={() => router.back()}>
           <ChevronLeft className="h-4 w-4 mr-2" /> Back
         </Button>
-        <Card>
-          <CardHeader>
-            <CardTitle>Loading...</CardTitle>
-          </CardHeader>
-          <CardContent className="flex items-center gap-2">
-            <Loader2 className="h-4 w-4 animate-spin" />
-            Please wait
+        <Card className="border-0 shadow-xl shadow-manzhil-teal/5">
+          <CardContent className="flex items-center justify-center gap-3 py-16">
+            <Loader2 className="h-6 w-6 animate-spin text-manzhil-teal" />
+            <span className="text-lg text-gray-600">Loading resident details...</span>
           </CardContent>
         </Card>
       </div>
     )
   }
 
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50">
-      <div className="container mx-auto p-6 space-y-6">
-        <div className="flex items-center justify-between">
-          <Button variant="ghost" onClick={() => router.back()}>
-            <ChevronLeft className="h-4 w-4 mr-2" />
-            Back
-          </Button>
-          <div />
-        </div>
+  // Get initials for avatar
+  const initials = profile?.name?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) || '?'
 
-        <Card className="border-0 shadow-xl">
-          <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50">
-            <CardTitle className="text-xl sm:text-2xl">
-              {profile?.name} — {profile?.apartment_number}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-6 space-y-4">
-            <div className="text-sm text-gray-600 space-y-1">
-              <p>Phone: {profile?.phone_number || "N/A"}</p>
-              <p>Monthly Maintenance: Rs. {profile?.maintenance_charges?.toLocaleString() ?? "0"}</p>
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-manzhil-teal/5 via-white to-manzhil-dark/5">
+      <div className="container mx-auto p-6 space-y-6">
+        {/* Back Button */}
+        <Button variant="ghost" onClick={() => router.back()} className="text-manzhil-dark hover:bg-manzhil-teal/10 -ml-2">
+          <ChevronLeft className="h-4 w-4 mr-2" />
+          Back to Residents
+        </Button>
+
+        {/* Profile Header Card */}
+        <Card className="border-0 shadow-xl shadow-manzhil-teal/10 overflow-hidden">
+          <div className="bg-gradient-to-r from-manzhil-dark to-manzhil-teal p-6 sm:p-8">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6">
+              {/* Avatar */}
+              <div className="h-20 w-20 sm:h-24 sm:w-24 rounded-full bg-white/20 backdrop-blur flex items-center justify-center text-white text-2xl sm:text-3xl font-bold shadow-lg">
+                {initials}
+              </div>
+
+              {/* Profile Info */}
+              <div className="flex-1 text-white">
+                <h1 className="text-2xl sm:text-3xl font-bold mb-1">{profile?.name}</h1>
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-white/80 text-sm sm:text-base">
+                  <span className="flex items-center gap-1">
+                    <span className="font-medium">Apt {profile?.apartment_number}</span>
+                  </span>
+                  <span>•</span>
+                  <span>{profile?.phone_number || "No phone"}</span>
+                  <span>•</span>
+                  <span>Member since {new Date(profile?.created_at || '').toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}</span>
+                </div>
+              </div>
+
+              {/* Maintenance Status Badge */}
+              <div className="hidden md:block">
+                <Badge className={`text-sm px-4 py-2 ${profile?.maintenance_paid ? 'bg-white/20 text-white border-white/30' : 'bg-red-500 text-white border-red-400'}`}>
+                  {profile?.maintenance_paid ? '✓ Maintenance Paid' : '⚠ Dues Pending'}
+                </Badge>
+              </div>
             </div>
-          </CardContent>
+          </div>
+
+          {/* Monthly Charge Info */}
+          <div className="bg-white px-6 py-4 border-t border-manzhil-teal/10">
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <div>
+                <span className="text-sm text-gray-500">Monthly Maintenance</span>
+                <p className="text-xl font-bold text-manzhil-dark">Rs. {profile?.maintenance_charges?.toLocaleString() ?? "0"}</p>
+              </div>
+              <div className="md:hidden">
+                <Badge className={`${profile?.maintenance_paid ? 'bg-manzhil-teal/20 text-manzhil-dark' : 'bg-red-100 text-red-700'}`}>
+                  {profile?.maintenance_paid ? '✓ Paid' : '⚠ Pending'}
+                </Badge>
+              </div>
+            </div>
+          </div>
         </Card>
+
+        {/* Stats Grid */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          {/* Maintenance Stats */}
+          <Card className="border-0 shadow-lg shadow-manzhil-teal/5 hover:shadow-xl hover:-translate-y-0.5 transition-all">
+            <CardContent className="p-5">
+              <div className="flex items-center justify-between mb-3">
+                <div className="h-10 w-10 rounded-full bg-manzhil-teal/10 flex items-center justify-center">
+                  <CheckCircle className="h-5 w-5 text-manzhil-teal" />
+                </div>
+                <Badge variant="outline" className="text-xs">{payments.length} total</Badge>
+              </div>
+              <p className="text-2xl font-bold text-manzhil-dark">{paidPayments} Paid</p>
+              <p className="text-sm text-gray-500">{unpaidPayments} unpaid months</p>
+            </CardContent>
+          </Card>
+
+          {/* Bookings Stats */}
+          <Card className="border-0 shadow-lg shadow-manzhil-teal/5 hover:shadow-xl hover:-translate-y-0.5 transition-all">
+            <CardContent className="p-5">
+              <div className="flex items-center justify-between mb-3">
+                <div className="h-10 w-10 rounded-full bg-manzhil-teal/10 flex items-center justify-center">
+                  <Calendar className="h-5 w-5 text-manzhil-teal" />
+                </div>
+                <Badge variant="outline" className="text-xs">{bookings.length} total</Badge>
+              </div>
+              <p className="text-2xl font-bold text-manzhil-dark">{confirmedBookings} Confirmed</p>
+              <p className="text-sm text-gray-500">{pendingBookings} pending payment</p>
+            </CardContent>
+          </Card>
+
+          {/* Complaints Stats */}
+          <Card className="border-0 shadow-lg shadow-manzhil-teal/5 hover:shadow-xl hover:-translate-y-0.5 transition-all">
+            <CardContent className="p-5">
+              <div className="flex items-center justify-between mb-3">
+                <div className="h-10 w-10 rounded-full bg-amber-100 flex items-center justify-center">
+                  <MessageSquare className="h-5 w-5 text-amber-600" />
+                </div>
+                <Badge variant="outline" className="text-xs">{complaints.length} total</Badge>
+              </div>
+              <p className="text-2xl font-bold text-manzhil-dark">{resolvedComplaints} Resolved</p>
+              <p className="text-sm text-gray-500">{pendingComplaints} in progress</p>
+            </CardContent>
+          </Card>
+
+          {/* Staff Stats */}
+          <Card className="border-0 shadow-lg shadow-manzhil-teal/5 hover:shadow-xl hover:-translate-y-0.5 transition-all">
+            <CardContent className="p-5">
+              <div className="flex items-center justify-between mb-3">
+                <div className="h-10 w-10 rounded-full bg-manzhil-dark/10 flex items-center justify-center">
+                  <Users className="h-5 w-5 text-manzhil-dark" />
+                </div>
+              </div>
+              <p className="text-2xl font-bold text-manzhil-dark">{staff.length} Staff</p>
+              <p className="text-sm text-gray-500">Registered members</p>
+            </CardContent>
+          </Card>
+        </div>
 
         <Tabs defaultValue="maintenance" className="space-y-6">
           <div className="overflow-x-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent">
-            <TabsList className="inline-flex w-full min-w-max bg-white rounded-xl shadow-sm border border-gray-200 p-1">
-              <TabsTrigger 
-                value="maintenance" 
-                className="data-[state=active]:bg-blue-600 data-[state=active]:text-white text-xs sm:text-sm px-3 sm:px-4 py-2 whitespace-nowrap"
+            <TabsList className="inline-flex w-full min-w-max bg-white rounded-xl shadow-lg shadow-manzhil-teal/5 border border-manzhil-teal/10 p-1.5 gap-1">
+              <TabsTrigger
+                value="maintenance"
+                className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-manzhil-dark data-[state=active]:to-manzhil-teal data-[state=active]:text-white data-[state=active]:shadow-md rounded-lg text-sm px-4 py-2.5 whitespace-nowrap transition-all flex items-center gap-2"
               >
+                <CheckCircle className="h-4 w-4" />
                 Maintenance
+                {unpaidPayments > 0 && (
+                  <span className="bg-red-500 text-white text-xs rounded-full px-2 py-0.5">{unpaidPayments}</span>
+                )}
               </TabsTrigger>
-              <TabsTrigger 
-                value="bookings" 
-                className="data-[state=active]:bg-green-600 data-[state=active]:text-white text-xs sm:text-sm px-3 sm:px-4 py-2 whitespace-nowrap"
+              <TabsTrigger
+                value="bookings"
+                className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-manzhil-dark data-[state=active]:to-manzhil-teal data-[state=active]:text-white data-[state=active]:shadow-md rounded-lg text-sm px-4 py-2.5 whitespace-nowrap transition-all flex items-center gap-2"
               >
-                Booking History
+                <Calendar className="h-4 w-4" />
+                Bookings
+                <span className="bg-manzhil-teal/20 text-manzhil-dark text-xs rounded-full px-2 py-0.5">{bookings.length}</span>
               </TabsTrigger>
               <TabsTrigger
                 value="complaints"
-                className="data-[state=active]:bg-orange-500 data-[state=active]:text-white text-xs sm:text-sm px-3 sm:px-4 py-2 whitespace-nowrap"
+                className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-amber-500 data-[state=active]:to-orange-500 data-[state=active]:text-white data-[state=active]:shadow-md rounded-lg text-sm px-4 py-2.5 whitespace-nowrap transition-all flex items-center gap-2"
               >
-                Complaints History
+                <MessageSquare className="h-4 w-4" />
+                Complaints
+                {pendingComplaints > 0 && (
+                  <span className="bg-amber-500 text-white text-xs rounded-full px-2 py-0.5">{pendingComplaints}</span>
+                )}
               </TabsTrigger>
-              <TabsTrigger 
-                value="staff" 
-                className="data-[state=active]:bg-purple-600 data-[state=active]:text-white text-xs sm:text-sm px-2 sm:px-4 py-2 whitespace-nowrap"
+              <TabsTrigger
+                value="staff"
+                className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-manzhil-dark data-[state=active]:to-manzhil-teal data-[state=active]:text-white data-[state=active]:shadow-md rounded-lg text-sm px-4 py-2.5 whitespace-nowrap transition-all flex items-center gap-2"
               >
-                <Users className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                <span className="hidden xs:inline">Staff Members</span>
-                <span className="inline xs:hidden">Staff</span>
+                <Users className="h-4 w-4" />
+                Staff
+                <span className="bg-manzhil-dark/10 text-manzhil-dark text-xs rounded-full px-2 py-0.5">{staff.length}</span>
               </TabsTrigger>
             </TabsList>
           </div>
 
           <TabsContent value="maintenance">
-            <Card className="border-0 shadow-xl">
+            <Card className="border-0 shadow-xl shadow-manzhil-teal/5">
               <CardHeader className="bg-white">
                 <CardTitle className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                   <span className="text-lg sm:text-xl">Maintenance Payments</span>
@@ -331,7 +439,7 @@ export default function ResidentProfilePage({ params }: { params: { id: string }
                 <div className="hidden md:block">
                   <Table>
                     <TableHeader>
-                      <TableRow className="bg-gray-50/50">
+                      <TableRow className="bg-gradient-to-r from-manzhil-teal/5 to-transparent">
                         <TableHead>Month</TableHead>
                         <TableHead>Amount</TableHead>
                         <TableHead>Status</TableHead>
@@ -341,11 +449,11 @@ export default function ResidentProfilePage({ params }: { params: { id: string }
                     </TableHeader>
                     <TableBody>
                       {filteredPayments.map((row) => (
-                        <TableRow key={row.id}>
+                        <TableRow key={row.id} className="hover:bg-manzhil-teal/5 transition-colors">
                           <TableCell className="font-medium">{formatMonth(row.year, row.month)}</TableCell>
                           <TableCell>Rs. {Number(row.amount).toLocaleString()}</TableCell>
                           <TableCell>
-                            <Badge variant={row.status === "paid" ? "default" : "secondary"}>{row.status}</Badge>
+                            <Badge variant={row.status === "paid" ? "default" : "secondary"} className={row.status === "paid" ? "bg-manzhil-teal/20 text-manzhil-dark" : ""}>{row.status}</Badge>
                           </TableCell>
                           <TableCell>
                             {row.paid_date ? new Date(row.paid_date + "T00:00:00").toLocaleDateString("en-GB") : "-"}
@@ -365,7 +473,7 @@ export default function ResidentProfilePage({ params }: { params: { id: string }
                                 variant="outline"
                                 size="sm"
                                 onClick={() => markPaid(row)}
-                                className="text-green-600 hover:bg-green-50 hover:border-green-200"
+                                className="text-manzhil-teal hover:bg-manzhil-teal/10 hover:border-manzhil-teal/30"
                               >
                                 <CheckCircle className="h-4 w-4 mr-1" /> Mark Paid
                               </Button>
@@ -405,7 +513,7 @@ export default function ResidentProfilePage({ params }: { params: { id: string }
                               {row.status}
                             </Badge>
                           </div>
-                          
+
                           <div className="space-y-2 text-sm">
                             <div className="flex justify-between">
                               <span className="text-gray-600">Amount:</span>
@@ -434,7 +542,7 @@ export default function ResidentProfilePage({ params }: { params: { id: string }
                                 variant="outline"
                                 size="sm"
                                 onClick={() => markPaid(row)}
-                                className="w-full text-green-600 hover:bg-green-50 hover:border-green-200"
+                                className="w-full text-manzhil-teal hover:bg-manzhil-teal/10 hover:border-manzhil-teal/30"
                               >
                                 <CheckCircle className="h-4 w-4 mr-2" /> Mark as Paid
                               </Button>
@@ -450,15 +558,15 @@ export default function ResidentProfilePage({ params }: { params: { id: string }
           </TabsContent>
 
           <TabsContent value="bookings">
-            <Card className="border-0 shadow-xl">
+            <Card className="border-0 shadow-xl shadow-manzhil-teal/5">
               <CardHeader className="bg-white">
                 <CardTitle className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                   <span className="text-lg sm:text-xl">Booking History</span>
                   <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">
                     <Select
-  value={bookingsPeriod}
-  onValueChange={(value) => setBookingsPeriod(value as Period)}
->
+                      value={bookingsPeriod}
+                      onValueChange={(value) => setBookingsPeriod(value as Period)}
+                    >
                       <SelectTrigger className="w-full sm:w-40 border-gray-200">
                         <Filter className="h-4 w-4 mr-2" />
                         <SelectValue placeholder="Period" />
@@ -513,7 +621,7 @@ export default function ResidentProfilePage({ params }: { params: { id: string }
               <CardContent className="p-0">
                 <Table>
                   <TableHeader>
-                    <TableRow className="bg-gray-50/50">
+                    <TableRow className="bg-gradient-to-r from-manzhil-teal/5 to-transparent">
                       <TableHead>Customer</TableHead>
                       <TableHead>Apartment</TableHead>
                       <TableHead>Date</TableHead>
@@ -526,7 +634,7 @@ export default function ResidentProfilePage({ params }: { params: { id: string }
                   </TableHeader>
                   <TableBody>
                     {bookingsDisplay.map((row) => (
-                      <TableRow key={row.id} className="hover:bg-gray-50/50 transition-colors">
+                      <TableRow key={row.id} className="hover:bg-manzhil-teal/5 transition-colors">
                         <TableCell className="font-medium text-gray-900">
                           {row.profiles?.name || profile?.name || "N/A"}
                         </TableCell>
@@ -559,15 +667,15 @@ export default function ResidentProfilePage({ params }: { params: { id: string }
           </TabsContent>
 
           <TabsContent value="complaints">
-            <Card className="border-0 shadow-xl">
+            <Card className="border-0 shadow-xl shadow-manzhil-teal/5">
               <CardHeader className="bg-white">
                 <CardTitle className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                   <span className="text-lg sm:text-xl">Complaints History</span>
                   <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">
                     <Select
-                    value={complaintsPeriod}
+                      value={complaintsPeriod}
                       onValueChange={(value) => setComplaintsPeriod(value as Period)}
->                      <SelectTrigger className="w-full sm:w-40 border-gray-200">
+                    >                      <SelectTrigger className="w-full sm:w-40 border-gray-200">
                         <Filter className="h-4 w-4 mr-2" />
                         <SelectValue placeholder="Period" />
                       </SelectTrigger>
@@ -621,7 +729,7 @@ export default function ResidentProfilePage({ params }: { params: { id: string }
               <CardContent className="p-0">
                 <Table>
                   <TableHeader>
-                    <TableRow className="bg-gray-50/50">
+                    <TableRow className="bg-gradient-to-r from-manzhil-teal/5 to-transparent">
                       <TableHead>Complaint ID</TableHead>
                       <TableHead>Customer</TableHead>
                       <TableHead>Apartment</TableHead>
@@ -634,7 +742,7 @@ export default function ResidentProfilePage({ params }: { params: { id: string }
                   </TableHeader>
                   <TableBody>
                     {complaintsDisplay.map((row) => (
-                      <TableRow key={row.id}>
+                      <TableRow key={row.id} className="hover:bg-manzhil-teal/5 transition-colors">
                         <TableCell className="font-medium">{row.complaint_id || row.id}</TableCell>
                         <TableCell>{row.profiles?.name || profile?.name || "N/A"}</TableCell>
                         <TableCell>{row.profiles?.apartment_number || profile?.apartment_number || "N/A"}</TableCell>
@@ -667,11 +775,11 @@ export default function ResidentProfilePage({ params }: { params: { id: string }
           </TabsContent>
 
           <TabsContent value="staff">
-            <Card className="border-0 shadow-xl">
+            <Card className="border-0 shadow-xl shadow-manzhil-teal/5">
               <CardHeader className="bg-white">
                 <CardTitle className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <Users className="h-5 w-5 text-purple-600" />
+                    <Users className="h-5 w-5 text-manzhil-teal" />
                     <span>Staff Members</span>
                   </div>
                   <Badge variant="outline" className="text-lg px-4 py-2">
@@ -691,7 +799,7 @@ export default function ResidentProfilePage({ params }: { params: { id: string }
                 ) : (
                   <Table>
                     <TableHeader>
-                      <TableRow className="bg-gray-50/50">
+                      <TableRow className="bg-gradient-to-r from-manzhil-teal/5 to-transparent">
                         <TableHead>Name</TableHead>
                         <TableHead>CNIC</TableHead>
                         <TableHead>Phone Number</TableHead>
@@ -701,12 +809,12 @@ export default function ResidentProfilePage({ params }: { params: { id: string }
                     </TableHeader>
                     <TableBody>
                       {staff.map((member) => (
-                        <TableRow key={member.id} className="hover:bg-gray-50/50 transition-colors">
+                        <TableRow key={member.id} className="hover:bg-manzhil-teal/5 transition-colors">
                           <TableCell className="font-medium text-gray-900">{member.name}</TableCell>
                           <TableCell className="font-mono text-gray-600">{member.cnic}</TableCell>
                           <TableCell className="text-gray-600">{member.phone_number}</TableCell>
                           <TableCell>
-                            <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200">
+                            <Badge variant="outline" className="bg-manzhil-teal/10 text-manzhil-dark border-manzhil-teal/30">
                               {member.role}
                             </Badge>
                           </TableCell>

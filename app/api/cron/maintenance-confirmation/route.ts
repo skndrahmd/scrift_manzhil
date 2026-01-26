@@ -29,32 +29,30 @@ export async function POST(request: NextRequest) {
       })
       const amount = Number(row.amount ?? 0).toLocaleString("en-PK")
 
+      // Fallback message
+      const fallbackMessage = `Hello, this is Manzhil by Scrift.
+
+Hi ${name}, your maintenance payment for ${String(row.month).padStart(2, "0")}-${row.year} has been received. ✅
+Invoice: ${invoiceLink}
+- Manzhil by Scrift Team`
+
       if (MAINTENANCE_PAYMENT_CONFIRMED_TEMPLATE_SID) {
-        // Use WhatsApp template for payment confirmation
-        // Template has 7 variables: 1=Name, 2=Month, 3=Year, 4=Apartment, 5=Amount, 6=PaymentDate, 7=InvoiceLink
+        // Use WhatsApp template with fallback
         const paymentDate = new Date()
         const monthName = new Date(row.year, row.month - 1, 1).toLocaleString("en-US", { month: "long" })
-        
+
         await sendWhatsAppTemplate(row.profiles?.phone_number, MAINTENANCE_PAYMENT_CONFIRMED_TEMPLATE_SID, {
-          "1": name,              // Name (Sikander Ahmed)
-          "2": monthName,         // Month (December)
-          "3": row.year.toString(), // Year (2025)
-          "4": row.profiles?.apartment_number || "N/A", // Apartment (A-101)
-          "5": amount,            // Amount (5,000) - Rs. is in template
-          "6": paymentDate.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "Asia/Karachi" }), // Payment Date (Dec 23, 2025)
-          "7": invoiceLink,       // Invoice link
-        })
+          "1": name,
+          "2": monthName,
+          "3": row.year.toString(),
+          "4": row.profiles?.apartment_number || "N/A",
+          "5": amount,
+          "6": paymentDate.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "Asia/Karachi" }),
+          "7": invoiceLink,
+        }, fallbackMessage)
       } else {
-        // Fallback to freeform message if template SID not configured
-        console.warn("MAINTENANCE_PAYMENT_CONFIRMED_TEMPLATE_SID not configured, using freeform message")
-        const messageLines = [
-          `Hello, this is Manzhil by Scrift.`,
-          ``,
-          `Hi ${name}, your maintenance payment for ${String(row.month).padStart(2, "0")}-${row.year} has been received. ✅`,
-          `Invoice: ${invoiceLink}`,
-          "- Manzhil by Scrift Team",
-        ]
-        await sendWhatsAppMessage(row.profiles?.phone_number, messageLines.join("\n"))
+        // No template configured, send fallback directly
+        await sendWhatsAppMessage(row.profiles?.phone_number, fallbackMessage)
       }
 
       await supabase

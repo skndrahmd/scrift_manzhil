@@ -810,29 +810,9 @@ async function createComplaint(profile: any, userState: any, phoneNumber: string
     // Send notification to staff about new complaint
     await sendNewComplaintNotification(complaintData, profile)
 
-    // Send confirmation to resident using template
-    try {
-      if (COMPLAINT_REGISTERED_TEMPLATE_SID) {
-        // Template variables: 1=Name, 2=ComplaintID, 3=Category, 4=Type, 5=Description, 6=RegisteredTime
-        await sendWhatsAppTemplate(phoneNumber, COMPLAINT_REGISTERED_TEMPLATE_SID, {
-          "1": profile.name || "Resident",
-          "2": complaintData.complaint_id,
-          "3": categoryText.charAt(0).toUpperCase() + categoryText.slice(1),
-          "4": subcategoryText,
-          "5": finalDescription || "No description provided",
-          "6": formattedDateTime,
-        })
-
-        // Template sent successfully, return empty string to avoid duplicate message
-        return ""
-      }
-    } catch (templateError) {
-      console.error("Failed to send complaint registered template:", templateError)
-    }
-
-    // Fallback: Return confirmation message if template failed
-    if (userState.complaint.subcategory === "other") {
-      return `✅ Your complaint has been registered and forwarded to the maintenance team.
+    // Build fallback message based on subcategory type
+    const fallbackMessage = userState.complaint.subcategory === "other"
+      ? `✅ Your complaint has been registered and forwarded to the maintenance team.
 
 🎫 Complaint ID: ${complaintData.complaint_id}
 📋 Category: ${categoryText.charAt(0).toUpperCase() + categoryText.slice(1)} - ${subcategoryText}
@@ -841,8 +821,7 @@ async function createComplaint(profile: any, userState: any, phoneNumber: string
 The management team has been notified and will address this matter promptly.
 
 Type 0 to return to the main menu`
-    } else {
-      return `✅ Your complaint about the ${subcategoryText.toLowerCase()} issue in your ${categoryText} has been registered.
+      : `✅ Your complaint about the ${subcategoryText.toLowerCase()} issue in your ${categoryText} has been registered.
 
 🎫 Complaint ID: ${complaintData.complaint_id}
 📅 Registered: ${formattedDateTime}
@@ -850,7 +829,24 @@ Type 0 to return to the main menu`
 The maintenance team has been notified and will resolve this as soon as possible.
 
 Type 0 to return to the main menu`
+
+    // Send confirmation to resident using template with fallback
+    if (COMPLAINT_REGISTERED_TEMPLATE_SID) {
+      const result = await sendWhatsAppTemplate(phoneNumber, COMPLAINT_REGISTERED_TEMPLATE_SID, {
+        "1": profile.name || "Resident",
+        "2": complaintData.complaint_id,
+        "3": categoryText.charAt(0).toUpperCase() + categoryText.slice(1),
+        "4": subcategoryText,
+        "5": finalDescription || "No description provided",
+        "6": formattedDateTime,
+      }, fallbackMessage)
+
+      // Return empty string since message was sent via API (either template or fallback)
+      return ""
     }
+
+    // No template SID configured, return fallback for TwiML response
+    return fallbackMessage
   } catch (error) {
     console.error("Create complaint error:", error)
     return "❌ Unable to create your complaint. Please try again.\n\nType 0 to return to the main menu"

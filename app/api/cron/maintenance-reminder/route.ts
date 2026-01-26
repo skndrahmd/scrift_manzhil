@@ -43,11 +43,11 @@ export async function POST(request: NextRequest) {
       .gte("year", currentYear - 1)
 
     const ledgerByProfile = new Map<string, any[]>()
-    ;(ledgers || []).forEach((row) => {
-      const arr = ledgerByProfile.get(row.profile_id) || []
-      arr.push(row)
-      ledgerByProfile.set(row.profile_id, arr)
-    })
+      ; (ledgers || []).forEach((row) => {
+        const arr = ledgerByProfile.get(row.profile_id) || []
+        arr.push(row)
+        ledgerByProfile.set(row.profile_id, arr)
+      })
 
     // Process each profile
     for (const prof of profiles) {
@@ -80,31 +80,28 @@ export async function POST(request: NextRequest) {
           const dueDate = formatDate(new Date(currentYear, currentMonth - 1, 10).toISOString().slice(0, 10))
           const amount = (prof.maintenance_charges ?? 0).toLocaleString()
 
+          // Fallback message
+          const fallbackMessage = `Hello, this is Manzhil by Scrift.
+
+Hi ${prof.name || "Resident"}, your ${monthYearLabel} maintenance invoice is ready.
+
+Amount: Rs. ${amount}
+Due Date: ${dueDate}
+
+📄 View Invoice: ${invoiceLink}
+
+Please pay at your earliest convenience.
+- Manzhil by Scrift Team`
+
           if (MAINTENANCE_INVOICE_TEMPLATE_SID) {
-            // Use WhatsApp template for new invoice notification
             await sendWhatsAppTemplate(prof.phone_number, MAINTENANCE_INVOICE_TEMPLATE_SID, {
               "1": monthYearLabel,
               "2": amount,
               "3": dueDate,
               "4": invoiceLink,
-            })
+            }, fallbackMessage)
           } else {
-            // Fallback to freeform message if template SID not configured
-            console.warn("MAINTENANCE_INVOICE_TEMPLATE_SID not configured, using freeform message")
-            const messageLines = [
-              `Hello, this is Manzhil by Scrift.`,
-              "",
-              `Hi ${prof.name || "Resident"}, your ${monthYearLabel} maintenance invoice is ready.`,
-              "",
-              `Amount: Rs. ${amount}`,
-              `Due Date: ${dueDate}`,
-              "",
-              `📄 View Invoice: ${invoiceLink}`,
-              "",
-              "Please pay at your earliest convenience.",
-              "- Manzhil by Scrift Team",
-            ]
-            await sendWhatsAppMessage(prof.phone_number, messageLines.join("\n"))
+            await sendWhatsAppMessage(prof.phone_number, fallbackMessage)
           }
         }
       }
@@ -147,30 +144,27 @@ export async function POST(request: NextRequest) {
         const monthsList = unpaid.map((r) => formatMonthYear(r.year, r.month)).join(", ")
         const invoiceLink = `${APP_BASE_URL}/maintenance-invoice/${unpaid[0].id}?snapshot=unpaid`
 
+        // Fallback message
+        const fallbackMessage = `Hello, this is Manzhil by Scrift.
+
+Hi ${prof.name || "Resident"}, ⚠️ reminder: your maintenance payment is due.
+
+Due months: ${monthsList}
+Total amount: Rs. ${totalDue.toLocaleString()}
+
+📄 View Invoice: ${invoiceLink}
+
+Please pay as soon as possible. Thank you.
+- Manzhil by Scrift Team`
+
         if (MAINTENANCE_PAYMENT_REMINDER_TEMPLATE_SID) {
-          // Use WhatsApp template for payment reminder
           await sendWhatsAppTemplate(prof.phone_number, MAINTENANCE_PAYMENT_REMINDER_TEMPLATE_SID, {
             "1": monthsList,
             "2": totalDue.toLocaleString(),
             "3": invoiceLink,
-          })
+          }, fallbackMessage)
         } else {
-          // Fallback to freeform message if template SID not configured
-          console.warn("MAINTENANCE_PAYMENT_REMINDER_TEMPLATE_SID not configured, using freeform message")
-          const messageLines = [
-            "Hello, this is Manzhil by Scrift.",
-            "",
-            `Hi ${prof.name || "Resident"}, ⚠️ reminder: your maintenance payment is due.`,
-            "",
-            `Due months: ${monthsList}`,
-            `Total amount: Rs. ${totalDue.toLocaleString()}`,
-            "",
-            `📄 View Invoice: ${invoiceLink}`,
-            "",
-            "Please pay as soon as possible. Thank you.",
-            "- Manzhil by Scrift Team",
-          ]
-          await sendWhatsAppMessage(prof.phone_number, messageLines.join("\n"))
+          await sendWhatsAppMessage(prof.phone_number, fallbackMessage)
         }
 
         // Update reminder timestamp for all unpaid invoices

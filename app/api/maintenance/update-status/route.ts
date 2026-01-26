@@ -91,33 +91,31 @@ export async function POST(request: NextRequest) {
       const residentName = payment.profiles.name || "Resident"
 
       try {
-        if (MAINTENANCE_PAYMENT_CONFIRMED_TEMPLATE_SID) {
-          // Use WhatsApp template for payment confirmation
-          // Template has 7 variables: 1=Name, 2=Month, 3=Year, 4=Apartment, 5=Amount, 6=PaymentDate, 7=InvoiceLink
-          const paymentDate = new Date()
-          const monthName = new Date(payment.year, payment.month - 1, 1).toLocaleString("en-US", { month: "long" })
+        const paymentDate = new Date()
+        const monthName = new Date(payment.year, payment.month - 1, 1).toLocaleString("en-US", { month: "long" })
 
+        // Fallback message
+        const fallbackMessage = `Hello, this is Manzhil by Scrift.
+
+Hi ${residentName}, your maintenance payment for ${month} (Rs. ${amount}) has been received and confirmed.
+Thank you for keeping your dues current.
+Invoice: ${invoiceLink}
+- Manzhil by Scrift Team`
+
+        if (MAINTENANCE_PAYMENT_CONFIRMED_TEMPLATE_SID) {
+          // Use WhatsApp template with fallback
           await sendWhatsAppTemplate(payment.profiles.phone_number, MAINTENANCE_PAYMENT_CONFIRMED_TEMPLATE_SID, {
-            "1": residentName,      // Name (Sikander Ahmed)
-            "2": monthName,         // Month (December)
-            "3": payment.year.toString(), // Year (2025)
-            "4": payment.profiles.apartment_number || "N/A", // Apartment (A-101)
-            "5": amount,            // Amount (5,000) - Rs. is in template
-            "6": paymentDate.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "Asia/Karachi" }), // Payment Date (Dec 23, 2025)
-            "7": invoiceLink,       // Invoice link
-          })
+            "1": residentName,
+            "2": monthName,
+            "3": payment.year.toString(),
+            "4": payment.profiles.apartment_number || "N/A",
+            "5": amount,
+            "6": paymentDate.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "Asia/Karachi" }),
+            "7": invoiceLink,
+          }, fallbackMessage)
         } else {
-          // Fallback to freeform message if template SID not configured
-          console.warn("MAINTENANCE_PAYMENT_CONFIRMED_TEMPLATE_SID not configured, using freeform message")
-          const message = [
-            `Hello, this is Manzhil by Scrift.`,
-            ``,
-            `Hi ${residentName}, your maintenance payment for ${month} (Rs. ${amount}) has been received and confirmed.`,
-            `Thank you for keeping your dues current.`,
-            `Invoice: ${invoiceLink}`,
-            "- Manzhil by Scrift Team",
-          ].join("\n")
-          await sendWhatsAppMessage(payment.profiles.phone_number, message)
+          // No template configured, send fallback directly
+          await sendWhatsAppMessage(payment.profiles.phone_number, fallbackMessage)
         }
       } catch (notifyError) {
         console.error("Failed to send maintenance payment notification:", notifyError)
