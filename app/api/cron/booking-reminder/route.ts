@@ -1,24 +1,15 @@
 import type { NextRequest } from "next/server"
 import { supabase } from "@/lib/supabase"
 import { getPakistanISOString } from "@/lib/dateUtils"
-import { sendWhatsAppMessage, sendWhatsAppTemplate } from "@/lib/twilio"
+import {
+  sendBookingReminder,
+  sendBookingCancelled,
+  formatDate,
+  formatTime,
+} from "@/lib/twilio"
 
 const CRON_KEY = process.env.CRON_SECRET
 const APP_BASE_URL = (process.env.NEXT_PUBLIC_APP_URL || "https://your-app-url.com").replace(/\/$/, "")
-const BOOKING_PAYMENT_REMINDER_TEMPLATE_SID = process.env.TWILIO_BOOKING_PAYMENT_REMINDER_TEMPLATE_SID
-const BOOKING_CANCELLED_TEMPLATE_SID = process.env.TWILIO_BOOKING_CANCELLED_TEMPLATE_SID
-
-function fmtDate(d: string) {
-  const dt = new Date(d + "T00:00:00")
-  return dt.toLocaleDateString("en-GB", { day: "2-digit", month: "2-digit", year: "numeric" })
-}
-
-function fmtTime(t: string) {
-  const [h, m] = t.split(":").map(Number)
-  const ampm = h >= 12 ? "PM" : "AM"
-  const hh = h === 0 ? 12 : h > 12 ? h - 12 : h
-  return `${hh}:${String(m).padStart(2, "0")} ${ampm}`
-}
 
 function daysSinceCreation(createdAt: string): number {
   const created = new Date(createdAt)
@@ -53,7 +44,6 @@ export async function POST(request: NextRequest) {
       if (!b.created_at) continue
 
       const daysSince = daysSinceCreation(b.created_at)
-      const invoiceLink = `${APP_BASE_URL}/booking-invoice/${b.id}?payment=pending&booking=confirmed`
 
       // Day 0 (same day as creation): Don't send reminder
       if (daysSince === 0) {
@@ -68,30 +58,14 @@ export async function POST(request: NextRequest) {
           .eq("id", b.id)
 
         if (b.profiles?.phone_number) {
-          const residentName = b.profiles.name || "Resident"
-          const bookingDate = fmtDate(b.booking_date)
-          const startTime = fmtTime(b.start_time)
-          const endTime = fmtTime(b.end_time)
-
-          // Fallback message
-          const fallbackMessage = `Hello, this is Manzhil by Scrift.
-
-Hi ${residentName}, your booking on ${bookingDate} (${startTime} - ${endTime}) has been cancelled due to non-payment within 3 days of booking.
-Invoice: ${invoiceLink}
-- Manzhil by Scrift Team`
-
-          if (BOOKING_CANCELLED_TEMPLATE_SID) {
-            await sendWhatsAppTemplate(b.profiles.phone_number, BOOKING_CANCELLED_TEMPLATE_SID, {
-              "1": residentName,
-              "2": bookingDate,
-              "3": startTime,
-              "4": endTime,
-              "5": b.id,
-              "6": invoiceLink,
-            }, fallbackMessage)
-          } else {
-            await sendWhatsAppMessage(b.profiles.phone_number, fallbackMessage)
-          }
+          await sendBookingCancelled({
+            phone: b.profiles.phone_number,
+            name: b.profiles.name || "Resident",
+            bookingDate: b.booking_date,
+            startTime: b.start_time,
+            endTime: b.end_time,
+            reason: "Non-payment within 3 days of booking",
+          })
         }
         continue
       }
@@ -102,32 +76,13 @@ Invoice: ${invoiceLink}
       // if (sentToday) continue
 
       if (b.profiles?.phone_number) {
-        const amount = Number(b.booking_charges).toLocaleString()
-        const residentName = b.profiles.name || "Resident"
-        const bookingDate = fmtDate(b.booking_date)
-        const startTime = fmtTime(b.start_time)
-        const endTime = fmtTime(b.end_time)
-
-        // Fallback message
-        const fallbackMessage = `Hello, this is Manzhil by Scrift.
-
-Hi ${residentName}, reminder: your booking payment of Rs. ${amount} for ${bookingDate} (${startTime} - ${endTime}) is due.
-Payment is due within 3 days of booking. Day ${daysSince} of 3.
-Invoice: ${invoiceLink}
-- Manzhil by Scrift Team`
-
-        if (BOOKING_PAYMENT_REMINDER_TEMPLATE_SID) {
-          await sendWhatsAppTemplate(b.profiles.phone_number, BOOKING_PAYMENT_REMINDER_TEMPLATE_SID, {
-            "1": amount,
-            "2": bookingDate,
-            "3": startTime,
-            "4": endTime,
-            "5": String(daysSince),
-            "6": invoiceLink,
-          }, fallbackMessage)
-        } else {
-          await sendWhatsAppMessage(b.profiles.phone_number, fallbackMessage)
-        }
+        await sendBookingReminder({
+          phone: b.profiles.phone_number,
+          name: b.profiles.name || "Resident",
+          bookingDate: b.booking_date,
+          startTime: b.start_time,
+          endTime: b.end_time,
+        })
       }
 
       await supabase
@@ -146,4 +101,3 @@ Invoice: ${invoiceLink}
 export async function GET() {
   return new Response("Use POST", { status: 200 })
 }
-

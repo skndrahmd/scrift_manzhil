@@ -1,40 +1,16 @@
 import type { NextRequest } from "next/server"
 import { supabase } from "@/lib/supabase"
 import { getPakistanISOString } from "@/lib/dateUtils"
-import { sendWhatsAppMessage, sendWhatsAppTemplate } from "@/lib/twilio"
-
-const COMPLAINT_IN_PROGRESS_TEMPLATE_SID = process.env.TWILIO_COMPLAINT_IN_PROGRESS_TEMPLATE_SID
-const COMPLAINT_COMPLETED_TEMPLATE_SID = process.env.TWILIO_COMPLAINT_COMPLETED_TEMPLATE_SID
-const COMPLAINT_REJECTED_TEMPLATE_SID = process.env.TWILIO_COMPLAINT_REJECTED_TEMPLATE_SID
+import {
+  sendComplaintInProgress,
+  sendComplaintCompleted,
+  sendComplaintRejected,
+  sendComplaintPending,
+  formatDateTime,
+} from "@/lib/twilio"
 
 const ALLOWED_STATUSES = ["pending", "in-progress", "completed", "cancelled"] as const
 type ComplaintStatus = (typeof ALLOWED_STATUSES)[number]
-
-function statusLabel(status: ComplaintStatus) {
-  switch (status) {
-    case "pending":
-      return "Pending"
-    case "in-progress":
-      return "In Progress"
-    case "completed":
-      return "Completed"
-    case "cancelled":
-      return "Cancelled"
-    default:
-      return status
-  }
-}
-
-type ComplaintWithProfiles = {
-  id: string
-  complaint_id: string
-  status: ComplaintStatus
-  category: string
-  subcategory: string
-  description: string
-  profile_id: string
-  profiles: { name: string; phone_number: string }[] // array from Supabase
-}
 
 export async function POST(request: NextRequest) {
   try {
@@ -93,7 +69,6 @@ export async function POST(request: NextRequest) {
 
     if (updateError) throw updateError
 
-    // 🔍 DEBUG: Log profile data
     console.log("[COMPLAINT UPDATE] Profile data:", {
       hasProfile: !!profile,
       phone_number: profile?.phone_number,
@@ -103,111 +78,36 @@ export async function POST(request: NextRequest) {
     })
 
     if (profile?.phone_number) {
-      const residentName = profile.name || "Resident"
-      const complaintId = complaint.complaint_id
-
-      // Format subcategory for display
-      const subcategoryDisplay = complaint.subcategory
-        .split('_')
-        .map((word: string) => word.charAt(0).toUpperCase() + word.slice(1))
-        .join(' ')
-
-      // Format timestamps
       const createdAt = new Date(complaint.created_at || Date.now())
       const resolvedAt = new Date()
+      const createdTime = formatDateTime(createdAt)
+      const resolvedTime = formatDateTime(resolvedAt)
 
-      const formatTime = (date: Date) => {
-        return date.toLocaleString('en-US', {
-          month: 'short',
-          day: 'numeric',
-          hour: 'numeric',
-          minute: '2-digit',
-          hour12: true,
-          timeZone: 'Asia/Karachi'
-        })
+      const notificationParams = {
+        phone: profile.phone_number,
+        name: profile.name || "Resident",
+        complaintId: complaint.complaint_id,
+        subcategory: complaint.subcategory,
+        registeredTime: createdTime,
+        resolvedTime: resolvedTime,
       }
 
-      const createdTime = formatTime(createdAt)
-      const resolvedTime = formatTime(resolvedAt)
-
-      console.log("[COMPLAINT UPDATE] Attempting to send WhatsApp message:", {
+      console.log("[COMPLAINT UPDATE] Sending notification:", {
         to: profile.phone_number,
-        complaintId,
+        complaintId: complaint.complaint_id,
         status,
-        subcategory: subcategoryDisplay
       })
 
       try {
-        // Prepare fallback messages for each status
-        const fallbackMessages: Record<string, string> = {
-          completed: `Hello, this is Manzhil by Scrift.
-
-✅ Complaint Resolved
-
-Hi ${residentName}, your ${subcategoryDisplay} complaint (${complaintId}) registered on ${createdTime} has been resolved at ${resolvedTime}.
-
-If you require further assistance, please contact us.
-
-- Manzhil by Scrift Team`,
-          "in-progress": `Hello, this is Manzhil by Scrift.
-
-🔄 Complaint In Progress
-
-Hi ${residentName}, your ${subcategoryDisplay} complaint (${complaintId}) registered on ${createdTime} is now in progress.
-
-The maintenance team is actively working to resolve this matter.
-
-- Manzhil by Scrift Team`,
-          cancelled: `Hello, this is Manzhil by Scrift.
-
-❌ Complaint Cancelled
-
-Hi ${residentName}, your ${subcategoryDisplay} complaint (${complaintId}) registered on ${createdTime} has been cancelled.
-
-If this was unexpected or you require further assistance, please contact us.
-
-- Manzhil by Scrift Team`,
-          pending: `Hello, this is Manzhil by Scrift.
-
-📋 Complaint Status Update
-
-Hi ${residentName}, your ${subcategoryDisplay} complaint (${complaintId}) registered on ${createdTime} is currently pending review.
-
-The team will address this matter shortly.
-
-- Manzhil by Scrift Team`
-        }
-
-        const fallbackMessage = fallbackMessages[status] || fallbackMessages.pending
-
-        // Send template with built-in fallback
-        if (status === "completed" && COMPLAINT_COMPLETED_TEMPLATE_SID) {
-          await sendWhatsAppTemplate(profile.phone_number, COMPLAINT_COMPLETED_TEMPLATE_SID, {
-            "1": residentName,
-            "2": subcategoryDisplay,
-            "3": complaintId,
-            "4": createdTime,
-            "5": resolvedTime,
-          }, fallbackMessage)
-        } else if (status === "in-progress" && COMPLAINT_IN_PROGRESS_TEMPLATE_SID) {
-          await sendWhatsAppTemplate(profile.phone_number, COMPLAINT_IN_PROGRESS_TEMPLATE_SID, {
-            "1": residentName,
-            "2": subcategoryDisplay,
-            "3": complaintId,
-            "4": createdTime,
-          }, fallbackMessage)
-        } else if (status === "cancelled" && COMPLAINT_REJECTED_TEMPLATE_SID) {
-          await sendWhatsAppTemplate(profile.phone_number, COMPLAINT_REJECTED_TEMPLATE_SID, {
-            "1": residentName,
-            "2": subcategoryDisplay,
-            "3": complaintId,
-            "4": createdTime,
-          }, fallbackMessage)
+        if (status === "completed") {
+          await sendComplaintCompleted(notificationParams)
+        } else if (status === "in-progress") {
+          await sendComplaintInProgress(notificationParams)
+        } else if (status === "cancelled") {
+          await sendComplaintRejected(notificationParams)
         } else {
-          // No template configured, send fallback directly
-          await sendWhatsAppMessage(profile.phone_number, fallbackMessage)
+          await sendComplaintPending(notificationParams)
         }
-
         console.log("[COMPLAINT UPDATE] WhatsApp notification sent successfully")
       } catch (notifyError) {
         console.error("[COMPLAINT UPDATE] Failed to send complaint status notification:", notifyError)

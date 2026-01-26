@@ -1,10 +1,9 @@
 import type { NextRequest } from "next/server"
 import { supabase } from "@/lib/supabase"
 import { getPakistanISOString } from "@/lib/dateUtils"
-import { sendWhatsAppMessage, sendWhatsAppTemplate } from "@/lib/twilio"
+import { sendBookingConfirmation, formatDate, formatTime } from "@/lib/twilio"
 
 const APP_BASE_URL = (process.env.NEXT_PUBLIC_APP_URL || "https://your-app-url.com").replace(/\/$/, "")
-const BOOKING_PAYMENT_CONFIRMED_TEMPLATE_SID = process.env.TWILIO_BOOKING_PAYMENT_CONFIRMED_TEMPLATE_SID
 
 export async function POST(request: NextRequest) {
   try {
@@ -93,42 +92,17 @@ export async function POST(request: NextRequest) {
     if (paymentStatus === "paid" && booking.profiles?.phone_number) {
       try {
         const invoiceUrl = `${APP_BASE_URL}/booking-invoice/${booking.id}?payment=paid&booking=confirmed`
-        const residentName = booking.profiles.name || "Resident"
-        const amount = booking.booking_charges.toLocaleString()
-        const bookingDate = formatDate(booking.booking_date)
-        const startTime = formatTime(booking.start_time)
-        const endTime = formatTime(booking.end_time)
 
-        // Fallback message
-        const fallbackMessage = `Hello, this is Manzhil by Scrift.
-
-✅ PAYMENT CONFIRMED!
-
-Hi ${residentName}, your payment of Rs. ${amount} has been received.
-
-Booking Date: ${bookingDate}
-Time: ${startTime} - ${endTime}
-
-📄 View Paid Invoice: ${invoiceUrl}
-
-Thank you for your payment!
-- Manzhil by Scrift Team`
-
-        if (BOOKING_PAYMENT_CONFIRMED_TEMPLATE_SID) {
-          // Use WhatsApp template with fallback
-          await sendWhatsAppTemplate(booking.profiles.phone_number, BOOKING_PAYMENT_CONFIRMED_TEMPLATE_SID, {
-            "1": residentName,
-            "2": bookingDate,
-            "3": startTime,
-            "4": endTime,
-            "5": amount,
-            "6": booking.id,
-            "7": invoiceUrl,
-          }, fallbackMessage)
-        } else {
-          // No template configured, send fallback directly
-          await sendWhatsAppMessage(booking.profiles.phone_number, fallbackMessage)
-        }
+        await sendBookingConfirmation({
+          phone: booking.profiles.phone_number,
+          name: booking.profiles.name || "Resident",
+          bookingDate: booking.booking_date,
+          startTime: booking.start_time,
+          endTime: booking.end_time,
+          amount: booking.booking_charges,
+          bookingId: booking.id,
+          invoiceUrl,
+        })
         console.log("WhatsApp notification sent successfully")
       } catch (whatsappError) {
         console.error("Error sending WhatsApp notification:", whatsappError)
@@ -144,7 +118,7 @@ Thank you for your payment!
           amount: booking.booking_charges,
           description: `Hall Booking - ${formatDate(booking.booking_date)}`,
           transaction_date: new Date().toISOString().split('T')[0],
-          payment_method: "cash", // Default, can be updated to track actual method
+          payment_method: "cash",
           notes: `Booking from ${formatTime(booking.start_time)} to ${formatTime(booking.end_time)}`
         })
         console.log("Transaction record created for booking:", booking.id)
@@ -178,21 +152,4 @@ Thank you for your payment!
       },
     )
   }
-}
-
-function formatDate(dateString: string) {
-  const date = new Date(dateString + "T00:00:00")
-  return date.toLocaleDateString("en-GB", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  })
-}
-
-function formatTime(timeString: string) {
-  const [hours, minutes] = timeString.split(":")
-  const hour = Number.parseInt(hours)
-  const ampm = hour >= 12 ? "PM" : "AM"
-  const displayHour = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour
-  return `${displayHour}:${minutes} ${ampm}`
 }
