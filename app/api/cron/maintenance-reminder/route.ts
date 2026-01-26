@@ -1,25 +1,16 @@
 import type { NextRequest } from "next/server"
 import { supabase } from "@/lib/supabase"
 import { getPakistanISOString } from "@/lib/dateUtils"
-import { sendWhatsAppMessage, sendWhatsAppTemplate } from "@/lib/twilio"
+import {
+  sendMaintenanceInvoice,
+  sendMaintenanceReminder,
+  formatMonthYear,
+  formatDate,
+  getTodayString,
+} from "@/lib/twilio"
 
 const CRON_KEY = process.env.CRON_SECRET
 const APP_BASE_URL = (process.env.NEXT_PUBLIC_APP_URL || "https://your-app-url.com").replace(/\/$/, "")
-const MAINTENANCE_INVOICE_TEMPLATE_SID = process.env.TWILIO_MAINTENANCE_INVOICE_TEMPLATE_SID
-const MAINTENANCE_PAYMENT_REMINDER_TEMPLATE_SID = process.env.TWILIO_MAINTENANCE_PAYMENT_REMINDER_TEMPLATE_SID
-
-function todayStr() {
-  const d = new Date()
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`
-}
-
-function formatMonthYear(year: number, month: number) {
-  const date = new Date(year, month - 1, 1)
-  return date.toLocaleDateString("en-GB", {
-    month: "long",
-    year: "numeric",
-  })
-}
 
 export async function POST(request: NextRequest) {
   const provided = request.headers.get("x-cron-key")
@@ -74,38 +65,19 @@ export async function POST(request: NextRequest) {
           rows.push(inserted)
           ledgerByProfile.set(prof.id, rows)
 
-          // Send invoice ready message using template
+          // Send invoice ready message
           const invoiceLink = `${APP_BASE_URL}/maintenance-invoice/${inserted.id}?snapshot=unpaid`
           const monthYearLabel = formatMonthYear(currentYear, currentMonth)
           const dueDate = formatDate(new Date(currentYear, currentMonth - 1, 10).toISOString().slice(0, 10))
-          const amount = (prof.maintenance_charges ?? 0).toLocaleString()
 
-          if (MAINTENANCE_INVOICE_TEMPLATE_SID) {
-            // Use WhatsApp template for new invoice notification
-            await sendWhatsAppTemplate(prof.phone_number, MAINTENANCE_INVOICE_TEMPLATE_SID, {
-              "1": monthYearLabel,
-              "2": amount,
-              "3": dueDate,
-              "4": invoiceLink,
-            })
-          } else {
-            // Fallback to freeform message if template SID not configured
-            console.warn("MAINTENANCE_INVOICE_TEMPLATE_SID not configured, using freeform message")
-            const messageLines = [
-              `Hello, this is Manzhil by Scrift.`,
-              "",
-              `Hi ${prof.name || "Resident"}, your ${monthYearLabel} maintenance invoice is ready.`,
-              "",
-              `Amount: Rs. ${amount}`,
-              `Due Date: ${dueDate}`,
-              "",
-              `📄 View Invoice: ${invoiceLink}`,
-              "",
-              "Please pay at your earliest convenience.",
-              "- Manzhil by Scrift Team",
-            ]
-            await sendWhatsAppMessage(prof.phone_number, messageLines.join("\n"))
-          }
+          await sendMaintenanceInvoice({
+            phone: prof.phone_number,
+            name: prof.name || "Resident",
+            monthYear: monthYearLabel,
+            amount: prof.maintenance_charges ?? 0,
+            dueDate,
+            invoiceUrl: invoiceLink,
+          })
         }
       }
       // From 3rd onwards, send reminders for unpaid invoices
@@ -139,7 +111,7 @@ export async function POST(request: NextRequest) {
 
         // Check if reminder was already sent today
         const last = unpaid.find((r) => r.reminder_last_sent_at)
-        const sentToday = last && last.reminder_last_sent_at?.slice(0, 10) === todayStr()
+        const sentToday = last && last.reminder_last_sent_at?.slice(0, 10) === getTodayString()
         // if (sentToday) continue
 
         // Calculate total due and format months list
@@ -147,31 +119,13 @@ export async function POST(request: NextRequest) {
         const monthsList = unpaid.map((r) => formatMonthYear(r.year, r.month)).join(", ")
         const invoiceLink = `${APP_BASE_URL}/maintenance-invoice/${unpaid[0].id}?snapshot=unpaid`
 
-        if (MAINTENANCE_PAYMENT_REMINDER_TEMPLATE_SID) {
-          // Use WhatsApp template for payment reminder
-          await sendWhatsAppTemplate(prof.phone_number, MAINTENANCE_PAYMENT_REMINDER_TEMPLATE_SID, {
-            "1": monthsList,
-            "2": totalDue.toLocaleString(),
-            "3": invoiceLink,
-          })
-        } else {
-          // Fallback to freeform message if template SID not configured
-          console.warn("MAINTENANCE_PAYMENT_REMINDER_TEMPLATE_SID not configured, using freeform message")
-          const messageLines = [
-            "Hello, this is Manzhil by Scrift.",
-            "",
-            `Hi ${prof.name || "Resident"}, ⚠️ reminder: your maintenance payment is due.`,
-            "",
-            `Due months: ${monthsList}`,
-            `Total amount: Rs. ${totalDue.toLocaleString()}`,
-            "",
-            `📄 View Invoice: ${invoiceLink}`,
-            "",
-            "Please pay as soon as possible. Thank you.",
-            "- Manzhil by Scrift Team",
-          ]
-          await sendWhatsAppMessage(prof.phone_number, messageLines.join("\n"))
-        }
+        await sendMaintenanceReminder({
+          phone: prof.phone_number,
+          name: prof.name || "Resident",
+          monthsList,
+          totalAmount: totalDue,
+          invoiceUrl: invoiceLink,
+        })
 
         // Update reminder timestamp for all unpaid invoices
         const ids = unpaid.map((u) => u.id)
@@ -191,13 +145,4 @@ export async function POST(request: NextRequest) {
 
 export async function GET() {
   return new Response("Use POST", { status: 200 })
-}
-
-function formatDate(dateString: string) {
-  const date = new Date(dateString + "T00:00:00")
-  return date.toLocaleDateString("en-GB", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  })
 }

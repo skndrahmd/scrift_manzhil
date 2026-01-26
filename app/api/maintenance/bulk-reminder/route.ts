@@ -1,6 +1,6 @@
 import type { NextRequest } from "next/server"
 import { supabase } from "@/lib/supabase"
-import { sendWhatsAppMessage } from "@/lib/twilio"
+import { sendMessage, formatCurrency } from "@/lib/twilio"
 
 export async function POST(request: NextRequest) {
   try {
@@ -57,20 +57,20 @@ export async function POST(request: NextRequest) {
       try {
         const residentName = profile.name || "Resident"
         const monthlyCharges = profile.maintenance_charges || 0
-        
+
         // Calculate overdue months if last payment date exists
         let overdueMonths = 0
         let lastPaymentText = ""
-        
+
         if (profile.last_payment_date) {
           const lastPayment = new Date(profile.last_payment_date)
           const currentDate = new Date()
-          overdueMonths = (currentDate.getFullYear() - lastPayment.getFullYear()) * 12 + 
-                         (currentDate.getMonth() - lastPayment.getMonth())
-          
-          lastPaymentText = `\n💳 Last Payment: ${lastPayment.toLocaleDateString('en-US', { 
-            month: 'short', 
-            day: 'numeric', 
+          overdueMonths = (currentDate.getFullYear() - lastPayment.getFullYear()) * 12 +
+            (currentDate.getMonth() - lastPayment.getMonth())
+
+          lastPaymentText = `\nLast Payment: ${lastPayment.toLocaleDateString('en-US', {
+            month: 'short',
+            day: 'numeric',
             year: 'numeric',
             timeZone: 'Asia/Karachi'
           })}`
@@ -78,24 +78,27 @@ export async function POST(request: NextRequest) {
 
         const totalDue = overdueMonths > 0 ? monthlyCharges * overdueMonths : monthlyCharges
 
-        const message = `Hello, this is Manzhil by Scrift.
+        const message = [
+          "Hello, this is Manzhil by Scrift.",
+          "",
+          "Maintenance Payment Reminder",
+          "",
+          `Hi ${residentName}, this is a payment reminder.${lastPaymentText}`,
+          "",
+          "Payment Details:",
+          `Monthly Charges: Rs. ${formatCurrency(monthlyCharges)}`,
+          overdueMonths > 0 ? `Overdue Months: ${overdueMonths}\nTotal Due: Rs. ${formatCurrency(totalDue)}` : "",
+          "",
+          "Please make your payment at your earliest convenience to avoid any service interruptions.",
+          "",
+          "If you've already paid, please disregard this message.",
+          "",
+          "Thank you for your cooperation!",
+          "- Manzhil by Scrift Team",
+        ].filter(Boolean).join("\n")
 
-💰 Maintenance Payment Reminder
+        const result = await sendMessage(profile.phone_number, message)
 
-Hi ${residentName}, this is a payment reminder.${lastPaymentText}
-
-📋 Payment Details:
-💵 Monthly Charges: Rs. ${monthlyCharges.toLocaleString()}${overdueMonths > 0 ? `\n⚠️ Overdue Months: ${overdueMonths}\n💸 Total Due: Rs. ${totalDue.toLocaleString()}` : ''}
-
-Please make your payment at your earliest convenience to avoid any service interruptions.
-
-If you've already paid, please disregard this message.
-
-Thank you for your cooperation!
-- Manzhil by Scrift Team`
-
-        const result = await sendWhatsAppMessage(profile.phone_number, message)
-        
         if (result.ok) {
           console.log(`[BULK MAINTENANCE REMINDER] Sent to ${profile.name} (${profile.phone_number})`)
           results.sent++
