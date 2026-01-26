@@ -1,111 +1,41 @@
 "use client"
 
 import type { FinancialSummary, Expense, ExpenseCategory } from "@/lib/supabase"
+import {
+    drawGridTwoColumn,
+    drawModernHeader,
+    drawPageFooter,
+    drawSectionTitle,
+    drawStatCard,
+    formatCurrency,
+    formatDate,
+    hexToRgb,
+    loadPdfLibs,
+    PDF_COLORS,
+} from "./pdf-theme"
 
 const BRAND_NAME = "Manzhil by Scrift"
-const BRAND_PRIMARY = "#047857"
-
-type PdfLibs = {
-    jsPDF: typeof import("jspdf").jsPDF
-    autoTable: (doc: import("jspdf").jsPDF, options: any) => void
-}
-
-let pdfLibsPromise: Promise<PdfLibs> | null = null
-
-async function loadPdfLibs(): Promise<PdfLibs> {
-    if (!pdfLibsPromise) {
-        pdfLibsPromise = Promise.all([
-            import("jspdf").then((module) => module.jsPDF),
-            import("jspdf-autotable").then((module) => module.default),
-        ]).then(([jsPDFConstructor, autoTable]) => ({
-            jsPDF: jsPDFConstructor,
-            autoTable,
-        }))
-    }
-    return pdfLibsPromise
-}
-
-function hexToRgb(hex: string): [number, number, number] {
-    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex)
-    return result ? [parseInt(result[1], 16), parseInt(result[2], 16), parseInt(result[3], 16)] : [0, 0, 0]
-}
-
-function formatCurrency(amount: number): string {
-    return `Rs ${amount.toLocaleString("en-PK")}`
-}
-
-function drawHeader(doc: import("jspdf").jsPDF, title: string, year: number) {
-    // Brand header
-    doc.setFillColor(...hexToRgb(BRAND_PRIMARY))
-    doc.rect(0, 0, 220, 25, "F")
-
-    doc.setTextColor(255, 255, 255)
-    doc.setFontSize(18)
-    doc.setFont("helvetica", "bold")
-    doc.text(BRAND_NAME, 14, 16)
-
-    doc.setFontSize(10)
-    doc.setFont("helvetica", "normal")
-    doc.text(`Financial Year: ${year}`, 196, 16, { align: "right" })
-
-    // Title
-    doc.setTextColor(0, 0, 0)
-    doc.setFontSize(14)
-    doc.setFont("helvetica", "bold")
-    doc.text(title, 14, 38)
-
-    // Generated date
-    doc.setFontSize(9)
-    doc.setFont("helvetica", "normal")
-    doc.setTextColor(100, 100, 100)
-    doc.text(`Generated: ${new Date().toLocaleDateString("en-PK", {
-        day: "2-digit",
-        month: "short",
-        year: "numeric",
-        hour: "2-digit",
-        minute: "2-digit"
-    })}`, 196, 38, { align: "right" })
-}
-
-function drawFooter(doc: import("jspdf").jsPDF) {
-    const pageHeight = doc.internal.pageSize.height
-    doc.setFontSize(8)
-    doc.setTextColor(150, 150, 150)
-    doc.text(`${BRAND_NAME} - Building Management System`, 105, pageHeight - 10, { align: "center" })
-}
 
 // Income Statement Report
 export async function generateIncomeStatementPdf(summary: FinancialSummary, year: number) {
     const { jsPDF, autoTable } = await loadPdfLibs()
     const doc = new jsPDF()
 
-    drawHeader(doc, "Income Statement", year)
+    const nextY = await drawModernHeader(doc, "Income Statement", `FY-${year}`, `Generated ${formatDate(new Date())}`)
 
-    // Summary cards
-    const summaryY = 50
-    doc.setFontSize(10)
-    doc.setTextColor(0, 0, 0)
+    // Stat Cards Row
+    const cardWidth = 55
+    const cardGap = 10
+    const startX = 14
 
-    const summaryData = [
-        { label: "Total Revenue", value: formatCurrency(summary.totalRevenue), color: "#10b981" },
-        { label: "Total Expenses", value: formatCurrency(summary.totalExpenses), color: "#f59e0b" },
-        { label: "Net Income", value: formatCurrency(summary.netIncome), color: summary.netIncome >= 0 ? "#10b981" : "#ef4444" },
-    ]
+    drawStatCard(doc, "Total Revenue", formatCurrency(summary.totalRevenue), startX, nextY + 10, cardWidth, "#10B981")
+    drawStatCard(doc, "Total Expenses", formatCurrency(summary.totalExpenses), startX + cardWidth + cardGap, nextY + 10, cardWidth, "#F59E0B")
 
-    let xPos = 14
-    summaryData.forEach((item) => {
-        doc.setFillColor(...hexToRgb("#f3f4f6"))
-        doc.roundedRect(xPos, summaryY, 55, 20, 2, 2, "F")
-        doc.setFontSize(8)
-        doc.setTextColor(100, 100, 100)
-        doc.text(item.label, xPos + 5, summaryY + 7)
-        doc.setFontSize(11)
-        doc.setFont("helvetica", "bold")
-        doc.setTextColor(...hexToRgb(item.color))
-        doc.text(item.value, xPos + 5, summaryY + 15)
-        doc.setFont("helvetica", "normal")
-        xPos += 60
-    })
+    const netColor = summary.netIncome >= 0 ? "#10B981" : "#EF4444"
+    drawStatCard(doc, "Net Income", formatCurrency(summary.netIncome), startX + (cardWidth + cardGap) * 2, nextY + 10, cardWidth, netColor)
+
+    const tableStartY = nextY + 45
+    drawSectionTitle(doc, "Monthly Breakdown", tableStartY)
 
     // Monthly breakdown table
     const tableData = summary.monthlyData.map((m) => [
@@ -118,12 +48,23 @@ export async function generateIncomeStatementPdf(summary: FinancialSummary, year
     ])
 
     autoTable(doc, {
-        startY: summaryY + 30,
-        head: [["Month", "Booking Income", "Maintenance", "Total Income", "Expenses", "Net"]],
+        startY: tableStartY + 8,
+        head: [["MONTH", "BOOKING IN", "MAINTENANCE", "TOTAL INC", "EXPENSES", "NET INCOME"]],
         body: tableData,
-        styles: { fontSize: 9 },
-        headStyles: { fillColor: hexToRgb(BRAND_PRIMARY) },
-        footStyles: { fillColor: [240, 240, 240], textColor: [0, 0, 0], fontStyle: "bold" },
+        styles: {
+            fontSize: 9,
+            textColor: hexToRgb(PDF_COLORS.text.secondary),
+            lineColor: hexToRgb(PDF_COLORS.border.light),
+            lineWidth: 0.1
+        },
+        headStyles: {
+            fillColor: [255, 255, 255],
+            textColor: hexToRgb(PDF_COLORS.text.tertiary),
+            fontStyle: "bold",
+            lineWidth: 0
+        },
+        alternateRowStyles: { fillColor: "#F9FAFB" },
+        footStyles: { fillColor: "#F3F4F6", textColor: hexToRgb(PDF_COLORS.text.primary), fontStyle: "bold" },
         foot: [[
             "TOTAL",
             formatCurrency(summary.bookingRevenue),
@@ -134,7 +75,7 @@ export async function generateIncomeStatementPdf(summary: FinancialSummary, year
         ]],
     })
 
-    drawFooter(doc)
+    drawPageFooter(doc)
     doc.save(`income_statement_${year}.pdf`)
 }
 
@@ -143,32 +84,14 @@ export async function generateCollectionReportPdf(summary: FinancialSummary, yea
     const { jsPDF, autoTable } = await loadPdfLibs()
     const doc = new jsPDF()
 
-    drawHeader(doc, "Collection Report", year)
+    const nextY = await drawModernHeader(doc, "Collection Report", `FY-${year}`, `Generated ${formatDate(new Date())}`)
 
-    // Overall collection rate
-    const rateY = 50
-    doc.setFillColor(...hexToRgb("#dbeafe"))
-    doc.roundedRect(14, rateY, 80, 25, 3, 3, "F")
-    doc.setFontSize(10)
-    doc.setTextColor(100, 100, 100)
-    doc.text("Overall Collection Rate", 20, rateY + 9)
-    doc.setFontSize(16)
-    doc.setFont("helvetica", "bold")
-    doc.setTextColor(...hexToRgb("#3b82f6"))
-    doc.text(`${summary.collectionRate.toFixed(1)}%`, 20, rateY + 20)
-    doc.setFont("helvetica", "normal")
+    // Highlights
+    drawStatCard(doc, "Collection Rate", `${summary.collectionRate.toFixed(1)}%`, 14, nextY + 10, 80, "#3B82F6")
+    drawStatCard(doc, "Outstanding Dues", formatCurrency(summary.outstandingDues), 105, nextY + 10, 80, "#F59E0B")
 
-    // Outstanding dues box
-    doc.setFillColor(...hexToRgb("#fef3c7"))
-    doc.roundedRect(100, rateY, 80, 25, 3, 3, "F")
-    doc.setFontSize(10)
-    doc.setTextColor(100, 100, 100)
-    doc.text("Outstanding Dues", 106, rateY + 9)
-    doc.setFontSize(14)
-    doc.setFont("helvetica", "bold")
-    doc.setTextColor(...hexToRgb("#f59e0b"))
-    doc.text(formatCurrency(summary.outstandingDues), 106, rateY + 20)
-    doc.setFont("helvetica", "normal")
+    const tableStartY = nextY + 45
+    drawSectionTitle(doc, "Monthly Collection Performance", tableStartY)
 
     // Monthly collection table
     const tableData = summary.monthlyData.map((m) => {
@@ -181,14 +104,15 @@ export async function generateCollectionReportPdf(summary: FinancialSummary, yea
     })
 
     autoTable(doc, {
-        startY: rateY + 35,
-        head: [["Month", "Amount Collected", "Collection Rate"]],
+        startY: tableStartY + 8,
+        head: [["MONTH", "AMOUNT COLLECTED", "COLLECTION RATE"]],
         body: tableData,
-        styles: { fontSize: 9 },
-        headStyles: { fillColor: hexToRgb(BRAND_PRIMARY) },
+        styles: { fontSize: 10, textColor: hexToRgb(PDF_COLORS.text.secondary), cellPadding: 4, lineColor: hexToRgb(PDF_COLORS.border.light), lineWidth: 0.1 },
+        headStyles: { fillColor: [255, 255, 255], textColor: hexToRgb(PDF_COLORS.text.tertiary), fontStyle: "bold", lineWidth: 0 },
+        alternateRowStyles: { fillColor: "#F9FAFB" },
     })
 
-    drawFooter(doc)
+    drawPageFooter(doc)
     doc.save(`collection_report_${year}.pdf`)
 }
 
@@ -201,7 +125,7 @@ export async function generateExpenseReportPdf(
     const { jsPDF, autoTable } = await loadPdfLibs()
     const doc = new jsPDF()
 
-    drawHeader(doc, "Expense Report", year)
+    const nextY = await drawModernHeader(doc, "Expense Report", `FY-${year}`, `Generated ${formatDate(new Date())}`)
 
     // Group expenses by category
     const categoryTotals: Record<string, { name: string; amount: number; color: string }> = {}
@@ -221,17 +145,10 @@ export async function generateExpenseReportPdf(
     })
 
     // Total expenses box
-    const summaryY = 50
-    doc.setFillColor(...hexToRgb("#fef2f2"))
-    doc.roundedRect(14, summaryY, 100, 25, 3, 3, "F")
-    doc.setFontSize(10)
-    doc.setTextColor(100, 100, 100)
-    doc.text("Total Expenses", 20, summaryY + 9)
-    doc.setFontSize(16)
-    doc.setFont("helvetica", "bold")
-    doc.setTextColor(...hexToRgb("#ef4444"))
-    doc.text(formatCurrency(totalExpenses), 20, summaryY + 20)
-    doc.setFont("helvetica", "normal")
+    drawStatCard(doc, "Total Expenses", formatCurrency(totalExpenses), 14, nextY + 10, 180, "#EF4444")
+
+    const breakdownY = nextY + 45
+    drawSectionTitle(doc, "Category Breakdown", breakdownY)
 
     // Category breakdown table
     const tableData = Object.values(categoryTotals)
@@ -243,47 +160,47 @@ export async function generateExpenseReportPdf(
         ])
 
     autoTable(doc, {
-        startY: summaryY + 35,
-        head: [["Category", "Amount", "% of Total"]],
+        startY: breakdownY + 8,
+        head: [["CATEGORY", "AMOUNT", "% OF TOTAL"]],
         body: tableData,
-        styles: { fontSize: 9 },
-        headStyles: { fillColor: hexToRgb(BRAND_PRIMARY) },
-        footStyles: { fillColor: [240, 240, 240], textColor: [0, 0, 0], fontStyle: "bold" },
+        styles: { fontSize: 10, textColor: hexToRgb(PDF_COLORS.text.secondary), lineColor: hexToRgb(PDF_COLORS.border.light), lineWidth: 0.1 },
+        headStyles: { fillColor: [255, 255, 255], textColor: hexToRgb(PDF_COLORS.text.tertiary), fontStyle: "bold", lineWidth: 0 },
+        alternateRowStyles: { fillColor: "#F9FAFB" },
+        footStyles: { fillColor: "#F3F4F6", textColor: hexToRgb(PDF_COLORS.text.primary), fontStyle: "bold" },
         foot: [["TOTAL", formatCurrency(totalExpenses), "100%"]],
     })
 
     // Detailed expense list
     if (expenses.length > 0) {
         const detailY = (doc as any).lastAutoTable.finalY + 15
-        doc.setFontSize(12)
-        doc.setFont("helvetica", "bold")
-        doc.setTextColor(0, 0, 0)
-        doc.text("Expense Details", 14, detailY)
+        drawSectionTitle(doc, "Expense Details", detailY)
 
         const detailData = expenses
             .sort((a, b) => new Date(b.expense_date).getTime() - new Date(a.expense_date).getTime())
-            .slice(0, 20)
+            .slice(0, 50)
             .map((e) => {
                 const cat = categories.find((c) => c.id === e.category_id)
                 return [
-                    new Date(e.expense_date).toLocaleDateString("en-PK", { day: "2-digit", month: "short" }),
+                    formatDate(e.expense_date),
                     cat?.name || "Other",
-                    e.description.substring(0, 30),
+                    e.description.substring(0, 40),
                     e.vendor_name || "-",
                     formatCurrency(e.amount),
                 ]
             })
 
         autoTable(doc, {
-            startY: detailY + 5,
-            head: [["Date", "Category", "Description", "Vendor", "Amount"]],
+            startY: detailY + 8,
+            head: [["DATE", "CATEGORY", "DESCRIPTION", "VENDOR", "AMOUNT"]],
             body: detailData,
-            styles: { fontSize: 8 },
-            headStyles: { fillColor: hexToRgb("#6b7280") },
+            styles: { fontSize: 8, textColor: hexToRgb(PDF_COLORS.text.secondary), lineColor: hexToRgb(PDF_COLORS.border.light), lineWidth: 0.1 },
+            headStyles: { fillColor: [255, 255, 255], textColor: hexToRgb(PDF_COLORS.text.tertiary), fontStyle: "bold", lineWidth: 0 },
+            alternateRowStyles: { fillColor: "#F9FAFB" },
+            columnStyles: { 4: { halign: "right" } }
         })
     }
 
-    drawFooter(doc)
+    drawPageFooter(doc)
     doc.save(`expense_report_${year}.pdf`)
 }
 
@@ -292,52 +209,41 @@ export async function generateOutstandingDuesPdf(summary: FinancialSummary, year
     const { jsPDF, autoTable } = await loadPdfLibs()
     const doc = new jsPDF()
 
-    drawHeader(doc, "Outstanding Dues Report", year)
+    const nextY = await drawModernHeader(doc, "Outstanding Dues", `FY-${year}`, `Generated ${formatDate(new Date())}`)
 
     // Summary
-    const summaryY = 50
-    doc.setFillColor(...hexToRgb("#fef3c7"))
-    doc.roundedRect(14, summaryY, 120, 25, 3, 3, "F")
-    doc.setFontSize(10)
-    doc.setTextColor(100, 100, 100)
-    doc.text("Total Outstanding Amount", 20, summaryY + 9)
-    doc.setFontSize(16)
-    doc.setFont("helvetica", "bold")
-    doc.setTextColor(...hexToRgb("#f59e0b"))
-    doc.text(formatCurrency(summary.outstandingDues), 20, summaryY + 20)
-    doc.setFont("helvetica", "normal")
+    drawStatCard(doc, "Total Outstanding", formatCurrency(summary.outstandingDues), 14, nextY + 10, 182, "#F59E0B")
 
     // Note about data
+    const noteY = nextY + 40
     doc.setFontSize(9)
-    doc.setTextColor(100, 100, 100)
+    doc.setTextColor(...hexToRgb(PDF_COLORS.text.tertiary))
     doc.text(
         "Note: Detailed outstanding dues by resident are available in the Residents tab.",
         14,
-        summaryY + 40
+        noteY
     )
 
-    // Collection rate info
-    doc.setFontSize(11)
-    doc.setTextColor(0, 0, 0)
-    doc.text("Collection Statistics", 14, summaryY + 55)
+    drawSectionTitle(doc, "Collection Statistics", noteY + 15)
 
     autoTable(doc, {
-        startY: summaryY + 60,
-        head: [["Metric", "Value"]],
+        startY: noteY + 23,
+        head: [["METRIC", "VALUE"]],
         body: [
             ["Total Revenue Collected", formatCurrency(summary.totalRevenue)],
             ["Outstanding Dues", formatCurrency(summary.outstandingDues)],
             ["Collection Rate", `${summary.collectionRate.toFixed(1)}%`],
-            ["Expected Total", formatCurrency(summary.totalRevenue + summary.outstandingDues)],
+            ["Expected Annual Total", formatCurrency(summary.totalRevenue + summary.outstandingDues)],
         ],
-        styles: { fontSize: 10 },
-        headStyles: { fillColor: hexToRgb(BRAND_PRIMARY) },
+        styles: { fontSize: 10, textColor: hexToRgb(PDF_COLORS.text.primary), cellPadding: 5, lineColor: hexToRgb(PDF_COLORS.border.light), lineWidth: 0.1 },
+        headStyles: { fillColor: [255, 255, 255], textColor: hexToRgb(PDF_COLORS.text.tertiary), fontStyle: "bold", lineWidth: 0 },
         columnStyles: {
-            0: { fontStyle: "bold" },
+            0: { fontStyle: "bold", cellWidth: 80 },
         },
+        alternateRowStyles: { fillColor: "#F9FAFB" },
     })
 
-    drawFooter(doc)
+    drawPageFooter(doc)
     doc.save(`outstanding_dues_${year}.pdf`)
 }
 
@@ -346,74 +252,59 @@ export async function generateAnnualSummaryPdf(summary: FinancialSummary, year: 
     const { jsPDF, autoTable } = await loadPdfLibs()
     const doc = new jsPDF()
 
-    drawHeader(doc, "Annual Financial Summary", year)
+    const nextY = await drawModernHeader(doc, "Annual Financial Summary", `FY-${year}`, `Generated ${formatDate(new Date())}`)
 
     // Key metrics boxes
-    const metrics = [
-        { label: "Total Revenue", value: formatCurrency(summary.totalRevenue), color: "#10b981", bg: "#d1fae5" },
-        { label: "Total Expenses", value: formatCurrency(summary.totalExpenses), color: "#f59e0b", bg: "#fef3c7" },
-        { label: "Net Income", value: formatCurrency(summary.netIncome), color: summary.netIncome >= 0 ? "#10b981" : "#ef4444", bg: summary.netIncome >= 0 ? "#d1fae5" : "#fee2e2" },
-        { label: "Collection Rate", value: `${summary.collectionRate.toFixed(1)}%`, color: "#3b82f6", bg: "#dbeafe" },
-    ]
+    const cardWidth = 44
+    const gap = 4
+    const startX = 14
 
-    let y = 50
-    let x = 14
-    metrics.forEach((m, i) => {
-        if (i === 2) { x = 14; y += 30 }
-        doc.setFillColor(...hexToRgb(m.bg))
-        doc.roundedRect(x, y, 88, 25, 3, 3, "F")
-        doc.setFontSize(9)
-        doc.setTextColor(100, 100, 100)
-        doc.text(m.label, x + 5, y + 9)
-        doc.setFontSize(14)
-        doc.setFont("helvetica", "bold")
-        doc.setTextColor(...hexToRgb(m.color))
-        doc.text(m.value, x + 5, y + 19)
-        doc.setFont("helvetica", "normal")
-        x += 93
-    })
+    // Custom tiny cards row? No, let's use stat cards but maybe smaller font or 2x2.
+    // Actually, let's stick to drawStatCard but modify it to wrap? 
+    // Let's do 2 rows of 2 cards.
+
+    drawStatCard(doc, "Total Revenue", formatCurrency(summary.totalRevenue), startX, nextY + 10, 88, "#10B981")
+    drawStatCard(doc, "Total Expenses", formatCurrency(summary.totalExpenses), startX + 92, nextY + 10, 88, "#F59E0B")
+
+    drawStatCard(doc, "Net Income", formatCurrency(summary.netIncome), startX, nextY + 40, 88, summary.netIncome >= 0 ? "#10B981" : "#EF4444")
+    drawStatCard(doc, "Collection Rate", `${summary.collectionRate.toFixed(1)}%`, startX + 92, nextY + 40, 88, "#3B82F6")
 
     // Revenue breakdown
-    y += 40
-    doc.setFontSize(11)
-    doc.setTextColor(0, 0, 0)
-    doc.setFont("helvetica", "bold")
-    doc.text("Revenue Breakdown", 14, y)
-    doc.setFont("helvetica", "normal")
+    const revenueY = nextY + 75
+    drawSectionTitle(doc, "Revenue Breakdown", revenueY)
 
     autoTable(doc, {
-        startY: y + 5,
-        head: [["Source", "Amount", "% of Total"]],
+        startY: revenueY + 8,
+        head: [["SOURCE", "AMOUNT", "% OF TOTAL"]],
         body: [
             ["Booking Revenue", formatCurrency(summary.bookingRevenue), summary.totalRevenue > 0 ? `${((summary.bookingRevenue / summary.totalRevenue) * 100).toFixed(1)}%` : "0%"],
             ["Maintenance Revenue", formatCurrency(summary.maintenanceRevenue), summary.totalRevenue > 0 ? `${((summary.maintenanceRevenue / summary.totalRevenue) * 100).toFixed(1)}%` : "0%"],
         ],
-        styles: { fontSize: 9 },
-        headStyles: { fillColor: hexToRgb(BRAND_PRIMARY) },
-        footStyles: { fillColor: [240, 240, 240], textColor: [0, 0, 0], fontStyle: "bold" },
-        foot: [["Total Revenue", formatCurrency(summary.totalRevenue), "100%"]],
+        styles: { fontSize: 9, textColor: hexToRgb(PDF_COLORS.text.secondary), lineColor: hexToRgb(PDF_COLORS.border.light), lineWidth: 0.1 },
+        headStyles: { fillColor: [255, 255, 255], textColor: hexToRgb(PDF_COLORS.text.tertiary), fontStyle: "bold", lineWidth: 0 },
+        footStyles: { fillColor: "#F3F4F6", textColor: hexToRgb(PDF_COLORS.text.primary), fontStyle: "bold" },
+        foot: [["TOTAL REVENUE", formatCurrency(summary.totalRevenue), "100%"]],
+        alternateRowStyles: { fillColor: "#F9FAFB" },
     })
 
     // Monthly trend
     const trendY = (doc as any).lastAutoTable.finalY + 15
-    doc.setFontSize(11)
-    doc.setFont("helvetica", "bold")
-    doc.text("Monthly Performance", 14, trendY)
-    doc.setFont("helvetica", "normal")
+    drawSectionTitle(doc, "Monthly Performance", trendY)
 
     autoTable(doc, {
-        startY: trendY + 5,
-        head: [["Month", "Income", "Expenses", "Net"]],
+        startY: trendY + 8,
+        head: [["MONTH", "TOTAL INCOME", "EXPENSES", "NET RESULT"]],
         body: summary.monthlyData.map((m) => [
             m.month,
             formatCurrency(m.bookingIncome + m.maintenanceIncome),
             formatCurrency(m.expenses),
             formatCurrency(m.bookingIncome + m.maintenanceIncome - m.expenses),
         ]),
-        styles: { fontSize: 8 },
-        headStyles: { fillColor: hexToRgb("#6b7280") },
+        styles: { fontSize: 9, textColor: hexToRgb(PDF_COLORS.text.secondary), lineColor: hexToRgb(PDF_COLORS.border.light), lineWidth: 0.1 },
+        headStyles: { fillColor: [255, 255, 255], textColor: hexToRgb(PDF_COLORS.text.tertiary), fontStyle: "bold", lineWidth: 0 },
+        alternateRowStyles: { fillColor: "#F9FAFB" },
     })
 
-    drawFooter(doc)
+    drawPageFooter(doc)
     doc.save(`annual_summary_${year}.pdf`)
 }

@@ -7,7 +7,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
-import { ChevronLeft, CheckCircle, XCircle, Loader2, Calendar, MessageSquare, Filter, Users } from "lucide-react"
+import Loader from "@/components/ui/loader"
+import { ChevronLeft, CheckCircle, XCircle, Calendar, MessageSquare, Filter, Users, DollarSign, AlertTriangle } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { exportToPdf, filterByPeriod, periodLabel, type Period } from "@/lib/pdf"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -214,519 +215,626 @@ export default function ResidentProfilePage({ params }: { params: { id: string }
     [complaints, complaintsPeriod],
   )
 
+  // Calculate stats
+  const paidPayments = payments.filter(p => p.status === "paid").length
+  const unpaidPayments = payments.filter(p => p.status === "unpaid").length
+  const confirmedBookings = bookings.filter(b => b.status === "confirmed").length
+  const pendingBookings = bookings.filter(b => b.payment_status === "pending").length
+  const resolvedComplaints = complaints.filter(c => c.status === "completed").length
+  const pendingComplaints = complaints.filter(c => c.status === "pending" || c.status === "in-progress").length
+
   if (loading) {
     return (
-      <div className="min-h-screen p-6">
-        <Button variant="ghost" className="mb-4" onClick={() => router.back()}>
+      <div className="space-y-6">
+        <Button variant="ghost" className="mb-4 text-manzhil-dark" onClick={() => router.back()}>
           <ChevronLeft className="h-4 w-4 mr-2" /> Back
         </Button>
-        <Card>
-          <CardHeader>
-            <CardTitle>Loading...</CardTitle>
-          </CardHeader>
-          <CardContent className="flex items-center gap-2">
-            <Loader2 className="h-4 w-4 animate-spin" />
-            Please wait
+        <Card className="border-0 shadow-xl shadow-manzhil-teal/5">
+          <CardContent className="flex items-center justify-center py-16">
+            <Loader />
           </CardContent>
         </Card>
       </div>
     )
   }
 
+  // Get initials for avatar
+  const initials = profile?.name?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) || '?'
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50">
-      <div className="container mx-auto p-6 space-y-6">
-        <div className="flex items-center justify-between">
-          <Button variant="ghost" onClick={() => router.back()}>
-            <ChevronLeft className="h-4 w-4 mr-2" />
-            Back
-          </Button>
-          <div />
+    <div className="space-y-6">
+      {/* Back Button */}
+      <Button variant="ghost" onClick={() => router.back()} className="text-manzhil-dark hover:bg-manzhil-teal/10 -ml-2">
+        <ChevronLeft className="h-4 w-4 mr-2" />
+        Back to Residents
+      </Button>
+
+      {/* Profile Header Card */}
+      <Card className="border-0 shadow-xl shadow-manzhil-teal/10 overflow-hidden">
+        <div className="bg-gradient-to-r from-manzhil-dark to-manzhil-teal p-6 sm:p-8">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6">
+            {/* Avatar */}
+            <div className="h-20 w-20 sm:h-24 sm:w-24 rounded-full bg-white/20 backdrop-blur flex items-center justify-center text-white text-2xl sm:text-3xl font-medium shadow-lg">
+              {initials}
+            </div>
+
+            {/* Profile Info */}
+            <div className="flex-1 text-white">
+              <h1 className="text-2xl sm:text-3xl font-medium mb-1">{profile?.name}</h1>
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-white/80 text-sm sm:text-base">
+                <span className="flex items-center gap-1">
+                  <span className="font-medium">Apt {profile?.apartment_number}</span>
+                </span>
+                <span>•</span>
+                <span>{profile?.phone_number || "No phone"}</span>
+                <span>•</span>
+                <span>Member since {new Date(profile?.created_at || '').toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}</span>
+              </div>
+            </div>
+
+            {/* Maintenance Status Badge */}
+            <div className="hidden md:block">
+              <Badge className={`text-sm px-4 py-2 ${profile?.maintenance_paid ? 'bg-white/20 text-white border-white/30' : 'bg-red-500 text-white border-red-400'}`}>
+                {profile?.maintenance_paid ? '✓ Maintenance Paid' : '⚠ Dues Pending'}
+              </Badge>
+            </div>
+          </div>
         </div>
 
-        <Card className="border-0 shadow-xl">
-          <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50">
-            <CardTitle className="text-xl sm:text-2xl">
-              {profile?.name} — {profile?.apartment_number}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-6 space-y-4">
-            <div className="text-sm text-gray-600 space-y-1">
-              <p>Phone: {profile?.phone_number || "N/A"}</p>
-              <p>Monthly Maintenance: Rs. {profile?.maintenance_charges?.toLocaleString() ?? "0"}</p>
+        {/* Monthly Charge Info */}
+        <div className="bg-white px-6 py-4 border-t border-manzhil-teal/10">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <span className="text-sm text-gray-500">Monthly Maintenance</span>
+              <p className="text-xl font-medium text-manzhil-dark">Rs. {profile?.maintenance_charges?.toLocaleString() ?? "0"}</p>
             </div>
+            <div className="md:hidden">
+              <Badge className={`${profile?.maintenance_paid ? 'bg-manzhil-teal/20 text-manzhil-dark' : 'bg-red-100 text-red-700'}`}>
+                {profile?.maintenance_paid ? '✓ Paid' : '⚠ Pending'}
+              </Badge>
+            </div>
+          </div>
+        </div>
+      </Card>
+
+      {/* Stats Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Maintenance Stats */}
+        <Card className="border-0 shadow-lg shadow-manzhil-teal/10 bg-[#0F766E] text-white hover:shadow-xl hover:-translate-y-0.5 transition-all relative overflow-hidden group">
+          <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+            <CheckCircle className="w-24 h-24 -mr-8 -mt-8 rotate-12" />
+          </div>
+          <CardContent className="p-5 relative z-10">
+            <div className="flex items-center justify-between mb-4">
+              <p className="text-sm font-medium text-white/90">Maintenance</p>
+              <Badge variant="outline" className="text-xs bg-white/20 text-white border-white/30">{payments.length} total</Badge>
+            </div>
+            <p className="text-4xl font-medium text-white mb-2">{paidPayments} Paid</p>
+            <p className="text-xs text-white/70 font-medium">{unpaidPayments} unpaid months</p>
           </CardContent>
         </Card>
 
-        <Tabs defaultValue="maintenance" className="space-y-6">
-          <div className="overflow-x-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent">
-            <TabsList className="inline-flex w-full min-w-max bg-white rounded-xl shadow-sm border border-gray-200 p-1">
-              <TabsTrigger 
-                value="maintenance" 
-                className="data-[state=active]:bg-blue-600 data-[state=active]:text-white text-xs sm:text-sm px-3 sm:px-4 py-2 whitespace-nowrap"
-              >
-                Maintenance
-              </TabsTrigger>
-              <TabsTrigger 
-                value="bookings" 
-                className="data-[state=active]:bg-green-600 data-[state=active]:text-white text-xs sm:text-sm px-3 sm:px-4 py-2 whitespace-nowrap"
-              >
-                Booking History
-              </TabsTrigger>
-              <TabsTrigger
-                value="complaints"
-                className="data-[state=active]:bg-orange-500 data-[state=active]:text-white text-xs sm:text-sm px-3 sm:px-4 py-2 whitespace-nowrap"
-              >
-                Complaints History
-              </TabsTrigger>
-              <TabsTrigger 
-                value="staff" 
-                className="data-[state=active]:bg-purple-600 data-[state=active]:text-white text-xs sm:text-sm px-2 sm:px-4 py-2 whitespace-nowrap"
-              >
-                <Users className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                <span className="hidden xs:inline">Staff Members</span>
-                <span className="inline xs:hidden">Staff</span>
-              </TabsTrigger>
-            </TabsList>
+        {/* Bookings Stats */}
+        <Card className="border-0 shadow-lg shadow-manzhil-teal/10 bg-[#0F766E] text-white hover:shadow-xl hover:-translate-y-0.5 transition-all relative overflow-hidden group">
+          <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+            <Calendar className="w-24 h-24 -mr-8 -mt-8 rotate-12" />
           </div>
+          <CardContent className="p-5 relative z-10">
+            <div className="flex items-center justify-between mb-4">
+              <p className="text-sm font-medium text-white/90">Bookings</p>
+              <Badge variant="outline" className="text-xs bg-white/20 text-white border-white/30">{bookings.length} total</Badge>
+            </div>
+            <p className="text-4xl font-medium text-white mb-2">{confirmedBookings} Confirmed</p>
+            <p className="text-xs text-white/70 font-medium">{pendingBookings} pending payment</p>
+          </CardContent>
+        </Card>
 
-          <TabsContent value="maintenance">
-            <Card className="border-0 shadow-xl">
-              <CardHeader className="bg-white">
-                <CardTitle className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                  <span className="text-lg sm:text-xl">Maintenance Payments</span>
-                  <div className="flex flex-col sm:flex-row sm:items-center gap-2">
-                    <span className="text-sm font-medium text-gray-600 hidden sm:inline">Filter:</span>
-                    <div className="flex items-center gap-2">
-                      <Button
-                        size="sm"
-                        variant={filter === "all" ? "default" : "outline"}
-                        onClick={() => setFilter("all")}
-                        className="flex-1 sm:flex-none"
-                      >
-                        All
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant={filter === "paid" ? "default" : "outline"}
-                        onClick={() => setFilter("paid")}
-                        className="flex-1 sm:flex-none"
-                      >
-                        Paid
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant={filter === "unpaid" ? "default" : "outline"}
-                        onClick={() => setFilter("unpaid")}
-                        className="flex-1 sm:flex-none"
-                      >
-                        Unpaid
-                      </Button>
-                    </div>
-                  </div>
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-0">
-                {/* Desktop Table View */}
-                <div className="hidden md:block">
-                  <Table>
-                    <TableHeader>
-                      <TableRow className="bg-gray-50/50">
-                        <TableHead>Month</TableHead>
-                        <TableHead>Amount</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Paid Date</TableHead>
-                        <TableHead className="text-right">Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filteredPayments.map((row) => (
-                        <TableRow key={row.id}>
-                          <TableCell className="font-medium">{formatMonth(row.year, row.month)}</TableCell>
-                          <TableCell>Rs. {Number(row.amount).toLocaleString()}</TableCell>
-                          <TableCell>
-                            <Badge variant={row.status === "paid" ? "default" : "secondary"}>{row.status}</Badge>
-                          </TableCell>
-                          <TableCell>
-                            {row.paid_date ? new Date(row.paid_date + "T00:00:00").toLocaleDateString("en-GB") : "-"}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            {row.status === "paid" ? (
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => markUnpaid(row)}
-                                className="text-red-600 hover:bg-red-50 hover:border-red-200"
-                              >
-                                <XCircle className="h-4 w-4 mr-1" /> Mark Unpaid
-                              </Button>
-                            ) : (
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => markPaid(row)}
-                                className="text-green-600 hover:bg-green-50 hover:border-green-200"
-                              >
-                                <CheckCircle className="h-4 w-4 mr-1" /> Mark Paid
-                              </Button>
-                            )}
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                      {filteredPayments.length === 0 && (
-                        <TableRow>
-                          <TableCell colSpan={5} className="text-center text-gray-500 py-8">
-                            No records
-                          </TableCell>
-                        </TableRow>
-                      )}
-                    </TableBody>
-                  </Table>
-                </div>
+        {/* Complaints Stats */}
+        <Card className="border-0 shadow-lg shadow-manzhil-teal/10 bg-[#0F766E] text-white hover:shadow-xl hover:-translate-y-0.5 transition-all relative overflow-hidden group">
+          <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+            <MessageSquare className="w-24 h-24 -mr-8 -mt-8 rotate-12" />
+          </div>
+          <CardContent className="p-5 relative z-10">
+            <div className="flex items-center justify-between mb-4">
+              <p className="text-sm font-medium text-white/90">Complaints</p>
+              <Badge variant="outline" className="text-xs bg-white/20 text-white border-white/30">{complaints.length} total</Badge>
+            </div>
+            <p className="text-4xl font-medium text-white mb-2">{resolvedComplaints} Resolved</p>
+            <p className="text-xs text-white/70 font-medium">{pendingComplaints} in progress</p>
+          </CardContent>
+        </Card>
 
-                {/* Mobile Card View */}
-                <div className="block md:hidden p-4 space-y-3">
-                  {filteredPayments.length === 0 ? (
-                    <div className="text-center text-gray-500 py-8">
-                      No records
-                    </div>
-                  ) : (
-                    filteredPayments.map((row) => (
-                      <Card key={row.id} className="border border-gray-200 shadow-sm">
-                        <CardContent className="p-4 space-y-3">
-                          <div className="flex items-start justify-between">
-                            <div>
-                              <h3 className="font-semibold text-base text-gray-900">
-                                {formatMonth(row.year, row.month)}
-                              </h3>
-                              <p className="text-sm text-gray-500 mt-0.5">Maintenance Payment</p>
-                            </div>
-                            <Badge variant={row.status === "paid" ? "default" : "secondary"}>
-                              {row.status}
-                            </Badge>
-                          </div>
-                          
-                          <div className="space-y-2 text-sm">
-                            <div className="flex justify-between">
-                              <span className="text-gray-600">Amount:</span>
-                              <span className="font-medium text-gray-900">Rs. {Number(row.amount).toLocaleString()}</span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span className="text-gray-600">Paid Date:</span>
-                              <span className="font-medium text-gray-900">
-                                {row.paid_date ? new Date(row.paid_date + "T00:00:00").toLocaleDateString("en-GB") : "-"}
-                              </span>
-                            </div>
-                          </div>
+        {/* Staff Stats */}
+        <Card className="border-0 shadow-lg shadow-manzhil-teal/10 bg-[#0F766E] text-white hover:shadow-xl hover:-translate-y-0.5 transition-all relative overflow-hidden group">
+          <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+            <Users className="w-24 h-24 -mr-8 -mt-8 rotate-12" />
+          </div>
+          <CardContent className="p-5 relative z-10">
+            <div className="flex items-center justify-between mb-4">
+              <p className="text-sm font-medium text-white/90">Staff Members</p>
+            </div>
+            <p className="text-4xl font-medium text-white mb-2">{staff.length} Staff</p>
+            <p className="text-xs text-white/70 font-medium">Registered members</p>
+          </CardContent>
+        </Card>
+      </div>
 
-                          <div className="pt-2 border-t border-gray-100">
-                            {row.status === "paid" ? (
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => markUnpaid(row)}
-                                className="w-full text-red-600 hover:bg-red-50 hover:border-red-200"
-                              >
-                                <XCircle className="h-4 w-4 mr-2" /> Mark as Unpaid
-                              </Button>
-                            ) : (
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => markPaid(row)}
-                                className="w-full text-green-600 hover:bg-green-50 hover:border-green-200"
-                              >
-                                <CheckCircle className="h-4 w-4 mr-2" /> Mark as Paid
-                              </Button>
-                            )}
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
+      <Tabs defaultValue="maintenance" className="space-y-6">
+        <TabsList className="bg-white h-auto w-full md:w-fit overflow-x-auto justify-start rounded-xl shadow-lg shadow-manzhil-teal/5 border border-manzhil-teal/10 p-1.5 gap-1 scrollbar-hide">
+          <TabsTrigger
+            value="maintenance"
+            className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-manzhil-dark data-[state=active]:to-manzhil-teal data-[state=active]:text-white rounded-lg text-sm px-4 py-2.5 transition-all flex items-center gap-2 flex-shrink-0"
+          >
+            <DollarSign className="h-4 w-4" />
+            Maintenance
+            {unpaidPayments > 0 && (
+              <span className="bg-red-500 text-white text-xs rounded-full px-2 py-0.5">{unpaidPayments}</span>
+            )}
+          </TabsTrigger>
+          <TabsTrigger
+            value="bookings"
+            className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-manzhil-dark data-[state=active]:to-manzhil-teal data-[state=active]:text-white rounded-lg text-sm px-4 py-2.5 transition-all flex items-center gap-2 flex-shrink-0"
+          >
+            <Calendar className="h-4 w-4" />
+            Bookings
+            <span className="bg-manzhil-teal/20 text-manzhil-dark text-xs rounded-full px-2 py-0.5">{bookings.length}</span>
+          </TabsTrigger>
+          <TabsTrigger
+            value="complaints"
+            className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-manzhil-dark data-[state=active]:to-manzhil-teal data-[state=active]:text-white rounded-lg text-sm px-4 py-2.5 transition-all flex items-center gap-2 flex-shrink-0"
+          >
+            <AlertTriangle className="h-4 w-4" />
+            Complaints
+            {pendingComplaints > 0 && (
+              <span className="bg-amber-500 text-white text-xs rounded-full px-2 py-0.5">{pendingComplaints}</span>
+            )}
+          </TabsTrigger>
+          <TabsTrigger
+            value="staff"
+            className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-manzhil-dark data-[state=active]:to-manzhil-teal data-[state=active]:text-white rounded-lg text-sm px-4 py-2.5 transition-all flex items-center gap-2 flex-shrink-0"
+          >
+            <Users className="h-4 w-4" />
+            Staff
+            <span className="bg-manzhil-dark/10 text-manzhil-dark text-xs rounded-full px-2 py-0.5">{staff.length}</span>
+          </TabsTrigger>
+        </TabsList>
 
-          <TabsContent value="bookings">
-            <Card className="border-0 shadow-xl">
-              <CardHeader className="bg-white">
-                <CardTitle className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                  <span className="text-lg sm:text-xl">Booking History</span>
-                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">
-                    <Select
-  value={bookingsPeriod}
-  onValueChange={(value) => setBookingsPeriod(value as Period)}
->
-                      <SelectTrigger className="w-full sm:w-40 border-gray-200">
-                        <Filter className="h-4 w-4 mr-2" />
-                        <SelectValue placeholder="Period" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Time</SelectItem>
-                        <SelectItem value="daily">Today</SelectItem>
-                        <SelectItem value="weekly">This Week</SelectItem>
-                        <SelectItem value="monthly">This Month</SelectItem>
-                        <SelectItem value="yearly">This Year</SelectItem>
-                      </SelectContent>
-                    </Select>
+        <TabsContent value="maintenance">
+          <Card className="border-0 shadow-xl shadow-manzhil-teal/5">
+            <CardHeader className="bg-white">
+              <CardTitle className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <span className="text-lg sm:text-xl">Maintenance Payments</span>
+                <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+                  <span className="text-sm font-medium text-gray-600 hidden sm:inline">Filter:</span>
+                  <div className="flex items-center gap-2">
                     <Button
-                      variant="outline"
                       size="sm"
-                      className="gap-2 bg-transparent w-full sm:w-auto"
-                      onClick={() => {
-                        void exportToPdf({
-                          title: `Booking History — ${profile?.name || ""}`,
-                          periodLabel: periodLabel(bookingsPeriod),
-                          columns: [
-                            { header: "Customer", dataKey: "customer" },
-                            { header: "Apartment", dataKey: "apartment" },
-                            { header: "Date", dataKey: "date" },
-                            { header: "Time Slot", dataKey: "time" },
-                            { header: "Amount", dataKey: "amount" },
-                            { header: "Payment", dataKey: "payment" },
-                            { header: "Status", dataKey: "status" },
-                            { header: "Created At", dataKey: "created" },
-                          ],
-                          rows: bookingsDisplay.map((b) => ({
-                            customer: b.profiles?.name || profile?.name || "N/A",
-                            apartment: b.profiles?.apartment_number || profile?.apartment_number || "",
-                            date: formatDateForDisplay(b.booking_date),
-                            time: `${formatTime(b.start_time)} - ${formatTime(b.end_time)}`,
-                            amount: `Rs. ${Number(b.booking_charges).toLocaleString()}`,
-                            payment: b.payment_status,
-                            status: b.status,
-                            created: formatDateTime(b.created_at),
-                          })),
-                          fileName: `booking-history-${profile?.apartment_number || "resident"}.pdf`,
-                        })
-                      }}
+                      variant={filter === "all" ? "default" : "outline"}
+                      onClick={() => setFilter("all")}
+                      className="flex-1 sm:flex-none"
                     >
-                      <Calendar className="h-4 w-4" />
-                      <span className="hidden sm:inline">Download PDF</span>
-                      <span className="inline sm:hidden">PDF</span>
+                      All
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant={filter === "paid" ? "default" : "outline"}
+                      onClick={() => setFilter("paid")}
+                      className="flex-1 sm:flex-none"
+                    >
+                      Paid
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant={filter === "unpaid" ? "default" : "outline"}
+                      onClick={() => setFilter("unpaid")}
+                      className="flex-1 sm:flex-none"
+                    >
+                      Unpaid
                     </Button>
                   </div>
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-0">
+                </div>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-0">
+              {/* Desktop Table View */}
+              <div className="hidden md:block">
                 <Table>
                   <TableHeader>
-                    <TableRow className="bg-gray-50/50">
-                      <TableHead>Customer</TableHead>
-                      <TableHead>Apartment</TableHead>
-                      <TableHead>Date</TableHead>
-                      <TableHead>Time Slot</TableHead>
+                    <TableRow className="bg-gradient-to-r from-manzhil-teal/5 to-transparent">
+                      <TableHead>Month</TableHead>
                       <TableHead>Amount</TableHead>
-                      <TableHead>Payment</TableHead>
                       <TableHead>Status</TableHead>
-                      <TableHead>Created At</TableHead>
+                      <TableHead>Paid Date</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {bookingsDisplay.map((row) => (
-                      <TableRow key={row.id} className="hover:bg-gray-50/50 transition-colors">
-                        <TableCell className="font-medium text-gray-900">
-                          {row.profiles?.name || profile?.name || "N/A"}
-                        </TableCell>
-                        <TableCell>{row.profiles?.apartment_number || profile?.apartment_number || "N/A"}</TableCell>
-                        <TableCell>{formatDateForDisplay(row.booking_date)}</TableCell>
+                    {filteredPayments.map((row) => (
+                      <TableRow key={row.id} className="hover:bg-manzhil-teal/5 transition-colors">
+                        <TableCell className="font-medium">{formatMonth(row.year, row.month)}</TableCell>
+                        <TableCell>Rs. {Number(row.amount).toLocaleString()}</TableCell>
                         <TableCell>
-                          {formatTime(row.start_time)} - {formatTime(row.end_time)}
-                        </TableCell>
-                        <TableCell>Rs. {Number(row.booking_charges).toLocaleString()}</TableCell>
-                        <TableCell>
-                          <Badge variant={getStatusBadgeVariant(row.payment_status)}>{row.payment_status}</Badge>
+                          <Badge variant={row.status === "paid" ? "default" : "secondary"} className={row.status === "paid" ? "bg-manzhil-teal/20 text-manzhil-dark" : ""}>{row.status}</Badge>
                         </TableCell>
                         <TableCell>
-                          <Badge variant={getStatusBadgeVariant(row.status)}>{row.status}</Badge>
+                          {row.paid_date ? new Date(row.paid_date + "T00:00:00").toLocaleDateString("en-GB") : "-"}
                         </TableCell>
-                        <TableCell>{formatDateTime(row.created_at)}</TableCell>
-                      </TableRow>
-                    ))}
-                    {bookingsDisplay.length === 0 && (
-                      <TableRow>
-                        <TableCell colSpan={8} className="text-center text-gray-500 py-8">
-                          No booking records for this period
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="complaints">
-            <Card className="border-0 shadow-xl">
-              <CardHeader className="bg-white">
-                <CardTitle className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                  <span className="text-lg sm:text-xl">Complaints History</span>
-                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">
-                    <Select
-                    value={complaintsPeriod}
-                      onValueChange={(value) => setComplaintsPeriod(value as Period)}
->                      <SelectTrigger className="w-full sm:w-40 border-gray-200">
-                        <Filter className="h-4 w-4 mr-2" />
-                        <SelectValue placeholder="Period" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Time</SelectItem>
-                        <SelectItem value="daily">Today</SelectItem>
-                        <SelectItem value="weekly">This Week</SelectItem>
-                        <SelectItem value="monthly">This Month</SelectItem>
-                        <SelectItem value="yearly">This Year</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="gap-2 bg-transparent w-full sm:w-auto"
-                      onClick={() => {
-                        void exportToPdf({
-                          title: `Complaints History — ${profile?.name || ""}`,
-                          periodLabel: periodLabel(complaintsPeriod),
-                          columns: [
-                            { header: "Complaint ID", dataKey: "complaintId" },
-                            { header: "Customer", dataKey: "customer" },
-                            { header: "Apartment", dataKey: "apartment" },
-                            { header: "Category", dataKey: "category" },
-                            { header: "Type", dataKey: "type" },
-                            { header: "Status", dataKey: "status" },
-                            { header: "Created At", dataKey: "created" },
-                            { header: "Description", dataKey: "description" },
-                          ],
-                          rows: complaintsDisplay.map((c) => ({
-                            complaintId: c.complaint_id || c.id,
-                            customer: c.profiles?.name || profile?.name || "N/A",
-                            apartment: c.profiles?.apartment_number || profile?.apartment_number || "",
-                            category: c.category,
-                            type: c.subcategory,
-                            status: c.status,
-                            created: formatDateTime(c.created_at),
-                            description: c.description || "—",
-                          })),
-                          fileName: `complaints-history-${profile?.apartment_number || "resident"}.pdf`,
-                        })
-                      }}
-                    >
-                      <MessageSquare className="h-4 w-4" />
-                      <span className="hidden sm:inline">Download PDF</span>
-                      <span className="inline sm:hidden">PDF</span>
-                    </Button>
-                  </div>
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-0">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="bg-gray-50/50">
-                      <TableHead>Complaint ID</TableHead>
-                      <TableHead>Customer</TableHead>
-                      <TableHead>Apartment</TableHead>
-                      <TableHead>Category</TableHead>
-                      <TableHead>Type</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Created At</TableHead>
-                      <TableHead>Description</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {complaintsDisplay.map((row) => (
-                      <TableRow key={row.id}>
-                        <TableCell className="font-medium">{row.complaint_id || row.id}</TableCell>
-                        <TableCell>{row.profiles?.name || profile?.name || "N/A"}</TableCell>
-                        <TableCell>{row.profiles?.apartment_number || profile?.apartment_number || "N/A"}</TableCell>
-                        <TableCell>{row.category}</TableCell>
-                        <TableCell>{row.subcategory}</TableCell>
-                        <TableCell>
-                          <Badge variant={getStatusBadgeVariant(row.status)}>{row.status}</Badge>
-                        </TableCell>
-                        <TableCell>{formatDateTime(row.created_at)}</TableCell>
-                        <TableCell className="max-w-xs">
-                          {row.description ? (
-                            <span className="line-clamp-3 text-gray-700">{row.description}</span>
+                        <TableCell className="text-right">
+                          {row.status === "paid" ? (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => markUnpaid(row)}
+                              className="text-red-600 hover:bg-red-50 hover:border-red-200"
+                            >
+                              <XCircle className="h-4 w-4 mr-1" /> Mark Unpaid
+                            </Button>
                           ) : (
-                            <span className="text-gray-400">No description</span>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => markPaid(row)}
+                              className="text-manzhil-teal hover:bg-manzhil-teal/10 hover:border-manzhil-teal/30"
+                            >
+                              <CheckCircle className="h-4 w-4 mr-1" /> Mark Paid
+                            </Button>
                           )}
                         </TableCell>
                       </TableRow>
                     ))}
-                    {complaintsDisplay.length === 0 && (
+                    {filteredPayments.length === 0 && (
                       <TableRow>
-                        <TableCell colSpan={8} className="text-center text-gray-500 py-8">
-                          No complaint records for this period
+                        <TableCell colSpan={5} className="text-center text-gray-500 py-8">
+                          No records
                         </TableCell>
                       </TableRow>
                     )}
                   </TableBody>
                 </Table>
-              </CardContent>
-            </Card>
-          </TabsContent>
+              </div>
 
-          <TabsContent value="staff">
-            <Card className="border-0 shadow-xl">
-              <CardHeader className="bg-white">
-                <CardTitle className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Users className="h-5 w-5 text-purple-600" />
-                    <span>Staff Members</span>
-                  </div>
-                  <Badge variant="outline" className="text-lg px-4 py-2">
-                    {staff.length} Total
-                  </Badge>
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-0">
-                {staff.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center py-16 text-center">
-                    <Users className="h-16 w-16 text-gray-300 mb-4" />
-                    <h3 className="text-xl font-semibold text-gray-900 mb-2">No Staff Members</h3>
-                    <p className="text-gray-500 max-w-md">
-                      This resident hasn't registered any staff members yet. Staff can be added via WhatsApp.
-                    </p>
+              {/* Mobile Card View */}
+              <div className="block md:hidden p-4 space-y-3">
+                {filteredPayments.length === 0 ? (
+                  <div className="text-center text-gray-500 py-8">
+                    No records
                   </div>
                 ) : (
-                  <Table>
-                    <TableHeader>
-                      <TableRow className="bg-gray-50/50">
-                        <TableHead>Name</TableHead>
-                        <TableHead>CNIC</TableHead>
-                        <TableHead>Phone Number</TableHead>
-                        <TableHead>Role</TableHead>
-                        <TableHead>Registered On</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {staff.map((member) => (
-                        <TableRow key={member.id} className="hover:bg-gray-50/50 transition-colors">
-                          <TableCell className="font-medium text-gray-900">{member.name}</TableCell>
-                          <TableCell className="font-mono text-gray-600">{member.cnic}</TableCell>
-                          <TableCell className="text-gray-600">{member.phone_number}</TableCell>
-                          <TableCell>
-                            <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200">
-                              {member.role}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-gray-600">
-                            {new Date(member.created_at).toLocaleDateString("en-GB", {
-                              day: "2-digit",
-                              month: "short",
-                              year: "numeric",
-                            })}
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
+                  filteredPayments.map((row) => (
+                    <Card key={row.id} className="border border-gray-200 shadow-sm">
+                      <CardContent className="p-4 space-y-3">
+                        <div className="flex items-start justify-between">
+                          <div>
+                            <h3 className="font-semibold text-base text-gray-900">
+                              {formatMonth(row.year, row.month)}
+                            </h3>
+                            <p className="text-sm text-gray-500 mt-0.5">Maintenance Payment</p>
+                          </div>
+                          <Badge variant={row.status === "paid" ? "default" : "secondary"}>
+                            {row.status}
+                          </Badge>
+                        </div>
+
+                        <div className="space-y-2 text-sm">
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">Amount:</span>
+                            <span className="font-medium text-gray-900">Rs. {Number(row.amount).toLocaleString()}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">Paid Date:</span>
+                            <span className="font-medium text-gray-900">
+                              {row.paid_date ? new Date(row.paid_date + "T00:00:00").toLocaleDateString("en-GB") : "-"}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="pt-2 border-t border-gray-100">
+                          {row.status === "paid" ? (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => markUnpaid(row)}
+                              className="w-full text-red-600 hover:bg-red-50 hover:border-red-200"
+                            >
+                              <XCircle className="h-4 w-4 mr-2" /> Mark as Unpaid
+                            </Button>
+                          ) : (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => markPaid(row)}
+                              className="w-full text-manzhil-teal hover:bg-manzhil-teal/10 hover:border-manzhil-teal/30"
+                            >
+                              <CheckCircle className="h-4 w-4 mr-2" /> Mark as Paid
+                            </Button>
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))
                 )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
-      </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="bookings">
+          <Card className="border-0 shadow-xl shadow-manzhil-teal/5">
+            <CardHeader className="bg-white">
+              <CardTitle className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <span className="text-lg sm:text-xl">Booking History</span>
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">
+                  <Select
+                    value={bookingsPeriod}
+                    onValueChange={(value) => setBookingsPeriod(value as Period)}
+                  >
+                    <SelectTrigger className="w-full sm:w-40 border-gray-200">
+                      <Filter className="h-4 w-4 mr-2" />
+                      <SelectValue placeholder="Period" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Time</SelectItem>
+                      <SelectItem value="daily">Today</SelectItem>
+                      <SelectItem value="weekly">This Week</SelectItem>
+                      <SelectItem value="monthly">This Month</SelectItem>
+                      <SelectItem value="yearly">This Year</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-2 bg-transparent w-full sm:w-auto"
+                    onClick={() => {
+                      void exportToPdf({
+                        title: `Booking History — ${profile?.name || ""}`,
+                        periodLabel: periodLabel(bookingsPeriod),
+                        columns: [
+                          { header: "Customer", dataKey: "customer" },
+                          { header: "Apartment", dataKey: "apartment" },
+                          { header: "Date", dataKey: "date" },
+                          { header: "Time Slot", dataKey: "time" },
+                          { header: "Amount", dataKey: "amount" },
+                          { header: "Payment", dataKey: "payment" },
+                          { header: "Status", dataKey: "status" },
+                          { header: "Created At", dataKey: "created" },
+                        ],
+                        rows: bookingsDisplay.map((b) => ({
+                          customer: b.profiles?.name || profile?.name || "N/A",
+                          apartment: b.profiles?.apartment_number || profile?.apartment_number || "",
+                          date: formatDateForDisplay(b.booking_date),
+                          time: `${formatTime(b.start_time)} - ${formatTime(b.end_time)}`,
+                          amount: `Rs. ${Number(b.booking_charges).toLocaleString()}`,
+                          payment: b.payment_status,
+                          status: b.status,
+                          created: formatDateTime(b.created_at),
+                        })),
+                        fileName: `booking-history-${profile?.apartment_number || "resident"}.pdf`,
+                      })
+                    }}
+                  >
+                    <Calendar className="h-4 w-4" />
+                    <span className="hidden sm:inline">Download PDF</span>
+                    <span className="inline sm:hidden">PDF</span>
+                  </Button>
+                </div>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-0">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-gradient-to-r from-manzhil-teal/5 to-transparent">
+                    <TableHead>Customer</TableHead>
+                    <TableHead>Apartment</TableHead>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Time Slot</TableHead>
+                    <TableHead>Amount</TableHead>
+                    <TableHead>Payment</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Created At</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {bookingsDisplay.map((row) => (
+                    <TableRow key={row.id} className="hover:bg-manzhil-teal/5 transition-colors">
+                      <TableCell className="font-medium text-gray-900">
+                        {row.profiles?.name || profile?.name || "N/A"}
+                      </TableCell>
+                      <TableCell>{row.profiles?.apartment_number || profile?.apartment_number || "N/A"}</TableCell>
+                      <TableCell>{formatDateForDisplay(row.booking_date)}</TableCell>
+                      <TableCell>
+                        {formatTime(row.start_time)} - {formatTime(row.end_time)}
+                      </TableCell>
+                      <TableCell>Rs. {Number(row.booking_charges).toLocaleString()}</TableCell>
+                      <TableCell>
+                        <Badge variant={getStatusBadgeVariant(row.payment_status)}>{row.payment_status}</Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={getStatusBadgeVariant(row.status)}>{row.status}</Badge>
+                      </TableCell>
+                      <TableCell>{formatDateTime(row.created_at)}</TableCell>
+                    </TableRow>
+                  ))}
+                  {bookingsDisplay.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={8} className="text-center text-gray-500 py-8">
+                        No booking records for this period
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="complaints">
+          <Card className="border-0 shadow-xl shadow-manzhil-teal/5">
+            <CardHeader className="bg-white">
+              <CardTitle className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <span className="text-lg sm:text-xl">Complaints History</span>
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">
+                  <Select
+                    value={complaintsPeriod}
+                    onValueChange={(value) => setComplaintsPeriod(value as Period)}
+                  >                      <SelectTrigger className="w-full sm:w-40 border-gray-200">
+                      <Filter className="h-4 w-4 mr-2" />
+                      <SelectValue placeholder="Period" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Time</SelectItem>
+                      <SelectItem value="daily">Today</SelectItem>
+                      <SelectItem value="weekly">This Week</SelectItem>
+                      <SelectItem value="monthly">This Month</SelectItem>
+                      <SelectItem value="yearly">This Year</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-2 bg-transparent w-full sm:w-auto"
+                    onClick={() => {
+                      void exportToPdf({
+                        title: `Complaints History — ${profile?.name || ""}`,
+                        periodLabel: periodLabel(complaintsPeriod),
+                        columns: [
+                          { header: "Complaint ID", dataKey: "complaintId" },
+                          { header: "Customer", dataKey: "customer" },
+                          { header: "Apartment", dataKey: "apartment" },
+                          { header: "Category", dataKey: "category" },
+                          { header: "Type", dataKey: "type" },
+                          { header: "Status", dataKey: "status" },
+                          { header: "Created At", dataKey: "created" },
+                          { header: "Description", dataKey: "description" },
+                        ],
+                        rows: complaintsDisplay.map((c) => ({
+                          complaintId: c.complaint_id || c.id,
+                          customer: c.profiles?.name || profile?.name || "N/A",
+                          apartment: c.profiles?.apartment_number || profile?.apartment_number || "",
+                          category: c.category,
+                          type: c.subcategory,
+                          status: c.status,
+                          created: formatDateTime(c.created_at),
+                          description: c.description || "—",
+                        })),
+                        fileName: `complaints-history-${profile?.apartment_number || "resident"}.pdf`,
+                      })
+                    }}
+                  >
+                    <MessageSquare className="h-4 w-4" />
+                    <span className="hidden sm:inline">Download PDF</span>
+                    <span className="inline sm:hidden">PDF</span>
+                  </Button>
+                </div>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-0">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-gradient-to-r from-manzhil-teal/5 to-transparent">
+                    <TableHead>Complaint ID</TableHead>
+                    <TableHead>Customer</TableHead>
+                    <TableHead>Apartment</TableHead>
+                    <TableHead>Category</TableHead>
+                    <TableHead>Type</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Created At</TableHead>
+                    <TableHead>Description</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {complaintsDisplay.map((row) => (
+                    <TableRow key={row.id} className="hover:bg-manzhil-teal/5 transition-colors">
+                      <TableCell className="font-medium">{row.complaint_id || row.id}</TableCell>
+                      <TableCell>{row.profiles?.name || profile?.name || "N/A"}</TableCell>
+                      <TableCell>{row.profiles?.apartment_number || profile?.apartment_number || "N/A"}</TableCell>
+                      <TableCell>{row.category}</TableCell>
+                      <TableCell>{row.subcategory}</TableCell>
+                      <TableCell>
+                        <Badge variant={getStatusBadgeVariant(row.status)}>{row.status}</Badge>
+                      </TableCell>
+                      <TableCell>{formatDateTime(row.created_at)}</TableCell>
+                      <TableCell className="max-w-xs">
+                        {row.description ? (
+                          <span className="line-clamp-3 text-gray-700">{row.description}</span>
+                        ) : (
+                          <span className="text-gray-400">No description</span>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                  {complaintsDisplay.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={8} className="text-center text-gray-500 py-8">
+                        No complaint records for this period
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="staff">
+          <Card className="border-0 shadow-xl shadow-manzhil-teal/5">
+            <CardHeader className="bg-white">
+              <CardTitle className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Users className="h-5 w-5 text-manzhil-teal" />
+                  <span>Staff Members</span>
+                </div>
+                <Badge variant="outline" className="text-lg px-4 py-2">
+                  {staff.length} Total
+                </Badge>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-0">
+              {staff.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-16 text-center">
+                  <Users className="h-16 w-16 text-gray-300 mb-4" />
+                  <h3 className="text-xl font-semibold text-gray-900 mb-2">No Staff Members</h3>
+                  <p className="text-gray-500 max-w-md">
+                    This resident hasn't registered any staff members yet. Staff can be added via WhatsApp.
+                  </p>
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-gradient-to-r from-manzhil-teal/5 to-transparent">
+                      <TableHead>Name</TableHead>
+                      <TableHead>CNIC</TableHead>
+                      <TableHead>Phone Number</TableHead>
+                      <TableHead>Role</TableHead>
+                      <TableHead>Registered On</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {staff.map((member) => (
+                      <TableRow key={member.id} className="hover:bg-manzhil-teal/5 transition-colors">
+                        <TableCell className="font-medium text-gray-900">{member.name}</TableCell>
+                        <TableCell className="font-mono text-gray-600">{member.cnic}</TableCell>
+                        <TableCell className="text-gray-600">{member.phone_number}</TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className="bg-manzhil-teal/10 text-manzhil-dark border-manzhil-teal/30">
+                            {member.role}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-gray-600">
+                          {new Date(member.created_at).toLocaleDateString("en-GB", {
+                            day: "2-digit",
+                            month: "short",
+                            year: "numeric",
+                          })}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   )
 }

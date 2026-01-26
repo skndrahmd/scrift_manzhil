@@ -33,7 +33,7 @@ export function FinancialSummaryCards({ summary, loading }: FinancialSummaryCard
         return (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                 {[...Array(4)].map((_, i) => (
-                    <Card key={i} className="animate-pulse">
+                    <Card key={i} className="animate-pulse border-0 shadow-lg shadow-manzhil-teal/5">
                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                             <div className="h-4 w-24 bg-gray-200 rounded" />
                             <div className="h-8 w-8 bg-gray-200 rounded" />
@@ -55,8 +55,8 @@ export function FinancialSummaryCards({ summary, loading }: FinancialSummaryCard
             icon: DollarSign,
             description: "All income collected",
             trend: "up",
-            color: "text-green-600",
-            bgColor: "bg-green-100"
+            color: "text-manzhil-teal",
+            bgColor: "bg-manzhil-teal/20"
         },
         {
             title: "Net Income",
@@ -64,8 +64,8 @@ export function FinancialSummaryCards({ summary, loading }: FinancialSummaryCard
             icon: summary?.netIncome && summary.netIncome >= 0 ? TrendingUp : TrendingDown,
             description: "Revenue minus expenses",
             trend: summary?.netIncome && summary.netIncome >= 0 ? "up" : "down",
-            color: summary?.netIncome && summary.netIncome >= 0 ? "text-green-600" : "text-red-600",
-            bgColor: summary?.netIncome && summary.netIncome >= 0 ? "bg-green-100" : "bg-red-100"
+            color: summary?.netIncome && summary.netIncome >= 0 ? "text-manzhil-dark" : "text-red-600",
+            bgColor: summary?.netIncome && summary.netIncome >= 0 ? "bg-manzhil-dark/10" : "bg-red-100"
         },
         {
             title: "Total Expenses",
@@ -73,8 +73,8 @@ export function FinancialSummaryCards({ summary, loading }: FinancialSummaryCard
             icon: Wallet,
             description: "All expenses recorded",
             trend: "neutral",
-            color: "text-orange-600",
-            bgColor: "bg-orange-100"
+            color: "text-amber-600",
+            bgColor: "bg-amber-100"
         },
         {
             title: "Outstanding Dues",
@@ -82,30 +82,28 @@ export function FinancialSummaryCards({ summary, loading }: FinancialSummaryCard
             icon: PiggyBank,
             description: `${summary?.collectionRate?.toFixed(1) || 0}% collection rate`,
             trend: "neutral",
-            color: "text-blue-600",
-            bgColor: "bg-blue-100"
+            color: "text-manzhil-teal",
+            bgColor: "bg-manzhil-teal/10"
         }
     ]
 
     return (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
             {cards.map((card, index) => (
-                <Card key={index} className="hover:shadow-md transition-shadow">
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium text-muted-foreground">
-                            {card.title}
-                        </CardTitle>
-                        <div className={`p-2 rounded-full ${card.bgColor}`}>
-                            <card.icon className={`h-4 w-4 ${card.color}`} />
+                <Card key={index} className="border-0 shadow-lg shadow-manzhil-teal/10 bg-[#0F766E] text-white hover:shadow-xl hover:-translate-y-0.5 transition-all relative overflow-hidden group">
+                    <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                        <card.icon className="w-24 h-24 -mr-8 -mt-8 rotate-12" />
+                    </div>
+                    <CardContent className="p-5 relative z-10">
+                        <div className="flex justify-between items-start mb-4">
+                            <p className="text-sm font-medium text-white/90">{card.title}</p>
                         </div>
-                    </CardHeader>
-                    <CardContent>
-                        <div className={`text-2xl font-bold ${card.color}`}>
+                        <p className="text-4xl font-medium text-white mb-2">
                             {formatCurrency(card.value)}
-                        </div>
-                        <p className="text-xs text-muted-foreground flex items-center mt-1">
-                            {card.trend === "up" && <ArrowUpRight className="h-3 w-3 mr-1 text-green-600" />}
-                            {card.trend === "down" && <ArrowDownRight className="h-3 w-3 mr-1 text-red-600" />}
+                        </p>
+                        <p className="text-xs text-white/80 flex items-center">
+                            {card.trend === "up" && <ArrowUpRight className="h-3 w-3 mr-1" />}
+                            {card.trend === "down" && <ArrowDownRight className="h-3 w-3 mr-1" />}
                             {card.description}
                         </p>
                     </CardContent>
@@ -147,35 +145,41 @@ export function RevenueBreakdownCards({ summary, loading }: FinancialSummaryCard
 
     return (
         <div className="grid gap-4 md:grid-cols-2">
-            <Card className="border-l-4 border-l-emerald-500">
-                <CardContent className="pt-6">
+            <Card className="border-0 shadow-lg shadow-manzhil-teal/10 bg-[#0F766E] text-white hover:shadow-xl hover:-translate-y-0.5 transition-all relative overflow-hidden group">
+                <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                    <DollarSign className="w-24 h-24 -mr-8 -mt-8 rotate-12" />
+                </div>
+                <CardContent className="p-5 relative z-10">
                     <div className="flex items-center justify-between">
                         <div>
-                            <p className="text-sm font-medium text-muted-foreground">Booking Revenue</p>
-                            <p className="text-2xl font-bold text-emerald-600">
+                            <p className="text-sm font-medium text-white/90">Booking Revenue</p>
+                            <p className="text-3xl font-medium text-white mt-2">
                                 {formatCurrency(summary?.bookingRevenue || 0)}
                             </p>
                         </div>
                         <div className="text-right">
-                            <span className="text-lg font-semibold text-emerald-600">{bookingPercent}%</span>
-                            <p className="text-xs text-muted-foreground">of total</p>
+                            <span className="text-2xl font-medium text-white">{bookingPercent}%</span>
+                            <p className="text-xs text-white/70">of total</p>
                         </div>
                     </div>
                 </CardContent>
             </Card>
 
-            <Card className="border-l-4 border-l-blue-500">
-                <CardContent className="pt-6">
+            <Card className="border-0 shadow-lg shadow-manzhil-teal/10 bg-[#0F766E] text-white hover:shadow-xl hover:-translate-y-0.5 transition-all relative overflow-hidden group">
+                <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                    <Wallet className="w-24 h-24 -mr-8 -mt-8 rotate-12" />
+                </div>
+                <CardContent className="p-5 relative z-10">
                     <div className="flex items-center justify-between">
                         <div>
-                            <p className="text-sm font-medium text-muted-foreground">Maintenance Revenue</p>
-                            <p className="text-2xl font-bold text-blue-600">
+                            <p className="text-sm font-medium text-white/90">Maintenance Revenue</p>
+                            <p className="text-3xl font-medium text-white mt-2">
                                 {formatCurrency(summary?.maintenanceRevenue || 0)}
                             </p>
                         </div>
                         <div className="text-right">
-                            <span className="text-lg font-semibold text-blue-600">{maintenancePercent}%</span>
-                            <p className="text-xs text-muted-foreground">of total</p>
+                            <span className="text-2xl font-medium text-white">{maintenancePercent}%</span>
+                            <p className="text-xs text-white/70">of total</p>
                         </div>
                     </div>
                 </CardContent>
