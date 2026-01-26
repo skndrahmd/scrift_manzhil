@@ -45,7 +45,7 @@ export default function AdminPage() {
     <div className="space-y-6">
       {/* Page Header */}
       <div>
-        <h1 className="text-2xl font-bold text-manzhil-dark flex items-center gap-2">
+        <h1 className="text-2xl font-medium text-manzhil-dark flex items-center gap-2">
           <Users className="h-6 w-6 text-manzhil-teal" />
           Residents
         </h1>
@@ -63,7 +63,7 @@ export default function AdminPage() {
             <div className="flex justify-between items-start mb-4">
               <p className="text-sm font-medium text-white/90">Total Residents</p>
             </div>
-            <p className="text-4xl font-bold text-white mb-2">{totalResidents}</p>
+            <p className="text-4xl font-medium text-white mb-2">{totalResidents}</p>
             <p className="text-xs text-white/80">
               +{newResidentsThisMonth} new this month
             </p>
@@ -79,7 +79,7 @@ export default function AdminPage() {
             <div className="flex justify-between items-start mb-4">
               <p className="text-sm font-medium text-white/90">Payment Compliance</p>
             </div>
-            <p className="text-4xl font-bold text-white mb-2">{paymentComplianceRate}%</p>
+            <p className="text-4xl font-medium text-white mb-2">{paymentComplianceRate}%</p>
             <p className="text-xs text-white/80">
               {paidUpResidents} paid up / {residentsWithDues} with dues
             </p>
@@ -95,7 +95,7 @@ export default function AdminPage() {
             <div className="flex justify-between items-start mb-4">
               <p className="text-sm font-medium text-white/90">Active Issues</p>
             </div>
-            <p className="text-4xl font-bold text-white mb-2">{residentsWithIssues}</p>
+            <p className="text-4xl font-medium text-white mb-2">{residentsWithIssues}</p>
             <p className="text-xs text-white/80">
               {pendingCount} pending / {inProgressCount} in-progress
             </p>

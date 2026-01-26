@@ -315,7 +315,7 @@ export function AnalyticsDashboard() {
         if (active && payload && payload.length) {
             return (
                 <div className="bg-white p-3 border border-manzhil-teal/20 rounded-lg shadow-lg">
-                    <p className="font-semibold text-manzhil-dark">{label}</p>
+                    <p className="font-medium text-manzhil-dark">{label}</p>
                     {payload.map((entry: any, index: number) => (
                         <p key={index} className="text-sm" style={{ color: entry.color }}>
                             {entry.name}: {typeof entry.value === 'number' && entry.name?.includes('Revenue')
@@ -334,7 +334,7 @@ export function AnalyticsDashboard() {
             {/* Header */}
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div>
-                    <h1 className="text-2xl font-bold text-manzhil-dark flex items-center gap-2">
+                    <h1 className="text-2xl font-medium text-manzhil-dark flex items-center gap-2">
                         <BarChart3 className="h-6 w-6 text-manzhil-teal" />
                         Analytics
                     </h1>
@@ -364,7 +364,7 @@ export function AnalyticsDashboard() {
                         <div className="flex justify-between items-start mb-4">
                             <p className="text-sm font-medium text-white/90">Total Residents</p>
                         </div>
-                        <p className="text-4xl font-bold text-white mb-2">{kpiData.occupancyRate}%</p>
+                        <p className="text-4xl font-medium text-white mb-2">{kpiData.occupancyRate}%</p>
                         <p className="text-xs text-white/70 font-medium">
                             {kpiData.activeResidents} active community members
                         </p>
@@ -380,7 +380,7 @@ export function AnalyticsDashboard() {
                         <div className="flex justify-between items-start mb-4">
                             <p className="text-sm font-medium text-white/90">Active Bookings</p>
                         </div>
-                        <p className="text-4xl font-bold text-white mb-2">{bookings.filter(b => b.status === 'confirmed').length}</p>
+                        <p className="text-4xl font-medium text-white mb-2">{bookings.filter(b => b.status === 'confirmed').length}</p>
                         <p className="text-xs text-white/70 font-medium">
                             Confirmed reservations
                         </p>
@@ -396,7 +396,7 @@ export function AnalyticsDashboard() {
                         <div className="flex justify-between items-start mb-4">
                             <p className="text-sm font-medium text-white/90">Pending Payments</p>
                         </div>
-                        <p className="text-4xl font-bold text-white mb-2">{profiles.filter(p => !p.maintenance_paid).length}</p>
+                        <p className="text-4xl font-medium text-white mb-2">{profiles.filter(p => !p.maintenance_paid).length}</p>
                         <p className="text-xs text-white/70 font-medium">
                             Maintenance payments due
                         </p>
@@ -412,7 +412,7 @@ export function AnalyticsDashboard() {
                         <div className="flex justify-between items-start mb-4">
                             <p className="text-sm font-medium text-white/90">Today's Bookings</p>
                         </div>
-                        <p className="text-4xl font-bold text-white mb-2">{
+                        <p className="text-4xl font-medium text-white mb-2">{
                             bookings.filter(b => {
                                 const today = new Date().toISOString().split('T')[0]
                                 return b.booking_date === today
@@ -555,7 +555,7 @@ export function AnalyticsDashboard() {
                                     {financialData.outstandingResidents.map((resident) => (
                                         <div key={resident.id} className="flex items-center justify-between p-3 bg-manzhil-teal/5 hover:bg-manzhil-teal/10 rounded-lg transition-colors">
                                             <div className="flex items-center gap-3">
-                                                <div className="h-10 w-10 rounded-full bg-amber-100 flex items-center justify-center text-amber-700 font-bold text-sm">
+                                                <div className="h-10 w-10 rounded-full bg-amber-100 flex items-center justify-center text-amber-700 font-medium text-sm">
                                                     {resident.apartment_number}
                                                 </div>
                                                 <div>
@@ -587,7 +587,7 @@ export function AnalyticsDashboard() {
                                     <div className="flex items-center justify-between">
                                         <div>
                                             <p className="text-sm text-gray-500 capitalize">{status}</p>
-                                            <p className="text-2xl font-bold text-manzhil-dark">{count}</p>
+                                            <p className="text-2xl font-medium text-manzhil-dark">{count}</p>
                                         </div>
                                         <Badge className={getStatusColor(status)}>
                                             {status === 'completed' && <CheckCircle className="h-4 w-4" />}
@@ -694,7 +694,7 @@ export function AnalyticsDashboard() {
                                         <Calendar className="h-6 w-6 text-manzhil-teal" />
                                     </div>
                                     <div>
-                                        <p className="text-2xl font-bold text-manzhil-dark">{bookings.length}</p>
+                                        <p className="text-2xl font-medium text-manzhil-dark">{bookings.length}</p>
                                         <p className="text-sm text-gray-500">Total Bookings</p>
                                     </div>
                                 </div>
@@ -707,7 +707,7 @@ export function AnalyticsDashboard() {
                                         <TrendingUp className="h-6 w-6 text-manzhil-dark" />
                                     </div>
                                     <div>
-                                        <p className="text-2xl font-bold text-manzhil-dark">{bookingData.futureBookingsCount}</p>
+                                        <p className="text-2xl font-medium text-manzhil-dark">{bookingData.futureBookingsCount}</p>
                                         <p className="text-sm text-gray-500">Upcoming Bookings</p>
                                     </div>
                                 </div>
@@ -720,7 +720,7 @@ export function AnalyticsDashboard() {
                                         <DollarSign className="h-6 w-6 text-manzhil-dark" />
                                     </div>
                                     <div>
-                                        <p className="text-2xl font-bold text-manzhil-dark">{formatCurrency(bookingData.projectedRevenue)}</p>
+                                        <p className="text-2xl font-medium text-manzhil-dark">{formatCurrency(bookingData.projectedRevenue)}</p>
                                         <p className="text-sm text-gray-500">Projected Revenue</p>
                                     </div>
                                 </div>

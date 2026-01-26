@@ -135,7 +135,7 @@ export function AdminSidebar({
                 </div>
                 {!isCollapsed && (
                     <div className="flex flex-col">
-                        <span className="font-bold text-manzhil-dark">Manzhil</span>
+                        <span className="font-medium text-manzhil-dark">Manzhil</span>
                         <span className="text-xs text-manzhil-teal/70">by Scrift</span>
                     </div>
                 )}

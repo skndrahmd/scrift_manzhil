@@ -223,7 +223,7 @@ export function TransactionsTable({
                                         {getPaymentMethodLabel(transaction.payment_method)}
                                     </TableCell>
                                     <TableCell className="text-right">
-                                        <div className={`flex items-center justify-end font-semibold ${transaction.amount >= 0 ? 'text-manzhil-teal' : 'text-amber-600'
+                                        <div className={`flex items-center justify-end font-medium ${transaction.amount >= 0 ? 'text-manzhil-teal' : 'text-amber-600'
                                             }`}>
                                             {transaction.amount >= 0 ? (
                                                 <ArrowUpRight className="h-4 w-4 mr-1" />
@@ -270,7 +270,7 @@ export function TransactionsTable({
                                         {getTypeLabel(transaction.transaction_type)}
                                     </Badge>
                                 </div>
-                                <div className={`flex items-center font-bold text-lg ${transaction.amount >= 0 ? 'text-manzhil-teal' : 'text-amber-600'}`}>
+                                <div className={`flex items-center font-medium text-lg ${transaction.amount >= 0 ? 'text-manzhil-teal' : 'text-amber-600'}`}>
                                     {transaction.amount >= 0 ? "+" : ""}
                                     {formatCurrency(transaction.amount)}
                                 </div>

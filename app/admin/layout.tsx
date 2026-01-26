@@ -291,7 +291,7 @@ function AdminLayoutContent({
                                                     <div className="flex items-center justify-between p-3 rounded-lg bg-manzhil-teal/5 border border-manzhil-teal/10">
                                                         <div className="flex items-center gap-3">
                                                             <div className="h-8 w-8 rounded-full bg-manzhil-teal/10 flex items-center justify-center">
-                                                                <span className="font-bold text-manzhil-teal text-xs">{newBookingsCount}</span>
+                                                                <span className="font-medium text-manzhil-teal text-xs">{newBookingsCount}</span>
                                                             </div>
                                                             <div>
                                                                 <p className="font-medium text-sm text-manzhil-dark">Unpaid Bookings</p>
@@ -307,7 +307,7 @@ function AdminLayoutContent({
                                                     <div className="flex items-center justify-between p-3 rounded-lg bg-amber-50 border border-amber-100">
                                                         <div className="flex items-center gap-3">
                                                             <div className="h-8 w-8 rounded-full bg-amber-100 flex items-center justify-center">
-                                                                <span className="font-bold text-amber-600 text-xs">{newComplaintsCount}</span>
+                                                                <span className="font-medium text-amber-600 text-xs">{newComplaintsCount}</span>
                                                             </div>
                                                             <div>
                                                                 <p className="font-medium text-sm text-manzhil-dark">Active Complaints</p>
@@ -323,7 +323,7 @@ function AdminLayoutContent({
                                                     <div className="flex items-center justify-between p-3 rounded-lg bg-blue-50 border border-blue-100">
                                                         <div className="flex items-center gap-3">
                                                             <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center">
-                                                                <span className="font-bold text-blue-600 text-xs">{newFeedbackCount}</span>
+                                                                <span className="font-medium text-blue-600 text-xs">{newFeedbackCount}</span>
                                                             </div>
                                                             <div>
                                                                 <p className="font-medium text-sm text-manzhil-dark">New Feedback</p>

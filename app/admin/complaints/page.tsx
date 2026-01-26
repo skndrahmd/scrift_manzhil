@@ -40,7 +40,7 @@ export default function ComplaintsPage() {
         <div className="space-y-6">
             {/* Page Header */}
             <div>
-                <h1 className="text-2xl font-bold text-manzhil-dark flex items-center gap-2">
+                <h1 className="text-2xl font-medium text-manzhil-dark flex items-center gap-2">
                     <AlertTriangle className="h-6 w-6 text-manzhil-teal" />
                     Complaints
                 </h1>
@@ -58,7 +58,7 @@ export default function ComplaintsPage() {
                         <div className="flex justify-between items-start mb-4">
                             <p className="text-sm font-medium text-white/90">Total Complaints</p>
                         </div>
-                        <p className="text-4xl font-bold text-white mb-2">{totalComplaints}</p>
+                        <p className="text-4xl font-medium text-white mb-2">{totalComplaints}</p>
                         <p className="text-xs text-white/80">
                             +{complaintsThisMonth} this month
                         </p>
@@ -74,7 +74,7 @@ export default function ComplaintsPage() {
                         <div className="flex justify-between items-start mb-4">
                             <p className="text-sm font-medium text-white/90">Pending</p>
                         </div>
-                        <p className="text-4xl font-bold text-white mb-2">{pendingComplaints}</p>
+                        <p className="text-4xl font-medium text-white mb-2">{pendingComplaints}</p>
                         <p className="text-xs text-white/80">
                             Awaiting action
                         </p>
@@ -90,7 +90,7 @@ export default function ComplaintsPage() {
                         <div className="flex justify-between items-start mb-4">
                             <p className="text-sm font-medium text-white/90">In Progress</p>
                         </div>
-                        <p className="text-4xl font-bold text-white mb-2">{inProgressComplaints}</p>
+                        <p className="text-4xl font-medium text-white mb-2">{inProgressComplaints}</p>
                         <p className="text-xs text-white/80">
                             Being worked on
                         </p>
@@ -106,7 +106,7 @@ export default function ComplaintsPage() {
                         <div className="flex justify-between items-start mb-4">
                             <p className="text-sm font-medium text-white/90">Resolution Rate</p>
                         </div>
-                        <p className="text-4xl font-bold text-white mb-2">{resolutionRate}%</p>
+                        <p className="text-4xl font-medium text-white mb-2">{resolutionRate}%</p>
                         <p className="text-xs text-white/80">
                             {completedComplaints} resolved
                         </p>

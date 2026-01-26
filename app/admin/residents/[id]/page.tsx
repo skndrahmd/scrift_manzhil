@@ -254,13 +254,13 @@ export default function ResidentProfilePage({ params }: { params: { id: string }
         <div className="bg-gradient-to-r from-manzhil-dark to-manzhil-teal p-6 sm:p-8">
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6">
             {/* Avatar */}
-            <div className="h-20 w-20 sm:h-24 sm:w-24 rounded-full bg-white/20 backdrop-blur flex items-center justify-center text-white text-2xl sm:text-3xl font-bold shadow-lg">
+            <div className="h-20 w-20 sm:h-24 sm:w-24 rounded-full bg-white/20 backdrop-blur flex items-center justify-center text-white text-2xl sm:text-3xl font-medium shadow-lg">
               {initials}
             </div>
 
             {/* Profile Info */}
             <div className="flex-1 text-white">
-              <h1 className="text-2xl sm:text-3xl font-bold mb-1">{profile?.name}</h1>
+              <h1 className="text-2xl sm:text-3xl font-medium mb-1">{profile?.name}</h1>
               <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-white/80 text-sm sm:text-base">
                 <span className="flex items-center gap-1">
                   <span className="font-medium">Apt {profile?.apartment_number}</span>
@@ -286,7 +286,7 @@ export default function ResidentProfilePage({ params }: { params: { id: string }
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
               <span className="text-sm text-gray-500">Monthly Maintenance</span>
-              <p className="text-xl font-bold text-manzhil-dark">Rs. {profile?.maintenance_charges?.toLocaleString() ?? "0"}</p>
+              <p className="text-xl font-medium text-manzhil-dark">Rs. {profile?.maintenance_charges?.toLocaleString() ?? "0"}</p>
             </div>
             <div className="md:hidden">
               <Badge className={`${profile?.maintenance_paid ? 'bg-manzhil-teal/20 text-manzhil-dark' : 'bg-red-100 text-red-700'}`}>
@@ -309,7 +309,7 @@ export default function ResidentProfilePage({ params }: { params: { id: string }
               <p className="text-sm font-medium text-white/90">Maintenance</p>
               <Badge variant="outline" className="text-xs bg-white/20 text-white border-white/30">{payments.length} total</Badge>
             </div>
-            <p className="text-4xl font-bold text-white mb-2">{paidPayments} Paid</p>
+            <p className="text-4xl font-medium text-white mb-2">{paidPayments} Paid</p>
             <p className="text-xs text-white/70 font-medium">{unpaidPayments} unpaid months</p>
           </CardContent>
         </Card>
@@ -324,7 +324,7 @@ export default function ResidentProfilePage({ params }: { params: { id: string }
               <p className="text-sm font-medium text-white/90">Bookings</p>
               <Badge variant="outline" className="text-xs bg-white/20 text-white border-white/30">{bookings.length} total</Badge>
             </div>
-            <p className="text-4xl font-bold text-white mb-2">{confirmedBookings} Confirmed</p>
+            <p className="text-4xl font-medium text-white mb-2">{confirmedBookings} Confirmed</p>
             <p className="text-xs text-white/70 font-medium">{pendingBookings} pending payment</p>
           </CardContent>
         </Card>
@@ -339,7 +339,7 @@ export default function ResidentProfilePage({ params }: { params: { id: string }
               <p className="text-sm font-medium text-white/90">Complaints</p>
               <Badge variant="outline" className="text-xs bg-white/20 text-white border-white/30">{complaints.length} total</Badge>
             </div>
-            <p className="text-4xl font-bold text-white mb-2">{resolvedComplaints} Resolved</p>
+            <p className="text-4xl font-medium text-white mb-2">{resolvedComplaints} Resolved</p>
             <p className="text-xs text-white/70 font-medium">{pendingComplaints} in progress</p>
           </CardContent>
         </Card>
@@ -353,7 +353,7 @@ export default function ResidentProfilePage({ params }: { params: { id: string }
             <div className="flex items-center justify-between mb-4">
               <p className="text-sm font-medium text-white/90">Staff Members</p>
             </div>
-            <p className="text-4xl font-bold text-white mb-2">{staff.length} Staff</p>
+            <p className="text-4xl font-medium text-white mb-2">{staff.length} Staff</p>
             <p className="text-xs text-white/70 font-medium">Registered members</p>
           </CardContent>
         </Card>

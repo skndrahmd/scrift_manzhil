@@ -77,7 +77,7 @@ export default function DashboardPage() {
             {/* Page Header */}
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div>
-                    <h1 className="text-2xl font-bold text-manzhil-dark flex items-center gap-2">
+                    <h1 className="text-2xl font-medium text-manzhil-dark flex items-center gap-2">
                         <LayoutDashboard className="h-6 w-6 text-manzhil-teal" />
                         Dashboard
                     </h1>
@@ -97,7 +97,7 @@ export default function DashboardPage() {
                         <div className="flex justify-between items-start mb-4">
                             <p className="text-sm font-medium text-white/90">Total Residents</p>
                         </div>
-                        <p className="text-4xl font-bold text-white mb-2">{totalResidents}</p>
+                        <p className="text-4xl font-medium text-white mb-2">{totalResidents}</p>
                         <p className="text-xs text-white/70 font-medium">
                             {activeResidents} active community members
                         </p>
@@ -113,7 +113,7 @@ export default function DashboardPage() {
                         <div className="flex justify-between items-start mb-4">
                             <p className="text-sm font-medium text-white/90">Pending Complaints</p>
                         </div>
-                        <p className="text-4xl font-bold text-white mb-2">{pendingComplaints}</p>
+                        <p className="text-4xl font-medium text-white mb-2">{pendingComplaints}</p>
                         <p className="text-xs text-white/70 font-medium">
                             {inProgressComplaints} complaints in progress
                         </p>
@@ -129,7 +129,7 @@ export default function DashboardPage() {
                         <div className="flex justify-between items-start mb-4">
                             <p className="text-sm font-medium text-white/90">Today's Bookings</p>
                         </div>
-                        <p className="text-4xl font-bold text-white mb-2">{todayBookings}</p>
+                        <p className="text-4xl font-medium text-white mb-2">{todayBookings}</p>
                         <p className="text-xs text-white/70 font-medium">
                             {bookings.length} total bookings
                         </p>
@@ -145,7 +145,7 @@ export default function DashboardPage() {
                         <div className="flex justify-between items-start mb-4">
                             <p className="text-sm font-medium text-white/90">Unpaid Maintenance</p>
                         </div>
-                        <p className="text-4xl font-bold text-white mb-2">{unpaidMaintenance}</p>
+                        <p className="text-4xl font-medium text-white mb-2">{unpaidMaintenance}</p>
                         <p className="text-xs text-white/70 font-medium">
                             {Math.round((unpaidMaintenance / totalResidents) * 100) || 0}% of residents pending
                         </p>
@@ -158,7 +158,7 @@ export default function DashboardPage() {
                 {/* Recent Complaints */}
                 <Card className="border-0 shadow-lg shadow-manzhil-teal/5">
                     <CardHeader className="flex flex-row items-center justify-between">
-                        <CardTitle className="text-lg font-semibold">Recent Complaints</CardTitle>
+                        <CardTitle className="text-lg font-medium">Recent Complaints</CardTitle>
                         <Link href="/admin/complaints">
                             <Button variant="ghost" size="sm" className="text-manzhil-teal hover:text-manzhil-dark hover:bg-manzhil-teal/10">
                                 View All
@@ -212,7 +212,7 @@ export default function DashboardPage() {
                 {/* Recent Bookings */}
                 <Card className="border-0 shadow-lg shadow-manzhil-teal/5">
                     <CardHeader className="flex flex-row items-center justify-between">
-                        <CardTitle className="text-lg font-semibold">Recent Bookings</CardTitle>
+                        <CardTitle className="text-lg font-medium">Recent Bookings</CardTitle>
                         <Link href="/admin/bookings">
                             <Button variant="ghost" size="sm" className="text-manzhil-teal hover:text-manzhil-dark hover:bg-manzhil-teal/10">
                                 View All

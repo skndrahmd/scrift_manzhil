@@ -374,7 +374,7 @@ export function BookingsTable() {
                             <CardContent className="p-4 space-y-4">
                                 <div className="flex justify-between items-start">
                                     <div>
-                                        <h3 className="font-semibold text-manzhil-dark">{booking.profiles?.name || "N/A"}</h3>
+                                        <h3 className="font-medium text-manzhil-dark">{booking.profiles?.name || "N/A"}</h3>
                                         <p className="text-xs text-muted-foreground">ID: {booking.id.slice(0, 8)}</p>
                                     </div>
                                     <Badge variant={getStatusBadgeVariant(booking.status)}>

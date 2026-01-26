@@ -48,7 +48,7 @@ export default function BookingsPage() {
         <div className="space-y-6">
             {/* Page Header */}
             <div>
-                <h1 className="text-2xl font-bold text-manzhil-dark flex items-center gap-2">
+                <h1 className="text-2xl font-medium text-manzhil-dark flex items-center gap-2">
                     <Calendar className="h-6 w-6 text-manzhil-teal" />
                     Bookings
                 </h1>
@@ -66,7 +66,7 @@ export default function BookingsPage() {
                         <div className="flex justify-between items-start mb-4">
                             <p className="text-sm font-medium text-white/90">Total Bookings</p>
                         </div>
-                        <p className="text-4xl font-bold text-white mb-2">{totalBookings}</p>
+                        <p className="text-4xl font-medium text-white mb-2">{totalBookings}</p>
                         <p className="text-xs text-white/80">
                             +{bookingsThisMonth} this month
                         </p>
@@ -82,7 +82,7 @@ export default function BookingsPage() {
                         <div className="flex justify-between items-start mb-4">
                             <p className="text-sm font-medium text-white/90">Pending Payments</p>
                         </div>
-                        <p className="text-4xl font-bold text-white mb-2">{pendingPayments}</p>
+                        <p className="text-4xl font-medium text-white mb-2">{pendingPayments}</p>
                         <p className="text-xs text-white/80">
                             Awaiting payment confirmation
                         </p>
@@ -98,7 +98,7 @@ export default function BookingsPage() {
                         <div className="flex justify-between items-start mb-4">
                             <p className="text-sm font-medium text-white/90">Today's Bookings</p>
                         </div>
-                        <p className="text-4xl font-bold text-white mb-2">{todayBookings}</p>
+                        <p className="text-4xl font-medium text-white mb-2">{todayBookings}</p>
                         <p className="text-xs text-white/80">
                             Scheduled for today
                         </p>
@@ -114,7 +114,7 @@ export default function BookingsPage() {
                         <div className="flex justify-between items-start mb-4">
                             <p className="text-sm font-medium text-white/90">Revenue This Month</p>
                         </div>
-                        <p className="text-4xl font-bold text-white mb-2">Rs {revenueThisMonth.toLocaleString()}</p>
+                        <p className="text-4xl font-medium text-white mb-2">Rs {revenueThisMonth.toLocaleString()}</p>
                         <p className="text-xs text-white/80">
                             From paid bookings
                         </p>

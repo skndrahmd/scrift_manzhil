@@ -98,7 +98,7 @@ export function FinancialSummaryCards({ summary, loading }: FinancialSummaryCard
                         <div className="flex justify-between items-start mb-4">
                             <p className="text-sm font-medium text-white/90">{card.title}</p>
                         </div>
-                        <p className="text-4xl font-bold text-white mb-2">
+                        <p className="text-4xl font-medium text-white mb-2">
                             {formatCurrency(card.value)}
                         </p>
                         <p className="text-xs text-white/80 flex items-center">
@@ -153,12 +153,12 @@ export function RevenueBreakdownCards({ summary, loading }: FinancialSummaryCard
                     <div className="flex items-center justify-between">
                         <div>
                             <p className="text-sm font-medium text-white/90">Booking Revenue</p>
-                            <p className="text-3xl font-bold text-white mt-2">
+                            <p className="text-3xl font-medium text-white mt-2">
                                 {formatCurrency(summary?.bookingRevenue || 0)}
                             </p>
                         </div>
                         <div className="text-right">
-                            <span className="text-2xl font-semibold text-white">{bookingPercent}%</span>
+                            <span className="text-2xl font-medium text-white">{bookingPercent}%</span>
                             <p className="text-xs text-white/70">of total</p>
                         </div>
                     </div>
@@ -173,12 +173,12 @@ export function RevenueBreakdownCards({ summary, loading }: FinancialSummaryCard
                     <div className="flex items-center justify-between">
                         <div>
                             <p className="text-sm font-medium text-white/90">Maintenance Revenue</p>
-                            <p className="text-3xl font-bold text-white mt-2">
+                            <p className="text-3xl font-medium text-white mt-2">
                                 {formatCurrency(summary?.maintenanceRevenue || 0)}
                             </p>
                         </div>
                         <div className="text-right">
-                            <span className="text-2xl font-semibold text-white">{maintenancePercent}%</span>
+                            <span className="text-2xl font-medium text-white">{maintenancePercent}%</span>
                             <p className="text-xs text-white/70">of total</p>
                         </div>
                     </div>

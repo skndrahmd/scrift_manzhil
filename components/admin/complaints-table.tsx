@@ -294,7 +294,7 @@ export function ComplaintsTable() {
                             <CardContent className="p-4 space-y-4">
                                 <div className="flex justify-between items-start">
                                     <div>
-                                        <h3 className="font-semibold text-manzhil-dark text-sm font-mono">{complaint.complaint_id}</h3>
+                                        <h3 className="font-medium text-manzhil-dark text-sm font-mono">{complaint.complaint_id}</h3>
                                         <p className="text-xs text-muted-foreground">{formatDateTime(complaint.created_at)}</p>
                                     </div>
                                     <Badge className={`${getStatusBadgeClass(complaint.status)} text-xs`}>

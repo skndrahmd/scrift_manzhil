@@ -32,7 +32,7 @@ export function FeedbackList() {
         <div className="space-y-6">
             {/* Header */}
             <div>
-                <h1 className="text-2xl font-bold text-manzhil-dark flex items-center gap-2">
+                <h1 className="text-2xl font-medium text-manzhil-dark flex items-center gap-2">
                     <MessageSquare className="h-6 w-6 text-manzhil-teal" />
                     Feedback
                 </h1>
@@ -54,7 +54,7 @@ export function FeedbackList() {
                             <CardContent className="p-6">
                                 <div className="flex items-start justify-between gap-4 mb-4">
                                     <div>
-                                        <h3 className="font-semibold text-gray-900">
+                                        <h3 className="font-medium text-gray-900">
                                             {(item as any).profiles?.name || "Anonymous"}
                                         </h3>
                                         <p className="text-sm text-gray-500">

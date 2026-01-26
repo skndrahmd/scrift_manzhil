@@ -555,7 +555,7 @@ export function ResidentsTable() {
                             <CardContent className="p-4 space-y-4">
                                 <div className="flex justify-between items-start">
                                     <div>
-                                        <h3 className="font-semibold text-manzhil-dark">{profile.name}</h3>
+                                        <h3 className="font-medium text-manzhil-dark">{profile.name}</h3>
                                         <p className="text-sm text-gray-500">{profile.apartment_number}</p>
                                     </div>
                                     <Checkbox

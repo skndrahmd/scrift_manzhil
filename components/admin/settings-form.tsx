@@ -63,7 +63,7 @@ export function SettingsForm() {
         <div className="space-y-6 max-w-2xl">
             {/* Header */}
             <div>
-                <h1 className="text-2xl font-bold text-manzhil-dark flex items-center gap-2">
+                <h1 className="text-2xl font-medium text-manzhil-dark flex items-center gap-2">
                     <Settings className="h-6 w-6 text-manzhil-teal" />
                     Booking Settings
                 </h1>

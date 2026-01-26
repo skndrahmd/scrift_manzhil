@@ -54,7 +54,7 @@ export function MonthlyRevenueChart({ summary, loading }: RevenueChartProps) {
         if (active && payload && payload.length) {
             return (
                 <div className="bg-white p-3 border rounded-lg shadow-lg">
-                    <p className="font-semibold mb-2">{label}</p>
+                    <p className="font-medium mb-2">{label}</p>
                     {payload.map((entry: any, index: number) => (
                         <p key={index} className="text-sm" style={{ color: entry.color }}>
                             {entry.name}: PKR {entry.value.toLocaleString()}
@@ -137,7 +137,7 @@ export function RevenueBreakdownPieChart({ summary, loading }: RevenueChartProps
         if (active && payload && payload.length) {
             return (
                 <div className="bg-white p-3 border rounded-lg shadow-lg">
-                    <p className="text-sm font-semibold">{payload[0].name}</p>
+                    <p className="text-sm font-medium">{payload[0].name}</p>
                     <p className="text-sm">{formatCurrency(payload[0].value)}</p>
                 </div>
             )

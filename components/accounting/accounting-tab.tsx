@@ -260,7 +260,7 @@ export function AccountingTab() {
             {/* Header */}
             <div className="flex items-center justify-between">
                 <div>
-                    <h2 className="text-2xl font-bold tracking-tight text-manzhil-dark flex items-center gap-2">
+                    <h2 className="text-2xl font-medium tracking-tight text-manzhil-dark flex items-center gap-2">
                         <Wallet className="h-6 w-6 text-manzhil-teal" />
                         Accounting
                     </h2>
@@ -400,7 +400,7 @@ export function AccountingTab() {
                                                         )}
                                                     </div>
                                                     <div>
-                                                        <h3 className="font-semibold text-lg">{report.title}</h3>
+                                                        <h3 className="font-medium text-lg">{report.title}</h3>
                                                         <p className="text-sm text-white/80">
                                                             {isGenerating ? "Generating PDF..." : report.description}
                                                         </p>
