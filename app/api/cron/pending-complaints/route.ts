@@ -1,9 +1,9 @@
 import type { NextRequest } from "next/server"
 import { supabase } from "@/lib/supabase"
-import { sendWhatsAppTemplate, sendWhatsAppMessage } from "@/lib/twilio"
+import { sendTemplate, sendMessage, formatSubcategory } from "@/lib/twilio"
 
 const APP_BASE_URL = (process.env.NEXT_PUBLIC_APP_URL || "https://com3-bms.vercel.app").replace(/\/$/, "")
-const PENDING_COMPLAINT_TEMPLATE_SID = process.env.TWILIO_PENDING_COMPLAINT_TEMPLATE_SID || "HXxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+const PENDING_COMPLAINT_TEMPLATE_SID = process.env.TWILIO_PENDING_COMPLAINT_TEMPLATE_SID
 
 // Reminder recipients (maintenance team)
 const REMINDER_RECIPIENTS = ["+923071288183", "+923000777454", "+923232244009", "+923422546249", "+923242927342"]
@@ -59,10 +59,7 @@ export async function POST(request: NextRequest) {
 
         // Format category and subcategory
         const categoryText = complaint.category === "apartment" ? "Apartment Complaint" : "Building Complaint"
-        const subcategoryText = complaint.subcategory
-          .split('_')
-          .map((word: string) => word.charAt(0).toUpperCase() + word.slice(1))
-          .join(' ')
+        const subcategoryText = formatSubcategory(complaint.subcategory)
 
         // Format registration date
         const formattedDate = createdAt.toLocaleDateString('en-US', {
@@ -74,10 +71,10 @@ export async function POST(request: NextRequest) {
 
         // Sanitize description for template (remove newlines, limit length)
         const sanitizedDescription = (complaint.description || "No description provided")
-          .replace(/\n/g, " ") // Replace newlines with spaces
-          .replace(/\s+/g, " ") // Replace multiple spaces with single space
+          .replace(/\n/g, " ")
+          .replace(/\s+/g, " ")
           .trim()
-          .substring(0, 500) // Limit to 500 characters
+          .substring(0, 500)
 
         // Template variables
         const templateVariables = {
@@ -92,38 +89,42 @@ export async function POST(request: NextRequest) {
           "9": `${APP_BASE_URL}/admin`
         }
 
+        // Fallback message
+        const fallbackMessage = [
+          "Hello, this is Manzhil by Scrift.",
+          "",
+          "Pending Complaint Alert",
+          "",
+          `Complaint ID: ${complaint.complaint_id}`,
+          `Resident: ${complaint.profiles?.name || "Unknown"} (${complaint.profiles?.apartment_number || "N/A"})`,
+          `Category: ${categoryText} - ${subcategoryText}`,
+          `Description: ${sanitizedDescription}`,
+          "",
+          `Registered: ${formattedDate}`,
+          `Pending for: ${hoursPending} hours`,
+          "",
+          "Please review and address this complaint.",
+          "",
+          `View in Admin Panel: ${APP_BASE_URL}/admin`,
+          "",
+          "- Manzhil by Scrift Team",
+        ].join("\n")
+
         // Send reminder to all recipients
         for (const recipient of REMINDER_RECIPIENTS) {
           try {
-            await sendWhatsAppTemplate(recipient, PENDING_COMPLAINT_TEMPLATE_SID, templateVariables)
-            console.log(`[PENDING COMPLAINTS] Reminder sent to ${recipient} for ${complaint.complaint_id} (${hoursPending}h pending)`)
-          } catch (error) {
-            console.error(`[PENDING COMPLAINTS] Failed to send template to ${recipient}:`, error)
-            // Fallback to plain text message
-            try {
-              const fallbackMessage = `Hello, this is Manzhil by Scrift.
-
-⚠️ Pending Complaint Alert
-
-Complaint ID: ${complaint.complaint_id}
-Resident: ${complaint.profiles?.name || "Unknown"} (${complaint.profiles?.apartment_number || "N/A"})
-Category: ${categoryText} - ${subcategoryText}
-Description: ${sanitizedDescription}
-
-Registered: ${formattedDate}
-Pending for: ${hoursPending} hours
-
-Please review and address this complaint.
-
-View in Admin Panel: ${APP_BASE_URL}/admin
-
-- Manzhil by Scrift Team`
-
-              await sendWhatsAppMessage(recipient, fallbackMessage)
-              console.log(`[PENDING COMPLAINTS] Sent fallback message to ${recipient} for ${complaint.complaint_id}`)
-            } catch (fallbackError) {
-              console.error(`[PENDING COMPLAINTS] Failed to send fallback to ${recipient}:`, fallbackError)
+            if (PENDING_COMPLAINT_TEMPLATE_SID) {
+              const result = await sendTemplate(recipient, PENDING_COMPLAINT_TEMPLATE_SID, templateVariables)
+              if (result.ok) {
+                console.log(`[PENDING COMPLAINTS] Reminder sent to ${recipient} for ${complaint.complaint_id} (${hoursPending}h pending)`)
+                continue
+              }
             }
+            // Fallback to plain text
+            await sendMessage(recipient, fallbackMessage)
+            console.log(`[PENDING COMPLAINTS] Sent fallback message to ${recipient} for ${complaint.complaint_id}`)
+          } catch (error) {
+            console.error(`[PENDING COMPLAINTS] Failed to send to ${recipient}:`, error)
           }
         }
         sentCount++
