@@ -42,8 +42,8 @@ export default function DashboardPage() {
         return b.booking_date === today
     }).length
     const unpaidMaintenance = profiles.filter(p => !p.maintenance_paid).length
-    const recentBookings = [...bookings].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()).slice(0, 5)
-    const recentComplaints = complaints.slice(0, 5)
+    const recentBookings = [...bookings].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()).slice(0, 3)
+    const recentComplaints = [...complaints].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()).slice(0, 3)
 
     // Get today's date in nice format
     const today = new Date().toLocaleDateString('en-US', {
@@ -262,6 +262,111 @@ export default function DashboardPage() {
                     </CardContent>
                 </Card>
             </div>
+
+            {/* Maintenance Payment Summary */}
+            <Card className="border-0 shadow-lg shadow-manzhil-teal/5">
+                <CardHeader className="flex flex-row items-center justify-between">
+                    <CardTitle className="text-lg font-medium flex items-center gap-2">
+                        <DollarSign className="h-5 w-5 text-manzhil-teal" />
+                        Maintenance Payment Summary
+                    </CardTitle>
+                    <Link href="/admin/residents">
+                        <Button variant="ghost" size="sm" className="text-manzhil-teal hover:text-manzhil-dark hover:bg-manzhil-teal/10">
+                            View All Residents
+                            <ArrowRight className="w-4 h-4 ml-1" />
+                        </Button>
+                    </Link>
+                </CardHeader>
+                <CardContent>
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        {/* Stats Overview */}
+                        <div className="lg:col-span-1 space-y-4">
+                            <div className="flex items-center justify-between p-4 bg-manzhil-teal/10 rounded-xl">
+                                <div className="flex items-center gap-3">
+                                    <div className="h-10 w-10 rounded-full bg-manzhil-teal/20 flex items-center justify-center">
+                                        <CheckCircle className="h-5 w-5 text-manzhil-teal" />
+                                    </div>
+                                    <div>
+                                        <p className="text-2xl font-semibold text-manzhil-dark">{activeResidents - unpaidMaintenance}</p>
+                                        <p className="text-sm text-gray-500">Paid</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="flex items-center justify-between p-4 bg-amber-50 rounded-xl">
+                                <div className="flex items-center gap-3">
+                                    <div className="h-10 w-10 rounded-full bg-amber-100 flex items-center justify-center">
+                                        <Clock className="h-5 w-5 text-amber-600" />
+                                    </div>
+                                    <div>
+                                        <p className="text-2xl font-semibold text-amber-700">{unpaidMaintenance}</p>
+                                        <p className="text-sm text-gray-500">Unpaid</p>
+                                    </div>
+                                </div>
+                            </div>
+                            {/* Progress Bar */}
+                            <div className="space-y-2">
+                                <div className="flex justify-between text-sm">
+                                    <span className="text-gray-500">Collection Rate</span>
+                                    <span className="font-medium text-manzhil-dark">
+                                        {Math.round(((activeResidents - unpaidMaintenance) / activeResidents) * 100) || 0}%
+                                    </span>
+                                </div>
+                                <div className="h-3 bg-gray-200 rounded-full overflow-hidden">
+                                    <div
+                                        className="h-full bg-gradient-to-r from-manzhil-teal to-manzhil-dark rounded-full transition-all duration-500"
+                                        style={{ width: `${Math.round(((activeResidents - unpaidMaintenance) / activeResidents) * 100) || 0}%` }}
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Unpaid Residents List */}
+                        <div className="lg:col-span-2">
+                            <div className="flex items-center justify-between mb-3">
+                                <p className="text-sm font-medium text-gray-700">Residents with Unpaid Maintenance</p>
+                                <Badge variant="secondary" className="bg-amber-100 text-amber-700">
+                                    {unpaidMaintenance} pending
+                                </Badge>
+                            </div>
+                            {unpaidMaintenance === 0 ? (
+                                <div className="flex flex-col items-center justify-center py-12 text-center">
+                                    <div className="h-16 w-16 rounded-full bg-manzhil-teal/10 flex items-center justify-center mb-4">
+                                        <CheckCircle className="h-8 w-8 text-manzhil-teal" />
+                                    </div>
+                                    <p className="text-gray-500 font-medium">All maintenance payments collected!</p>
+                                    <p className="text-sm text-gray-400">Great job keeping up with collections</p>
+                                </div>
+                            ) : (
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-[200px] overflow-y-auto pr-2">
+                                    {profiles
+                                        .filter(p => !p.maintenance_paid && p.is_active)
+                                        .slice(0, 10)
+                                        .map(resident => (
+                                            <Link key={resident.id} href={`/admin/residents/${resident.id}`}>
+                                                <div className="flex items-center gap-3 p-3 bg-amber-50 hover:bg-amber-100 rounded-xl transition-colors cursor-pointer">
+                                                    <div className="h-8 w-8 rounded-full bg-amber-200 flex items-center justify-center text-amber-700 font-medium text-sm">
+                                                        {resident.name?.charAt(0)?.toUpperCase() || 'R'}
+                                                    </div>
+                                                    <div className="flex-1 min-w-0">
+                                                        <p className="font-medium text-sm text-gray-900 truncate">{resident.name}</p>
+                                                        <p className="text-xs text-gray-500">Apt {resident.apartment_number}</p>
+                                                    </div>
+                                                    <ArrowRight className="h-4 w-4 text-amber-600 flex-shrink-0" />
+                                                </div>
+                                            </Link>
+                                        ))
+                                    }
+                                </div>
+                            )}
+                            {unpaidMaintenance > 10 && (
+                                <p className="text-xs text-gray-400 mt-2 text-center">
+                                    +{unpaidMaintenance - 10} more residents with unpaid maintenance
+                                </p>
+                            )}
+                        </div>
+                    </div>
+                </CardContent>
+            </Card>
         </div>
     )
 }
