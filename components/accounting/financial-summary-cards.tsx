@@ -90,22 +90,20 @@ export function FinancialSummaryCards({ summary, loading }: FinancialSummaryCard
     return (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
             {cards.map((card, index) => (
-                <Card key={index} className="border-0 shadow-lg shadow-manzhil-teal/5 hover:shadow-xl hover:-translate-y-0.5 transition-all">
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium text-muted-foreground">
-                            {card.title}
-                        </CardTitle>
-                        <div className={`p-2 rounded-full ${card.bgColor}`}>
-                            <card.icon className={`h-4 w-4 ${card.color}`} />
+                <Card key={index} className="border-0 shadow-lg shadow-manzhil-teal/10 bg-[#0F766E] text-white hover:shadow-xl hover:-translate-y-0.5 transition-all relative overflow-hidden group">
+                    <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                        <card.icon className="w-24 h-24 -mr-8 -mt-8 rotate-12" />
+                    </div>
+                    <CardContent className="p-5 relative z-10">
+                        <div className="flex justify-between items-start mb-4">
+                            <p className="text-sm font-medium text-white/90">{card.title}</p>
                         </div>
-                    </CardHeader>
-                    <CardContent>
-                        <div className={`text-2xl font-bold ${card.color}`}>
+                        <p className="text-4xl font-bold text-white mb-2">
                             {formatCurrency(card.value)}
-                        </div>
-                        <p className="text-xs text-muted-foreground flex items-center mt-1">
-                            {card.trend === "up" && <ArrowUpRight className="h-3 w-3 mr-1 text-manzhil-teal" />}
-                            {card.trend === "down" && <ArrowDownRight className="h-3 w-3 mr-1 text-red-600" />}
+                        </p>
+                        <p className="text-xs text-white/80 flex items-center">
+                            {card.trend === "up" && <ArrowUpRight className="h-3 w-3 mr-1" />}
+                            {card.trend === "down" && <ArrowDownRight className="h-3 w-3 mr-1" />}
                             {card.description}
                         </p>
                     </CardContent>
@@ -147,35 +145,41 @@ export function RevenueBreakdownCards({ summary, loading }: FinancialSummaryCard
 
     return (
         <div className="grid gap-4 md:grid-cols-2">
-            <Card className="border-l-4 border-l-manzhil-teal shadow-lg shadow-manzhil-teal/5">
-                <CardContent className="pt-6">
+            <Card className="border-0 shadow-lg shadow-manzhil-teal/10 bg-[#0F766E] text-white hover:shadow-xl hover:-translate-y-0.5 transition-all relative overflow-hidden group">
+                <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                    <DollarSign className="w-24 h-24 -mr-8 -mt-8 rotate-12" />
+                </div>
+                <CardContent className="p-5 relative z-10">
                     <div className="flex items-center justify-between">
                         <div>
-                            <p className="text-sm font-medium text-muted-foreground">Booking Revenue</p>
-                            <p className="text-2xl font-bold text-manzhil-dark">
+                            <p className="text-sm font-medium text-white/90">Booking Revenue</p>
+                            <p className="text-3xl font-bold text-white mt-2">
                                 {formatCurrency(summary?.bookingRevenue || 0)}
                             </p>
                         </div>
                         <div className="text-right">
-                            <span className="text-lg font-semibold text-manzhil-teal">{bookingPercent}%</span>
-                            <p className="text-xs text-muted-foreground">of total</p>
+                            <span className="text-2xl font-semibold text-white">{bookingPercent}%</span>
+                            <p className="text-xs text-white/70">of total</p>
                         </div>
                     </div>
                 </CardContent>
             </Card>
 
-            <Card className="border-l-4 border-l-manzhil-dark shadow-lg shadow-manzhil-teal/5">
-                <CardContent className="pt-6">
+            <Card className="border-0 shadow-lg shadow-manzhil-teal/10 bg-[#0F766E] text-white hover:shadow-xl hover:-translate-y-0.5 transition-all relative overflow-hidden group">
+                <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                    <Wallet className="w-24 h-24 -mr-8 -mt-8 rotate-12" />
+                </div>
+                <CardContent className="p-5 relative z-10">
                     <div className="flex items-center justify-between">
                         <div>
-                            <p className="text-sm font-medium text-muted-foreground">Maintenance Revenue</p>
-                            <p className="text-2xl font-bold text-manzhil-teal">
+                            <p className="text-sm font-medium text-white/90">Maintenance Revenue</p>
+                            <p className="text-3xl font-bold text-white mt-2">
                                 {formatCurrency(summary?.maintenanceRevenue || 0)}
                             </p>
                         </div>
                         <div className="text-right">
-                            <span className="text-lg font-semibold text-manzhil-dark">{maintenancePercent}%</span>
-                            <p className="text-xs text-muted-foreground">of total</p>
+                            <span className="text-2xl font-semibold text-white">{maintenancePercent}%</span>
+                            <p className="text-xs text-white/70">of total</p>
                         </div>
                     </div>
                 </CardContent>

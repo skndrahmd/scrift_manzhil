@@ -134,17 +134,6 @@ export function ComplaintsTable() {
 
     return (
         <div className="space-y-6">
-            {/* Header */}
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                <div>
-                    <h1 className="text-2xl font-bold text-manzhil-dark flex items-center gap-2">
-                        <AlertTriangle className="h-6 w-6 text-manzhil-teal" />
-                        Complaints Management
-                    </h1>
-                    <p className="text-gray-500 text-sm mt-1">Track and resolve resident complaints</p>
-                </div>
-            </div>
-
             {/* Filters */}
             <div className="flex flex-wrap items-center gap-3">
                 <div className="relative flex-1 min-w-[200px] max-w-[300px]">

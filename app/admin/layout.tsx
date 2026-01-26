@@ -3,9 +3,19 @@
 import { useState, useEffect, createContext, useContext, useCallback, Suspense } from "react"
 import { AdminSidebar } from "@/components/admin/sidebar"
 import { UserMenu } from "@/components/user-menu"
+import Loader from "@/components/ui/loader"
 import { RefreshCw, Bell } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useToast } from "@/hooks/use-toast"
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
+    DialogFooter,
+} from "@/components/ui/dialog"
 import {
     supabase,
     type Booking,
@@ -99,8 +109,10 @@ function AdminLayoutContent({
     }, [lastViewedFeedback])
 
     // Calculate counts
-    const newBookingsCount = bookings.filter(b => isNewBooking(b.created_at)).length
-    const newComplaintsCount = complaints.filter(c => isNewComplaint(c.created_at)).length
+    // Count unpaid bookings instead of just new ones
+    const newBookingsCount = bookings.filter(b => b.payment_status === "pending" || b.payment_status === "unpaid").length
+    // Count active complaints (pending + in-progress) instead of just new ones
+    const newComplaintsCount = complaints.filter(c => c.status === "pending" || c.status === "in-progress").length
     const newFeedbackCount = feedback.filter(f => isNewFeedbackItem(f.created_at)).length
 
     // Fetch functions
@@ -245,16 +257,94 @@ function AdminLayoutContent({
                             >
                                 <RefreshCw className={`w-5 h-5 ${refreshing ? 'animate-spin' : ''}`} />
                             </Button>
-                            <Button
-                                variant="ghost"
-                                size="icon"
-                                className="text-manzhil-teal hover:text-manzhil-dark hover:bg-manzhil-teal/10 transition-colors relative"
-                            >
-                                <Bell className="w-5 h-5" />
-                                {(newBookingsCount + newComplaintsCount + newFeedbackCount) > 0 && (
-                                    <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-manzhil-light rounded-full animate-pulse-subtle" />
-                                )}
-                            </Button>
+                            <Dialog>
+                                <DialogTrigger asChild>
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="text-manzhil-teal hover:text-manzhil-dark hover:bg-manzhil-teal/10 transition-colors relative"
+                                    >
+                                        <Bell className="w-5 h-5" />
+                                        {(newBookingsCount + newComplaintsCount + newFeedbackCount) > 0 && (
+                                            <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-manzhil-light rounded-full animate-pulse-subtle" />
+                                        )}
+                                    </Button>
+                                </DialogTrigger>
+                                <DialogContent className="sm:max-w-md">
+                                    <DialogHeader>
+                                        <DialogTitle className="flex items-center gap-2 text-manzhil-dark">
+                                            <Bell className="h-5 w-5 text-manzhil-teal" />
+                                            Notifications
+                                        </DialogTitle>
+                                        <DialogDescription>
+                                            Summary of recent updates and required actions.
+                                        </DialogDescription>
+                                    </DialogHeader>
+                                    <div className="flex flex-col gap-4 py-4">
+                                        {(newBookingsCount + newComplaintsCount + newFeedbackCount) === 0 ? (
+                                            <div className="text-center py-8 text-muted-foreground">
+                                                <p>No new notifications</p>
+                                            </div>
+                                        ) : (
+                                            <>
+                                                {newBookingsCount > 0 && (
+                                                    <div className="flex items-center justify-between p-3 rounded-lg bg-manzhil-teal/5 border border-manzhil-teal/10">
+                                                        <div className="flex items-center gap-3">
+                                                            <div className="h-8 w-8 rounded-full bg-manzhil-teal/10 flex items-center justify-center">
+                                                                <span className="font-bold text-manzhil-teal text-xs">{newBookingsCount}</span>
+                                                            </div>
+                                                            <div>
+                                                                <p className="font-medium text-sm text-manzhil-dark">Unpaid Bookings</p>
+                                                                <p className="text-xs text-muted-foreground">Pending payment confirmation</p>
+                                                            </div>
+                                                        </div>
+                                                        <Button size="sm" variant="outline" className="h-8 text-xs border-manzhil-teal/20 text-manzhil-teal hover:bg-manzhil-teal/5" onClick={() => window.location.href = '/admin/bookings'}>
+                                                            View
+                                                        </Button>
+                                                    </div>
+                                                )}
+                                                {newComplaintsCount > 0 && (
+                                                    <div className="flex items-center justify-between p-3 rounded-lg bg-amber-50 border border-amber-100">
+                                                        <div className="flex items-center gap-3">
+                                                            <div className="h-8 w-8 rounded-full bg-amber-100 flex items-center justify-center">
+                                                                <span className="font-bold text-amber-600 text-xs">{newComplaintsCount}</span>
+                                                            </div>
+                                                            <div>
+                                                                <p className="font-medium text-sm text-manzhil-dark">Active Complaints</p>
+                                                                <p className="text-xs text-muted-foreground">Pending or in-progress</p>
+                                                            </div>
+                                                        </div>
+                                                        <Button size="sm" variant="outline" className="h-8 text-xs border-amber-200 text-amber-700 hover:bg-amber-100" onClick={() => window.location.href = '/admin/complaints'}>
+                                                            View
+                                                        </Button>
+                                                    </div>
+                                                )}
+                                                {newFeedbackCount > 0 && (
+                                                    <div className="flex items-center justify-between p-3 rounded-lg bg-blue-50 border border-blue-100">
+                                                        <div className="flex items-center gap-3">
+                                                            <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center">
+                                                                <span className="font-bold text-blue-600 text-xs">{newFeedbackCount}</span>
+                                                            </div>
+                                                            <div>
+                                                                <p className="font-medium text-sm text-manzhil-dark">New Feedback</p>
+                                                                <p className="text-xs text-muted-foreground">Recent user feedback</p>
+                                                            </div>
+                                                        </div>
+                                                        <Button size="sm" variant="outline" className="h-8 text-xs border-blue-200 text-blue-700 hover:bg-blue-100" onClick={() => window.location.href = '/admin/feedback'}>
+                                                            View
+                                                        </Button>
+                                                    </div>
+                                                )}
+                                            </>
+                                        )}
+                                    </div>
+                                    <DialogFooter className="sm:justify-start">
+                                        <div className="text-xs text-muted-foreground flex items-center gap-1 w-full justify-center">
+                                            <span>Updates reflect real-time status</span>
+                                        </div>
+                                    </DialogFooter>
+                                </DialogContent>
+                            </Dialog>
                             <UserMenu />
                         </div>
                     </header>
@@ -262,8 +352,8 @@ function AdminLayoutContent({
                     {/* Page Content */}
                     <main className="flex-1 overflow-auto p-4 lg:p-6">
                         {loading ? (
-                            <div className="flex items-center justify-center h-64">
-                                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-manzhil-teal"></div>
+                            <div className="flex items-center justify-center h-full min-h-[50vh]">
+                                <Loader />
                             </div>
                         ) : (
                             <div className="animate-fade-in">{children}</div>

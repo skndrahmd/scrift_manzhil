@@ -253,13 +253,7 @@ export function AccountingTab() {
         }
     ]
 
-    const colorClasses: Record<string, { bg: string; text: string }> = {
-        green: { bg: "bg-manzhil-teal/20", text: "text-manzhil-dark" },
-        blue: { bg: "bg-manzhil-dark/10", text: "text-manzhil-dark" },
-        purple: { bg: "bg-manzhil-teal/10", text: "text-manzhil-teal" },
-        orange: { bg: "bg-amber-100", text: "text-amber-600" },
-        teal: { bg: "bg-manzhil-teal/20", text: "text-manzhil-teal" }
-    }
+
 
     return (
         <div className="space-y-6">
@@ -310,7 +304,7 @@ export function AccountingTab() {
                         <span className="hidden sm:inline">Dashboard</span>
                     </TabsTrigger>
                     <TabsTrigger value="transactions" className="flex items-center gap-2">
-                        <Receipt className="h-4 w-4" />
+                        <Receipt className="h-6 w-6" />
                         <span className="hidden sm:inline">Transactions</span>
                     </TabsTrigger>
                     <TabsTrigger value="expenses" className="flex items-center gap-2">
@@ -385,27 +379,29 @@ export function AccountingTab() {
                             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                                 {reportCards.map((report) => {
                                     const Icon = report.icon
-                                    const colors = colorClasses[report.color]
                                     const isGenerating = generatingReport === report.id
 
                                     return (
                                         <Card
                                             key={report.id}
-                                            className={`cursor-pointer border-0 shadow-lg shadow-manzhil-teal/5 hover:shadow-xl hover:-translate-y-0.5 transition-all ${isGenerating ? 'opacity-75' : ''}`}
+                                            className={`cursor-pointer border-0 shadow-lg shadow-manzhil-teal/10 bg-[#0F766E] text-white hover:shadow-xl hover:-translate-y-0.5 transition-all relative overflow-hidden group ${isGenerating ? 'opacity-75' : ''}`}
                                             onClick={() => !isGenerating && handleGenerateReport(report.id)}
                                         >
-                                            <CardContent className="pt-6">
+                                            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                                                <Icon className="w-24 h-24 -mr-8 -mt-8 rotate-12" />
+                                            </div>
+                                            <CardContent className="p-5 relative z-10">
                                                 <div className="flex items-center gap-4">
-                                                    <div className={`p-3 ${colors.bg} rounded-full`}>
+                                                    <div className="p-3 bg-white/10 rounded-full backdrop-blur-sm">
                                                         {isGenerating ? (
-                                                            <Loader2 className={`h-6 w-6 ${colors.text} animate-spin`} />
+                                                            <Loader2 className="h-6 w-6 text-white animate-spin" />
                                                         ) : (
-                                                            <Icon className={`h-6 w-6 ${colors.text}`} />
+                                                            <Icon className="h-6 w-6 text-white" />
                                                         )}
                                                     </div>
                                                     <div>
-                                                        <h3 className="font-semibold">{report.title}</h3>
-                                                        <p className="text-sm text-muted-foreground">
+                                                        <h3 className="font-semibold text-lg">{report.title}</h3>
+                                                        <p className="text-sm text-white/80">
                                                             {isGenerating ? "Generating PDF..." : report.description}
                                                         </p>
                                                     </div>

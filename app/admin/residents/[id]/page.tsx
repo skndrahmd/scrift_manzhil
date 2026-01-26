@@ -7,7 +7,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
-import { ChevronLeft, CheckCircle, XCircle, Loader2, Calendar, MessageSquare, Filter, Users } from "lucide-react"
+import Loader from "@/components/ui/loader"
+import { ChevronLeft, CheckCircle, XCircle, Calendar, MessageSquare, Filter, Users } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { exportToPdf, filterByPeriod, periodLabel, type Period } from "@/lib/pdf"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -229,9 +230,8 @@ export default function ResidentProfilePage({ params }: { params: { id: string }
           <ChevronLeft className="h-4 w-4 mr-2" /> Back
         </Button>
         <Card className="border-0 shadow-xl shadow-manzhil-teal/5">
-          <CardContent className="flex items-center justify-center gap-3 py-16">
-            <Loader2 className="h-6 w-6 animate-spin text-manzhil-teal" />
-            <span className="text-lg text-gray-600">Loading resident details...</span>
+          <CardContent className="flex items-center justify-center py-16">
+            <Loader />
           </CardContent>
         </Card>
       </div>

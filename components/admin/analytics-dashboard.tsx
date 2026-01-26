@@ -336,7 +336,7 @@ export function AnalyticsDashboard() {
                 <div>
                     <h1 className="text-2xl font-bold text-manzhil-dark flex items-center gap-2">
                         <BarChart3 className="h-6 w-6 text-manzhil-teal" />
-                        Analytics Dashboard
+                        Analytics
                     </h1>
                     <p className="text-gray-500 text-sm mt-1">Data-driven insights for building management</p>
                 </div>
@@ -440,7 +440,7 @@ export function AnalyticsDashboard() {
                         value="complaints"
                         className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-manzhil-dark data-[state=active]:to-manzhil-teal data-[state=active]:text-white rounded-lg text-sm px-4 py-2.5 transition-all flex items-center gap-2"
                     >
-                        <MessageSquare className="h-4 w-4" />
+                        <AlertTriangle className="h-4 w-4" />
                         Complaints
                     </TabsTrigger>
                     <TabsTrigger
