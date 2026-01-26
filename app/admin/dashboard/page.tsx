@@ -158,7 +158,10 @@ export default function DashboardPage() {
                 {/* Recent Complaints */}
                 <Card className="border-0 shadow-lg shadow-manzhil-teal/5">
                     <CardHeader className="flex flex-row items-center justify-between">
-                        <CardTitle className="text-lg font-medium">Recent Complaints</CardTitle>
+                        <CardTitle className="text-lg font-medium flex items-center gap-2">
+                            <AlertTriangle className="h-5 w-5 text-manzhil-teal" />
+                            Recent Complaints
+                        </CardTitle>
                         <Link href="/admin/complaints">
                             <Button variant="ghost" size="sm" className="text-manzhil-teal hover:text-manzhil-dark hover:bg-manzhil-teal/10">
                                 View All
@@ -212,7 +215,10 @@ export default function DashboardPage() {
                 {/* Recent Bookings */}
                 <Card className="border-0 shadow-lg shadow-manzhil-teal/5">
                     <CardHeader className="flex flex-row items-center justify-between">
-                        <CardTitle className="text-lg font-medium">Recent Bookings</CardTitle>
+                        <CardTitle className="text-lg font-medium flex items-center gap-2">
+                            <Calendar className="h-5 w-5 text-manzhil-teal" />
+                            Recent Bookings
+                        </CardTitle>
                         <Link href="/admin/bookings">
                             <Button variant="ghost" size="sm" className="text-manzhil-teal hover:text-manzhil-dark hover:bg-manzhil-teal/10">
                                 View All
