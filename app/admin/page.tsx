@@ -47,7 +47,7 @@ export default function AdminPage() {
       <div>
         <h1 className="text-2xl font-medium text-manzhil-dark flex items-center gap-2">
           <Users className="h-6 w-6 text-manzhil-teal" />
-          Residents
+          Resident Management
         </h1>
         <p className="text-gray-500 text-sm">Manage and monitor all residents</p>
       </div>

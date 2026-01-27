@@ -5,7 +5,7 @@ import { useAdmin } from "@/app/admin/layout"
 import { supabase } from "@/lib/supabase"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Card, CardContent } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import {
     Calendar,
@@ -186,81 +186,96 @@ export function BookingsTable() {
     }
 
     return (
-        <div className="space-y-6">
-            {/* Filters */}
-            <div className="flex flex-wrap items-center gap-3">
-                <div className="relative flex-1 min-w-[200px] max-w-[300px]">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                    <Input
-                        placeholder="Search bookings..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="pl-10"
-                    />
+        <Card className="border-0 shadow-lg shadow-manzhil-teal/10">
+            <CardHeader className="pb-4">
+                <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                    <CardTitle className="flex items-center gap-2 text-manzhil-dark">
+                        <Calendar className="h-5 w-5 text-manzhil-teal" />
+                        Bookings
+                    </CardTitle>
+
+                    {/* Filters */}
+                    <div className="flex flex-wrap items-center gap-3">
+                        {/* Search */}
+                        <div className="relative">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                            <Input
+                                placeholder="Search bookings..."
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                className="pl-9 w-[180px] border-manzhil-teal/20 focus:border-manzhil-teal"
+                            />
+                        </div>
+
+                        {/* Date Filter */}
+                        <Input
+                            type="date"
+                            value={dateFilter}
+                            onChange={(e) => setDateFilter(e.target.value)}
+                            className="w-[150px] border-manzhil-teal/20"
+                        />
+
+                        {/* Status Filter */}
+                        <Select value={statusFilter} onValueChange={setStatusFilter}>
+                            <SelectTrigger className="w-[130px] border-manzhil-teal/20">
+                                <Filter className="h-4 w-4 mr-2" />
+                                <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">All Status</SelectItem>
+                                <SelectItem value="confirmed">Confirmed</SelectItem>
+                                <SelectItem value="cancelled">Cancelled</SelectItem>
+                            </SelectContent>
+                        </Select>
+
+                        {/* Period Filter */}
+                        <Select value={bookingsPeriod} onValueChange={(v) => setBookingsPeriod(v as Period)}>
+                            <SelectTrigger className="w-[130px] border-manzhil-teal/20">
+                                <SelectValue placeholder="Period" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">All Time</SelectItem>
+                                <SelectItem value="daily">Today</SelectItem>
+                                <SelectItem value="weekly">This Week</SelectItem>
+                                <SelectItem value="monthly">This Month</SelectItem>
+                            </SelectContent>
+                        </Select>
+
+                        {/* Export PDF */}
+                        <Button
+                            onClick={() =>
+                                exportToPdf({
+                                    title: "Bookings Report",
+                                    periodLabel: periodLabel(bookingsPeriod),
+                                    columns: [
+                                        { header: "Customer", dataKey: "customer" },
+                                        { header: "Date", dataKey: "date" },
+                                        { header: "Amount", dataKey: "amount" },
+                                        { header: "Status", dataKey: "status" },
+                                    ],
+                                    rows: bookingsDisplay.map((b) => ({
+                                        customer: b.profiles?.name || "N/A",
+                                        date: formatDateForDisplay(b.booking_date),
+                                        amount: `Rs. ${b.booking_charges.toLocaleString()}`,
+                                        status: b.status,
+                                    })),
+                                    fileName: `bookings-${bookingsPeriod}.pdf`,
+                                })
+                            }
+                            variant="outline"
+                            size="sm"
+                            className="border-manzhil-teal/30 text-manzhil-dark hover:bg-manzhil-teal/5"
+                        >
+                            <Eye className="h-4 w-4 mr-2" />
+                            Export PDF
+                        </Button>
+                    </div>
                 </div>
+            </CardHeader>
 
-                <Input
-                    type="date"
-                    value={dateFilter}
-                    onChange={(e) => setDateFilter(e.target.value)}
-                    className="w-[160px]"
-                />
-
-                <Select value={statusFilter} onValueChange={setStatusFilter}>
-                    <SelectTrigger className="w-[140px]">
-                        <Filter className="h-4 w-4 mr-2" />
-                        <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value="all">All Status</SelectItem>
-                        <SelectItem value="confirmed">Confirmed</SelectItem>
-                        <SelectItem value="cancelled">Cancelled</SelectItem>
-                    </SelectContent>
-                </Select>
-
-                <Select value={bookingsPeriod} onValueChange={(v) => setBookingsPeriod(v as Period)}>
-                    <SelectTrigger className="w-[140px]">
-                        <SelectValue placeholder="Period" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value="all">All Time</SelectItem>
-                        <SelectItem value="daily">Today</SelectItem>
-                        <SelectItem value="weekly">This Week</SelectItem>
-                        <SelectItem value="monthly">This Month</SelectItem>
-                    </SelectContent>
-                </Select>
-
-                <Button
-                    onClick={() =>
-                        exportToPdf({
-                            title: "Bookings Report",
-                            periodLabel: periodLabel(bookingsPeriod),
-                            columns: [
-                                { header: "Customer", dataKey: "customer" },
-                                { header: "Date", dataKey: "date" },
-                                { header: "Amount", dataKey: "amount" },
-                                { header: "Status", dataKey: "status" },
-                            ],
-                            rows: bookingsDisplay.map((b) => ({
-                                customer: b.profiles?.name || "N/A",
-                                date: formatDateForDisplay(b.booking_date),
-                                amount: `Rs. ${b.booking_charges.toLocaleString()}`,
-                                status: b.status,
-                            })),
-                            fileName: `bookings-${bookingsPeriod}.pdf`,
-                        })
-                    }
-                    variant="outline"
-                    className="border-manzhil-teal/30 text-manzhil-dark hover:bg-manzhil-teal/5 transition-colors"
-                >
-                    <Eye className="h-4 w-4 mr-2" />
-                    Export PDF
-                </Button>
-            </div>
-
-            {/* Desktop Table View */}
-            <Card className="hidden md:block border-0 shadow-lg shadow-manzhil-teal/5 hover:shadow-xl transition-shadow">
-                <CardContent className="p-0">
+            <CardContent className="p-0">
+                {/* Desktop Table View */}
+                <div className="hidden md:block">
                     <Table>
                         <TableHeader>
                             <TableRow className="bg-gradient-to-r from-manzhil-teal/5 to-transparent">
@@ -319,7 +334,7 @@ export function BookingsTable() {
                                                         size="sm"
                                                         onClick={() => updateBookingPaymentStatus(booking.id, "paid")}
                                                         disabled={updatingPaymentId === booking.id}
-                                                        className="text-manzhil-teal hover:bg-manzhil-teal/5"
+                                                        className="text-manzhil-teal hover:bg-manzhil-teal/5 border-manzhil-teal/30"
                                                     >
                                                         {updatingPaymentId === booking.id ? (
                                                             <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
@@ -334,7 +349,7 @@ export function BookingsTable() {
                                                         size="sm"
                                                         onClick={() => updateBookingPaymentStatus(booking.id, "pending")}
                                                         disabled={updatingPaymentId === booking.id}
-                                                        className="text-red-600"
+                                                        className="text-red-600 border-red-200"
                                                     >
                                                         <XCircle className="h-4 w-4 mr-1" />Mark Unpaid
                                                     </Button>
@@ -344,7 +359,7 @@ export function BookingsTable() {
                                                         variant="outline"
                                                         size="sm"
                                                         onClick={() => cancelBooking(booking.id)}
-                                                        className="text-red-600"
+                                                        className="text-red-600 border-red-200"
                                                     >
                                                         <X className="h-4 w-4 mr-1" />Cancel
                                                     </Button>
@@ -356,133 +371,133 @@ export function BookingsTable() {
                             )}
                         </TableBody>
                     </Table>
-                </CardContent>
-            </Card>
+                </div>
 
-            {/* Mobile Card View */}
-            <div className="md:hidden space-y-4">
-                {paginatedBookings.length === 0 ? (
-                    <Card className="border-manzhil-teal/10">
-                        <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+                {/* Mobile Card View */}
+                <div className="md:hidden p-4 space-y-4">
+                    {paginatedBookings.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center py-12 text-center">
                             <Calendar className="h-12 w-12 text-gray-300 mb-4" />
                             <p className="text-gray-500">No bookings found</p>
-                        </CardContent>
-                    </Card>
-                ) : (
-                    paginatedBookings.map((booking) => (
-                        <Card key={booking.id} className="border-manzhil-teal/10 shadow-sm">
-                            <CardContent className="p-4 space-y-4">
-                                <div className="flex justify-between items-start">
-                                    <div>
-                                        <h3 className="font-medium text-manzhil-dark">{booking.profiles?.name || "N/A"}</h3>
-                                        <p className="text-xs text-muted-foreground">ID: {booking.id.slice(0, 8)}</p>
+                        </div>
+                    ) : (
+                        paginatedBookings.map((booking) => (
+                            <Card key={booking.id} className="border-manzhil-teal/10 shadow-sm">
+                                <CardContent className="p-4 space-y-4">
+                                    <div className="flex justify-between items-start">
+                                        <div>
+                                            <h3 className="font-medium text-manzhil-dark">{booking.profiles?.name || "N/A"}</h3>
+                                            <p className="text-xs text-muted-foreground">ID: {booking.id.slice(0, 8)}</p>
+                                        </div>
+                                        <Badge variant={getStatusBadgeVariant(booking.status)}>
+                                            {booking.status}
+                                        </Badge>
                                     </div>
-                                    <Badge variant={getStatusBadgeVariant(booking.status)}>
-                                        {booking.status}
-                                    </Badge>
-                                </div>
 
-                                <div className="grid grid-cols-2 gap-3 text-sm">
-                                    <div>
-                                        <span className="text-gray-500 block text-xs">Date</span>
-                                        <span className="font-medium text-gray-700">{formatDateForDisplay(booking.booking_date)}</span>
+                                    <div className="grid grid-cols-2 gap-3 text-sm">
+                                        <div>
+                                            <span className="text-gray-500 block text-xs">Date</span>
+                                            <span className="font-medium text-gray-700">{formatDateForDisplay(booking.booking_date)}</span>
+                                        </div>
+                                        <div>
+                                            <span className="text-gray-500 block text-xs">Time</span>
+                                            <span className="font-medium text-gray-700">{formatTime(booking.start_time)}</span>
+                                        </div>
+                                        <div>
+                                            <span className="text-gray-500 block text-xs">Apartment</span>
+                                            <span className="font-medium text-gray-700">{booking.profiles?.apartment_number}</span>
+                                        </div>
+                                        <div>
+                                            <span className="text-gray-500 block text-xs">Amount</span>
+                                            <span className="font-medium text-gray-700">Rs. {booking.booking_charges.toLocaleString()}</span>
+                                        </div>
                                     </div>
-                                    <div>
-                                        <span className="text-gray-500 block text-xs">Time</span>
-                                        <span className="font-medium text-gray-700">{formatTime(booking.start_time)}</span>
-                                    </div>
-                                    <div>
-                                        <span className="text-gray-500 block text-xs">Apartment</span>
-                                        <span className="font-medium text-gray-700">{booking.profiles?.apartment_number}</span>
-                                    </div>
-                                    <div>
-                                        <span className="text-gray-500 block text-xs">Amount</span>
-                                        <span className="font-medium text-gray-700">Rs. {booking.booking_charges.toLocaleString()}</span>
-                                    </div>
-                                </div>
 
-                                <div className="flex justify-between items-center pt-3 border-t border-gray-100">
-                                    <Badge
-                                        variant={getStatusBadgeVariant(booking.payment_status)}
-                                        className={booking.payment_status === "paid" ? "bg-manzhil-teal/20 text-manzhil-dark" : "bg-amber-100 text-amber-700"}
-                                    >
-                                        {booking.payment_status === "paid" ? "Paid" : "Pending"}
-                                    </Badge>
+                                    <div className="flex justify-between items-center pt-3 border-t border-gray-100">
+                                        <Badge
+                                            variant={getStatusBadgeVariant(booking.payment_status)}
+                                            className={booking.payment_status === "paid" ? "bg-manzhil-teal/20 text-manzhil-dark" : "bg-amber-100 text-amber-700"}
+                                        >
+                                            {booking.payment_status === "paid" ? "Paid" : "Pending"}
+                                        </Badge>
 
-                                    <div className="flex gap-2">
-                                        {booking.payment_status === "pending" && (
-                                            <Button
-                                                variant="outline"
-                                                size="sm"
-                                                onClick={() => updateBookingPaymentStatus(booking.id, "paid")}
-                                                disabled={updatingPaymentId === booking.id}
-                                                className="h-8 text-xs text-manzhil-teal border-manzhil-teal/30 hover:bg-manzhil-teal/5"
-                                            >
-                                                {updatingPaymentId === booking.id ? (
-                                                    <div className="h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                                                ) : "Mark Paid"}
-                                            </Button>
-                                        )}
-                                        {booking.payment_status === "paid" && (
-                                            <Button
-                                                variant="outline"
-                                                size="sm"
-                                                onClick={() => updateBookingPaymentStatus(booking.id, "pending")}
-                                                disabled={updatingPaymentId === booking.id}
-                                                className="h-8 text-xs text-red-600 border-red-200 hover:bg-red-50"
-                                            >
-                                                Mark Unpaid
-                                            </Button>
-                                        )}
-                                        {booking.status === "confirmed" && (
-                                            <Button
-                                                variant="ghost"
-                                                size="icon"
-                                                onClick={() => cancelBooking(booking.id)}
-                                                className="h-8 w-8 text-red-600 hover:bg-red-50"
-                                            >
-                                                <X className="h-4 w-4" />
-                                            </Button>
-                                        )}
+                                        <div className="flex gap-2">
+                                            {booking.payment_status === "pending" && (
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    onClick={() => updateBookingPaymentStatus(booking.id, "paid")}
+                                                    disabled={updatingPaymentId === booking.id}
+                                                    className="h-8 text-xs text-manzhil-teal border-manzhil-teal/30 hover:bg-manzhil-teal/5"
+                                                >
+                                                    {updatingPaymentId === booking.id ? (
+                                                        <div className="h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                                                    ) : "Mark Paid"}
+                                                </Button>
+                                            )}
+                                            {booking.payment_status === "paid" && (
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    onClick={() => updateBookingPaymentStatus(booking.id, "pending")}
+                                                    disabled={updatingPaymentId === booking.id}
+                                                    className="h-8 text-xs text-red-600 border-red-200 hover:bg-red-50"
+                                                >
+                                                    Mark Unpaid
+                                                </Button>
+                                            )}
+                                            {booking.status === "confirmed" && (
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    onClick={() => cancelBooking(booking.id)}
+                                                    className="h-8 w-8 text-red-600 hover:bg-red-50"
+                                                >
+                                                    <X className="h-4 w-4" />
+                                                </Button>
+                                            )}
+                                        </div>
                                     </div>
-                                </div>
-                            </CardContent>
-                        </Card>
-                    ))
+                                </CardContent>
+                            </Card>
+                        ))
+                    )}
+                </div>
+
+                {/* Pagination */}
+                {totalPages > 1 && (
+                    <div className="p-4 border-t border-gray-100">
+                        <Pagination>
+                            <PaginationContent>
+                                <PaginationItem>
+                                    <PaginationPrevious
+                                        onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                                        className={currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                                    />
+                                </PaginationItem>
+                                {[...Array(Math.min(5, totalPages))].map((_, i) => (
+                                    <PaginationItem key={i}>
+                                        <PaginationLink
+                                            onClick={() => setCurrentPage(i + 1)}
+                                            isActive={currentPage === i + 1}
+                                            className="cursor-pointer"
+                                        >
+                                            {i + 1}
+                                        </PaginationLink>
+                                    </PaginationItem>
+                                ))}
+                                <PaginationItem>
+                                    <PaginationNext
+                                        onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                                        className={currentPage === totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                                    />
+                                </PaginationItem>
+                            </PaginationContent>
+                        </Pagination>
+                    </div>
                 )}
-            </div>
-
-            {/* Pagination */}
-            {totalPages > 1 && (
-                <Pagination>
-                    <PaginationContent>
-                        <PaginationItem>
-                            <PaginationPrevious
-                                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                                className={currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
-                            />
-                        </PaginationItem>
-                        {[...Array(Math.min(5, totalPages))].map((_, i) => (
-                            <PaginationItem key={i}>
-                                <PaginationLink
-                                    onClick={() => setCurrentPage(i + 1)}
-                                    isActive={currentPage === i + 1}
-                                    className="cursor-pointer"
-                                >
-                                    {i + 1}
-                                </PaginationLink>
-                            </PaginationItem>
-                        ))}
-                        <PaginationItem>
-                            <PaginationNext
-                                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                                className={currentPage === totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
-                            />
-                        </PaginationItem>
-                    </PaginationContent>
-                </Pagination>
-            )}
-        </div>
+            </CardContent>
+        </Card>
     )
 }
 

@@ -24,6 +24,7 @@ import {
     type Feedback,
     type BookingSettings,
     type VisitorPass,
+    type Parcel,
 } from "@/lib/supabase"
 
 // Admin context for shared state across all admin pages
@@ -34,6 +35,7 @@ interface AdminContextType {
     profiles: Profile[]
     feedback: Feedback[]
     visitors: VisitorPass[]
+    parcels: Parcel[]
     settings: BookingSettings | null
 
     // Loading states
@@ -45,6 +47,7 @@ interface AdminContextType {
     newComplaintsCount: number
     newFeedbackCount: number
     newVisitorsCount: number
+    newParcelsCount: number
 
     // Actions
     refreshData: () => Promise<void>
@@ -53,6 +56,7 @@ interface AdminContextType {
     fetchProfiles: () => Promise<void>
     fetchFeedback: () => Promise<void>
     fetchVisitors: () => Promise<void>
+    fetchParcels: () => Promise<void>
     fetchSettings: () => Promise<void>
 
     // Viewed timestamps
@@ -81,6 +85,7 @@ function AdminLayoutContent({
     const [profiles, setProfiles] = useState<Profile[]>([])
     const [feedback, setFeedback] = useState<Feedback[]>([])
     const [visitors, setVisitors] = useState<VisitorPass[]>([])
+    const [parcels, setParcels] = useState<Parcel[]>([])
     const [settings, setSettings] = useState<BookingSettings | null>(null)
     const [loading, setLoading] = useState(true)
     const [refreshing, setRefreshing] = useState(false)
@@ -122,6 +127,8 @@ function AdminLayoutContent({
     // Count pending visitors for today or future
     const today = new Date().toISOString().split('T')[0]
     const newVisitorsCount = visitors.filter(v => v.status === "pending" && v.visit_date >= today).length
+    // Count pending parcels
+    const newParcelsCount = parcels.filter(p => p.status === "pending").length
 
     // Fetch functions
     const fetchBookings = async () => {
@@ -169,9 +176,17 @@ function AdminLayoutContent({
         if (data) setVisitors(data)
     }
 
+    const fetchParcels = async () => {
+        const { data } = await supabase
+            .from("parcels")
+            .select(`*, profiles (name, phone_number, apartment_number)`)
+            .order("created_at", { ascending: false })
+        if (data) setParcels(data)
+    }
+
     const refreshData = async () => {
         setRefreshing(true)
-        await Promise.all([fetchBookings(), fetchComplaints(), fetchProfiles(), fetchFeedback(), fetchVisitors(), fetchSettings()])
+        await Promise.all([fetchBookings(), fetchComplaints(), fetchProfiles(), fetchFeedback(), fetchVisitors(), fetchParcels(), fetchSettings()])
         setRefreshing(false)
         toast({
             title: "Data Refreshed",
@@ -182,7 +197,7 @@ function AdminLayoutContent({
     useEffect(() => {
         const fetchAllData = async () => {
             setLoading(true)
-            await Promise.all([fetchBookings(), fetchComplaints(), fetchProfiles(), fetchFeedback(), fetchVisitors(), fetchSettings()])
+            await Promise.all([fetchBookings(), fetchComplaints(), fetchProfiles(), fetchFeedback(), fetchVisitors(), fetchParcels(), fetchSettings()])
             setLoading(false)
         }
         fetchAllData()
@@ -223,12 +238,20 @@ function AdminLayoutContent({
             })
             .subscribe()
 
+        const parcelsChannel = supabase
+            .channel('parcels-admin')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'parcels' }, () => {
+                fetchParcels()
+            })
+            .subscribe()
+
         return () => {
             supabase.removeChannel(bookingsChannel)
             supabase.removeChannel(complaintsChannel)
             supabase.removeChannel(profilesChannel)
             supabase.removeChannel(feedbackChannel)
             supabase.removeChannel(visitorsChannel)
+            supabase.removeChannel(parcelsChannel)
         }
     }, [])
 
@@ -238,6 +261,7 @@ function AdminLayoutContent({
         profiles,
         feedback,
         visitors,
+        parcels,
         settings,
         loading,
         refreshing,
@@ -245,12 +269,14 @@ function AdminLayoutContent({
         newComplaintsCount,
         newFeedbackCount,
         newVisitorsCount,
+        newParcelsCount,
         refreshData,
         fetchBookings,
         fetchComplaints,
         fetchProfiles,
         fetchFeedback,
         fetchVisitors,
+        fetchParcels,
         fetchSettings,
         setLastViewedBookings,
         setLastViewedComplaints,
@@ -267,6 +293,7 @@ function AdminLayoutContent({
                     newComplaintsCount={newComplaintsCount}
                     newFeedbackCount={newFeedbackCount}
                     newVisitorsCount={newVisitorsCount}
+                    newParcelsCount={newParcelsCount}
                 />
 
                 {/* Main Content */}

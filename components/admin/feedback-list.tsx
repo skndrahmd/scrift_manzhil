@@ -29,16 +29,7 @@ export function FeedbackList() {
     }
 
     return (
-        <div className="space-y-6">
-            {/* Header */}
-            <div>
-                <h1 className="text-2xl font-medium text-manzhil-dark flex items-center gap-2">
-                    <MessageSquare className="h-6 w-6 text-manzhil-teal" />
-                    Feedback
-                </h1>
-                <p className="text-gray-500 text-sm mt-1">View resident feedback and suggestions</p>
-            </div>
-
+        <>
             {/* Feedback Cards */}
             {feedback.length === 0 ? (
                 <Card className="border-0 shadow-lg shadow-manzhil-teal/5">
@@ -79,7 +70,7 @@ export function FeedbackList() {
                     ))}
                 </div>
             )}
-        </div>
+        </>
     )
 }
 

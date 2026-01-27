@@ -42,7 +42,7 @@ export default function ComplaintsPage() {
             <div>
                 <h1 className="text-2xl font-medium text-manzhil-dark flex items-center gap-2">
                     <AlertTriangle className="h-6 w-6 text-manzhil-teal" />
-                    Complaints
+                    Complaint Management
                 </h1>
                 <p className="text-gray-500 text-sm">Track and resolve resident complaints</p>
             </div>

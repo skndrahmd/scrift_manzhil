@@ -4,7 +4,7 @@ import { useState, useMemo, useEffect } from "react"
 import { useAdmin } from "@/app/admin/layout"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Card, CardContent } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import {
     AlertTriangle,
@@ -163,275 +163,291 @@ export function ComplaintsTable() {
     }
 
     return (
-        <div className="space-y-6">
-            {/* Filters */}
-            <div className="flex flex-wrap items-center gap-3">
-                <div className="relative flex-1 min-w-[200px] max-w-[300px]">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                    <Input
-                        placeholder="Search complaints..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="pl-10"
-                    />
-                </div>
+        <>
+            <Card className="border-0 shadow-lg shadow-manzhil-teal/10">
+                <CardHeader className="pb-4">
+                    <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                        <CardTitle className="flex items-center gap-2 text-manzhil-dark">
+                            <AlertTriangle className="h-5 w-5 text-manzhil-teal" />
+                            Complaints
+                        </CardTitle>
 
-                <Select value={statusFilter} onValueChange={setStatusFilter}>
-                    <SelectTrigger className="w-[140px]">
-                        <Filter className="h-4 w-4 mr-2" />
-                        <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value="all">All Status</SelectItem>
-                        <SelectItem value="pending">Pending</SelectItem>
-                        <SelectItem value="in-progress">In Progress</SelectItem>
-                        <SelectItem value="completed">Completed</SelectItem>
-                        <SelectItem value="cancelled">Cancelled</SelectItem>
-                    </SelectContent>
-                </Select>
+                        {/* Filters */}
+                        <div className="flex flex-wrap items-center gap-3">
+                            {/* Search */}
+                            <div className="relative">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                                <Input
+                                    placeholder="Search complaints..."
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                    className="pl-9 w-[180px] border-manzhil-teal/20 focus:border-manzhil-teal"
+                                />
+                            </div>
 
-                <Select value={complaintsPeriod} onValueChange={(v) => setComplaintsPeriod(v as Period)}>
-                    <SelectTrigger className="w-[140px]">
-                        <SelectValue placeholder="Period" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value="all">All Time</SelectItem>
-                        <SelectItem value="daily">Today</SelectItem>
-                        <SelectItem value="weekly">This Week</SelectItem>
-                        <SelectItem value="monthly">This Month</SelectItem>
-                    </SelectContent>
-                </Select>
+                            {/* Status Filter */}
+                            <Select value={statusFilter} onValueChange={setStatusFilter}>
+                                <SelectTrigger className="w-[130px] border-manzhil-teal/20">
+                                    <Filter className="h-4 w-4 mr-2" />
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">All Status</SelectItem>
+                                    <SelectItem value="pending">Pending</SelectItem>
+                                    <SelectItem value="in-progress">In Progress</SelectItem>
+                                    <SelectItem value="completed">Completed</SelectItem>
+                                    <SelectItem value="cancelled">Cancelled</SelectItem>
+                                </SelectContent>
+                            </Select>
 
-                <Button
-                    onClick={() =>
-                        exportToPdf({
-                            title: "Complaints Report",
-                            periodLabel: periodLabel(complaintsPeriod),
-                            columns: [
-                                { header: "ID", dataKey: "id" },
-                                { header: "Resident", dataKey: "resident" },
-                                { header: "Category", dataKey: "category" },
-                                { header: "Status", dataKey: "status" },
-                                { header: "Date", dataKey: "date" },
-                            ],
-                            rows: complaintsDisplay.map((c) => ({
-                                id: c.complaint_id,
-                                resident: c.profiles?.name || "N/A",
-                                category: `${c.category} - ${c.subcategory.replace(/_/g, " ")}`,
-                                status: c.status,
-                                date: formatDateTime(c.created_at),
-                            })),
-                            fileName: `complaints-${complaintsPeriod}.pdf`,
-                        })
-                    }
-                    variant="outline"
-                    className="border-manzhil-teal/30 text-manzhil-dark hover:bg-manzhil-teal/5 transition-colors"
-                >
-                    <Eye className="h-4 w-4 mr-2" />
-                    Export PDF
-                </Button>
-            </div>
+                            {/* Period Filter */}
+                            <Select value={complaintsPeriod} onValueChange={(v) => setComplaintsPeriod(v as Period)}>
+                                <SelectTrigger className="w-[130px] border-manzhil-teal/20">
+                                    <SelectValue placeholder="Period" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">All Time</SelectItem>
+                                    <SelectItem value="daily">Today</SelectItem>
+                                    <SelectItem value="weekly">This Week</SelectItem>
+                                    <SelectItem value="monthly">This Month</SelectItem>
+                                </SelectContent>
+                            </Select>
 
-            {/* Desktop Table View */}
-            <Card className="hidden md:block border-0 shadow-lg shadow-manzhil-teal/5 hover:shadow-xl transition-shadow">
+                            {/* Export PDF */}
+                            <Button
+                                onClick={() =>
+                                    exportToPdf({
+                                        title: "Complaints Report",
+                                        periodLabel: periodLabel(complaintsPeriod),
+                                        columns: [
+                                            { header: "ID", dataKey: "id" },
+                                            { header: "Resident", dataKey: "resident" },
+                                            { header: "Category", dataKey: "category" },
+                                            { header: "Status", dataKey: "status" },
+                                            { header: "Date", dataKey: "date" },
+                                        ],
+                                        rows: complaintsDisplay.map((c) => ({
+                                            id: c.complaint_id,
+                                            resident: c.profiles?.name || "N/A",
+                                            category: `${c.category} - ${c.subcategory.replace(/_/g, " ")}`,
+                                            status: c.status,
+                                            date: formatDateTime(c.created_at),
+                                        })),
+                                        fileName: `complaints-${complaintsPeriod}.pdf`,
+                                    })
+                                }
+                                variant="outline"
+                                size="sm"
+                                className="border-manzhil-teal/30 text-manzhil-dark hover:bg-manzhil-teal/5"
+                            >
+                                <Eye className="h-4 w-4 mr-2" />
+                                Export PDF
+                            </Button>
+                        </div>
+                    </div>
+                </CardHeader>
+
                 <CardContent className="p-0">
-                    <Table>
-                        <TableHeader>
-                            <TableRow className="bg-gradient-to-r from-manzhil-teal/5 to-transparent">
-                                <TableHead>Complaint ID</TableHead>
-                                <TableHead>Resident</TableHead>
-                                <TableHead>Apartment</TableHead>
-                                <TableHead>Category</TableHead>
-                                <TableHead>Description</TableHead>
-                                <TableHead>Status</TableHead>
-                                <TableHead>Date</TableHead>
-                                <TableHead className="text-right">Actions</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {paginatedComplaints.length === 0 ? (
-                                <TableRow>
-                                    <TableCell colSpan={8} className="text-center py-12">
-                                        <AlertTriangle className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-                                        <p className="text-gray-500">No complaints found</p>
-                                    </TableCell>
+                    {/* Desktop Table View */}
+                    <div className="hidden md:block">
+                        <Table>
+                            <TableHeader>
+                                <TableRow className="bg-gradient-to-r from-manzhil-teal/5 to-transparent">
+                                    <TableHead>Complaint ID</TableHead>
+                                    <TableHead>Resident</TableHead>
+                                    <TableHead>Apartment</TableHead>
+                                    <TableHead>Category</TableHead>
+                                    <TableHead>Description</TableHead>
+                                    <TableHead>Status</TableHead>
+                                    <TableHead>Date</TableHead>
+                                    <TableHead className="text-right">Actions</TableHead>
                                 </TableRow>
-                            ) : (
-                                paginatedComplaints.map((complaint) => (
-                                    <TableRow key={complaint.id} className="hover:bg-manzhil-teal/5 transition-colors">
-                                        <TableCell className="font-mono text-sm">{complaint.complaint_id}</TableCell>
-                                        <TableCell className="font-medium">{complaint.profiles?.name || "N/A"}</TableCell>
-                                        <TableCell className="text-gray-600">{complaint.profiles?.apartment_number}</TableCell>
-                                        <TableCell className="text-gray-600">
-                                            <span className="capitalize">{complaint.category}</span>
-                                            <span className="text-gray-400 mx-1">•</span>
-                                            <span className="capitalize">{complaint.subcategory.replace(/_/g, " ")}</span>
+                            </TableHeader>
+                            <TableBody>
+                                {paginatedComplaints.length === 0 ? (
+                                    <TableRow>
+                                        <TableCell colSpan={8} className="text-center py-12">
+                                            <AlertTriangle className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+                                            <p className="text-gray-500">No complaints found</p>
                                         </TableCell>
-                                        <TableCell className="text-gray-600 max-w-[200px] truncate">
-                                            {complaint.description || "-"}
-                                        </TableCell>
-                                        <TableCell>
-                                            <Badge className={getStatusBadgeClass(complaint.status)}>
-                                                {complaint.status === "completed" && <CheckCircle className="h-3 w-3 mr-1" />}
-                                                {complaint.status === "pending" && <Clock className="h-3 w-3 mr-1" />}
-                                                {complaint.status}
-                                            </Badge>
-                                        </TableCell>
-                                        <TableCell className="text-gray-600 text-sm">{formatDateTime(complaint.created_at)}</TableCell>
-                                        <TableCell className="text-right">
-                                            <div className="flex gap-2 justify-end">
+                                    </TableRow>
+                                ) : (
+                                    paginatedComplaints.map((complaint) => (
+                                        <TableRow key={complaint.id} className="hover:bg-manzhil-teal/5 transition-colors">
+                                            <TableCell className="font-mono text-sm">{complaint.complaint_id}</TableCell>
+                                            <TableCell className="font-medium">{complaint.profiles?.name || "N/A"}</TableCell>
+                                            <TableCell className="text-gray-600">{complaint.profiles?.apartment_number}</TableCell>
+                                            <TableCell className="text-gray-600">
+                                                <span className="capitalize">{complaint.category}</span>
+                                                <span className="text-gray-400 mx-1">•</span>
+                                                <span className="capitalize">{complaint.subcategory.replace(/_/g, " ")}</span>
+                                            </TableCell>
+                                            <TableCell className="text-gray-600 max-w-[200px] truncate">
+                                                {complaint.description || "-"}
+                                            </TableCell>
+                                            <TableCell>
+                                                <Badge className={getStatusBadgeClass(complaint.status)}>
+                                                    {complaint.status === "completed" && <CheckCircle className="h-3 w-3 mr-1" />}
+                                                    {complaint.status === "pending" && <Clock className="h-3 w-3 mr-1" />}
+                                                    {complaint.status}
+                                                </Badge>
+                                            </TableCell>
+                                            <TableCell className="text-gray-600 text-sm">{formatDateTime(complaint.created_at)}</TableCell>
+                                            <TableCell className="text-right">
+                                                <div className="flex gap-2 justify-end">
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        onClick={() => openViewModal(complaint)}
+                                                        className="h-8 w-8 p-0 border-manzhil-teal/30 hover:bg-manzhil-teal/10"
+                                                        title="View Details"
+                                                    >
+                                                        <Eye className="h-4 w-4 text-manzhil-teal" />
+                                                    </Button>
+                                                    <Select
+                                                        value={complaint.status}
+                                                        onValueChange={(value) => updateComplaintStatus(complaint.id, value)}
+                                                        disabled={updatingComplaintId === complaint.id}
+                                                    >
+                                                        <SelectTrigger className="w-[130px] h-8">
+                                                            {updatingComplaintId === complaint.id ? (
+                                                                <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                                                            ) : (
+                                                                <SelectValue />
+                                                            )}
+                                                        </SelectTrigger>
+                                                        <SelectContent>
+                                                            <SelectItem value="pending">Pending</SelectItem>
+                                                            <SelectItem value="in-progress">In Progress</SelectItem>
+                                                            <SelectItem value="completed">Completed</SelectItem>
+                                                            <SelectItem value="cancelled">Cancelled</SelectItem>
+                                                        </SelectContent>
+                                                    </Select>
+                                                </div>
+                                            </TableCell>
+                                        </TableRow>
+                                    ))
+                                )}
+                            </TableBody>
+                        </Table>
+                    </div>
+
+                    {/* Mobile Card View */}
+                    <div className="md:hidden p-4 space-y-4">
+                        {paginatedComplaints.length === 0 ? (
+                            <div className="flex flex-col items-center justify-center py-12 text-center">
+                                <AlertTriangle className="h-12 w-12 text-gray-300 mb-4" />
+                                <p className="text-gray-500">No complaints found</p>
+                            </div>
+                        ) : (
+                            paginatedComplaints.map((complaint) => (
+                                <Card key={complaint.id} className="border-manzhil-teal/10 shadow-sm">
+                                    <CardContent className="p-4 space-y-4">
+                                        <div className="flex justify-between items-start">
+                                            <div>
+                                                <h3 className="font-medium text-manzhil-dark text-sm font-mono">{complaint.complaint_id}</h3>
+                                                <p className="text-xs text-muted-foreground">{formatDateTime(complaint.created_at)}</p>
+                                            </div>
+                                            <div className="flex items-center gap-2">
                                                 <Button
                                                     variant="outline"
                                                     size="sm"
                                                     onClick={() => openViewModal(complaint)}
-                                                    className="h-8 w-8 p-0 border-manzhil-teal/30 hover:bg-manzhil-teal/10"
-                                                    title="View Details"
+                                                    className="h-7 w-7 p-0 border-manzhil-teal/30"
                                                 >
-                                                    <Eye className="h-4 w-4 text-manzhil-teal" />
+                                                    <Eye className="h-3.5 w-3.5 text-manzhil-teal" />
                                                 </Button>
-                                                <Select
-                                                    value={complaint.status}
-                                                    onValueChange={(value) => updateComplaintStatus(complaint.id, value)}
-                                                    disabled={updatingComplaintId === complaint.id}
-                                                >
-                                                    <SelectTrigger className="w-[130px] h-8">
-                                                        {updatingComplaintId === complaint.id ? (
-                                                            <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                                                        ) : (
-                                                            <SelectValue />
-                                                        )}
-                                                    </SelectTrigger>
-                                                    <SelectContent>
-                                                        <SelectItem value="pending">Pending</SelectItem>
-                                                        <SelectItem value="in-progress">In Progress</SelectItem>
-                                                        <SelectItem value="completed">Completed</SelectItem>
-                                                        <SelectItem value="cancelled">Cancelled</SelectItem>
-                                                    </SelectContent>
-                                                </Select>
+                                                <Badge className={`${getStatusBadgeClass(complaint.status)} text-xs`}>
+                                                    {complaint.status}
+                                                </Badge>
                                             </div>
-                                        </TableCell>
-                                    </TableRow>
-                                ))
-                            )}
-                        </TableBody>
-                    </Table>
+                                        </div>
+
+                                        <div className="grid grid-cols-2 gap-3 text-sm">
+                                            <div>
+                                                <span className="text-gray-500 block text-xs">Resident</span>
+                                                <span className="font-medium text-gray-700">{complaint.profiles?.name || "N/A"}</span>
+                                            </div>
+                                            <div>
+                                                <span className="text-gray-500 block text-xs">Apartment</span>
+                                                <span className="font-medium text-gray-700">{complaint.profiles?.apartment_number}</span>
+                                            </div>
+                                            <div className="col-span-2">
+                                                <span className="text-gray-500 block text-xs">Category</span>
+                                                <div className="flex items-center text-gray-700">
+                                                    <span className="capitalize">{complaint.category}</span>
+                                                    <span className="text-gray-400 mx-2">•</span>
+                                                    <span className="capitalize">{complaint.subcategory.replace(/_/g, " ")}</span>
+                                                </div>
+                                            </div>
+                                            <div className="col-span-2">
+                                                <span className="text-gray-500 block text-xs">Description</span>
+                                                <p className="text-gray-700 mt-1 line-clamp-2 text-sm">{complaint.description || "-"}</p>
+                                            </div>
+                                        </div>
+
+                                        <div className="pt-3 border-t border-gray-100">
+                                            <span className="text-gray-500 block text-xs mb-2">Update Status</span>
+                                            <Select
+                                                value={complaint.status}
+                                                onValueChange={(value) => updateComplaintStatus(complaint.id, value)}
+                                                disabled={updatingComplaintId === complaint.id}
+                                            >
+                                                <SelectTrigger className="w-full h-9">
+                                                    {updatingComplaintId === complaint.id ? (
+                                                        <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent mx-auto" />
+                                                    ) : (
+                                                        <SelectValue />
+                                                    )}
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="pending">Pending</SelectItem>
+                                                    <SelectItem value="in-progress">In Progress</SelectItem>
+                                                    <SelectItem value="completed">Completed</SelectItem>
+                                                    <SelectItem value="cancelled">Cancelled</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            ))
+                        )}
+                    </div>
+
+                    {/* Pagination */}
+                    {totalPages > 1 && (
+                        <div className="p-4 border-t border-gray-100">
+                            <Pagination>
+                                <PaginationContent>
+                                    <PaginationItem>
+                                        <PaginationPrevious
+                                            onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                                            className={currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                                        />
+                                    </PaginationItem>
+                                    {[...Array(Math.min(5, totalPages))].map((_, i) => (
+                                        <PaginationItem key={i}>
+                                            <PaginationLink
+                                                onClick={() => setCurrentPage(i + 1)}
+                                                isActive={currentPage === i + 1}
+                                                className="cursor-pointer"
+                                            >
+                                                {i + 1}
+                                            </PaginationLink>
+                                        </PaginationItem>
+                                    ))}
+                                    <PaginationItem>
+                                        <PaginationNext
+                                            onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                                            className={currentPage === totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                                        />
+                                    </PaginationItem>
+                                </PaginationContent>
+                            </Pagination>
+                        </div>
+                    )}
                 </CardContent>
             </Card>
-
-            {/* Mobile Card View */}
-            <div className="md:hidden space-y-4">
-                {paginatedComplaints.length === 0 ? (
-                    <Card className="border-manzhil-teal/10">
-                        <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-                            <AlertTriangle className="h-12 w-12 text-gray-300 mb-4" />
-                            <p className="text-gray-500">No complaints found</p>
-                        </CardContent>
-                    </Card>
-                ) : (
-                    paginatedComplaints.map((complaint) => (
-                        <Card key={complaint.id} className="border-manzhil-teal/10 shadow-sm">
-                            <CardContent className="p-4 space-y-4">
-                                <div className="flex justify-between items-start">
-                                    <div>
-                                        <h3 className="font-medium text-manzhil-dark text-sm font-mono">{complaint.complaint_id}</h3>
-                                        <p className="text-xs text-muted-foreground">{formatDateTime(complaint.created_at)}</p>
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                        <Button
-                                            variant="outline"
-                                            size="sm"
-                                            onClick={() => openViewModal(complaint)}
-                                            className="h-7 w-7 p-0 border-manzhil-teal/30"
-                                        >
-                                            <Eye className="h-3.5 w-3.5 text-manzhil-teal" />
-                                        </Button>
-                                        <Badge className={`${getStatusBadgeClass(complaint.status)} text-xs`}>
-                                            {complaint.status}
-                                        </Badge>
-                                    </div>
-                                </div>
-
-                                <div className="grid grid-cols-2 gap-3 text-sm">
-                                    <div>
-                                        <span className="text-gray-500 block text-xs">Resident</span>
-                                        <span className="font-medium text-gray-700">{complaint.profiles?.name || "N/A"}</span>
-                                    </div>
-                                    <div>
-                                        <span className="text-gray-500 block text-xs">Apartment</span>
-                                        <span className="font-medium text-gray-700">{complaint.profiles?.apartment_number}</span>
-                                    </div>
-                                    <div className="col-span-2">
-                                        <span className="text-gray-500 block text-xs">Category</span>
-                                        <div className="flex items-center text-gray-700">
-                                            <span className="capitalize">{complaint.category}</span>
-                                            <span className="text-gray-400 mx-2">•</span>
-                                            <span className="capitalize">{complaint.subcategory.replace(/_/g, " ")}</span>
-                                        </div>
-                                    </div>
-                                    <div className="col-span-2">
-                                        <span className="text-gray-500 block text-xs">Description</span>
-                                        <p className="text-gray-700 mt-1 line-clamp-2 text-sm">{complaint.description || "-"}</p>
-                                    </div>
-                                </div>
-
-                                <div className="pt-3 border-t border-gray-100">
-                                    <span className="text-gray-500 block text-xs mb-2">Update Status</span>
-                                    <Select
-                                        value={complaint.status}
-                                        onValueChange={(value) => updateComplaintStatus(complaint.id, value)}
-                                        disabled={updatingComplaintId === complaint.id}
-                                    >
-                                        <SelectTrigger className="w-full h-9">
-                                            {updatingComplaintId === complaint.id ? (
-                                                <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent mx-auto" />
-                                            ) : (
-                                                <SelectValue />
-                                            )}
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="pending">Pending</SelectItem>
-                                            <SelectItem value="in-progress">In Progress</SelectItem>
-                                            <SelectItem value="completed">Completed</SelectItem>
-                                            <SelectItem value="cancelled">Cancelled</SelectItem>
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-                            </CardContent>
-                        </Card>
-                    ))
-                )}
-            </div>
-
-            {/* Pagination */}
-            {totalPages > 1 && (
-                <Pagination>
-                    <PaginationContent>
-                        <PaginationItem>
-                            <PaginationPrevious
-                                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                                className={currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
-                            />
-                        </PaginationItem>
-                        {[...Array(Math.min(5, totalPages))].map((_, i) => (
-                            <PaginationItem key={i}>
-                                <PaginationLink
-                                    onClick={() => setCurrentPage(i + 1)}
-                                    isActive={currentPage === i + 1}
-                                    className="cursor-pointer"
-                                >
-                                    {i + 1}
-                                </PaginationLink>
-                            </PaginationItem>
-                        ))}
-                        <PaginationItem>
-                            <PaginationNext
-                                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                                className={currentPage === totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
-                            />
-                        </PaginationItem>
-                    </PaginationContent>
-                </Pagination>
-            )}
 
             {/* Complaint Details Modal */}
             <Dialog open={isViewModalOpen} onOpenChange={setIsViewModalOpen}>
@@ -552,7 +568,7 @@ export function ComplaintsTable() {
                     )}
                 </DialogContent>
             </Dialog>
-        </div>
+        </>
     )
 }
 

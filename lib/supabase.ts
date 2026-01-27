@@ -229,3 +229,22 @@ export type FinancialSummary = {
     expenses: number
   }[]
 }
+
+// ============================================
+// Parcel Tracking Types
+// ============================================
+
+export type Parcel = {
+  id: string
+  resident_id: string
+  description: string | null
+  sender_name: string | null
+  courier_name: string | null
+  image_url: string
+  status: "pending" | "collected" | "returned"
+  notified_at: string | null
+  collected_at: string | null
+  created_at: string
+  updated_at: string
+  profiles?: Profile
+}
