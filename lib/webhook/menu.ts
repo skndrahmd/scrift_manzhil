@@ -35,7 +35,7 @@ ${options}
 
 ${DIVIDER}
 
-Reply with your choice (1-8)`
+Reply with your choice (1-10)`
 }
 
 /**

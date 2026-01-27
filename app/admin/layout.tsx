@@ -23,6 +23,7 @@ import {
     type Profile,
     type Feedback,
     type BookingSettings,
+    type VisitorPass,
 } from "@/lib/supabase"
 
 // Admin context for shared state across all admin pages
@@ -32,6 +33,7 @@ interface AdminContextType {
     complaints: Complaint[]
     profiles: Profile[]
     feedback: Feedback[]
+    visitors: VisitorPass[]
     settings: BookingSettings | null
 
     // Loading states
@@ -42,6 +44,7 @@ interface AdminContextType {
     newBookingsCount: number
     newComplaintsCount: number
     newFeedbackCount: number
+    newVisitorsCount: number
 
     // Actions
     refreshData: () => Promise<void>
@@ -49,6 +52,7 @@ interface AdminContextType {
     fetchComplaints: () => Promise<void>
     fetchProfiles: () => Promise<void>
     fetchFeedback: () => Promise<void>
+    fetchVisitors: () => Promise<void>
     fetchSettings: () => Promise<void>
 
     // Viewed timestamps
@@ -76,6 +80,7 @@ function AdminLayoutContent({
     const [complaints, setComplaints] = useState<Complaint[]>([])
     const [profiles, setProfiles] = useState<Profile[]>([])
     const [feedback, setFeedback] = useState<Feedback[]>([])
+    const [visitors, setVisitors] = useState<VisitorPass[]>([])
     const [settings, setSettings] = useState<BookingSettings | null>(null)
     const [loading, setLoading] = useState(true)
     const [refreshing, setRefreshing] = useState(false)
@@ -114,6 +119,9 @@ function AdminLayoutContent({
     // Count active complaints (pending + in-progress) instead of just new ones
     const newComplaintsCount = complaints.filter(c => c.status === "pending" || c.status === "in-progress").length
     const newFeedbackCount = feedback.filter(f => isNewFeedbackItem(f.created_at)).length
+    // Count pending visitors for today or future
+    const today = new Date().toISOString().split('T')[0]
+    const newVisitorsCount = visitors.filter(v => v.status === "pending" && v.visit_date >= today).length
 
     // Fetch functions
     const fetchBookings = async () => {
@@ -153,9 +161,17 @@ function AdminLayoutContent({
         if (data) setSettings(data)
     }
 
+    const fetchVisitors = async () => {
+        const { data } = await supabase
+            .from("visitor_passes")
+            .select(`*, profiles (name, phone_number, apartment_number)`)
+            .order("visit_date", { ascending: false })
+        if (data) setVisitors(data)
+    }
+
     const refreshData = async () => {
         setRefreshing(true)
-        await Promise.all([fetchBookings(), fetchComplaints(), fetchProfiles(), fetchFeedback(), fetchSettings()])
+        await Promise.all([fetchBookings(), fetchComplaints(), fetchProfiles(), fetchFeedback(), fetchVisitors(), fetchSettings()])
         setRefreshing(false)
         toast({
             title: "Data Refreshed",
@@ -166,7 +182,7 @@ function AdminLayoutContent({
     useEffect(() => {
         const fetchAllData = async () => {
             setLoading(true)
-            await Promise.all([fetchBookings(), fetchComplaints(), fetchProfiles(), fetchFeedback(), fetchSettings()])
+            await Promise.all([fetchBookings(), fetchComplaints(), fetchProfiles(), fetchFeedback(), fetchVisitors(), fetchSettings()])
             setLoading(false)
         }
         fetchAllData()
@@ -200,11 +216,19 @@ function AdminLayoutContent({
             })
             .subscribe()
 
+        const visitorsChannel = supabase
+            .channel('visitors-admin')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'visitor_passes' }, () => {
+                fetchVisitors()
+            })
+            .subscribe()
+
         return () => {
             supabase.removeChannel(bookingsChannel)
             supabase.removeChannel(complaintsChannel)
             supabase.removeChannel(profilesChannel)
             supabase.removeChannel(feedbackChannel)
+            supabase.removeChannel(visitorsChannel)
         }
     }, [])
 
@@ -213,17 +237,20 @@ function AdminLayoutContent({
         complaints,
         profiles,
         feedback,
+        visitors,
         settings,
         loading,
         refreshing,
         newBookingsCount,
         newComplaintsCount,
         newFeedbackCount,
+        newVisitorsCount,
         refreshData,
         fetchBookings,
         fetchComplaints,
         fetchProfiles,
         fetchFeedback,
+        fetchVisitors,
         fetchSettings,
         setLastViewedBookings,
         setLastViewedComplaints,
@@ -239,6 +266,7 @@ function AdminLayoutContent({
                     newBookingsCount={newBookingsCount}
                     newComplaintsCount={newComplaintsCount}
                     newFeedbackCount={newFeedbackCount}
+                    newVisitorsCount={newVisitorsCount}
                 />
 
                 {/* Main Content */}

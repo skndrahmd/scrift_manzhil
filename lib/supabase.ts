@@ -16,11 +16,11 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
 // Only create if service key is available (runtime only)
 export const supabaseAdmin = supabaseServiceKey
   ? createClient(supabaseUrl, supabaseServiceKey, {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false,
-      },
-    })
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
+    },
+  })
   : supabase // Fallback to regular client if service key not available
 
 export type Profile = {
@@ -130,6 +130,20 @@ export type Staff = {
   cnic: string
   phone_number: string
   role: string
+  created_at: string
+  updated_at: string
+  profiles?: Profile
+}
+
+export type VisitorPass = {
+  id: string
+  resident_id: string
+  visitor_name: string
+  visitor_cnic: string
+  visitor_phone: string
+  visit_date: string
+  status: "pending" | "arrived" | "cancelled"
+  notified_at: string | null
   created_at: string
   updated_at: string
   profiles?: Profile

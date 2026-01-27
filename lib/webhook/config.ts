@@ -95,9 +95,10 @@ export const MAIN_MENU_OPTIONS = [
   { key: "4", label: "My Staff Management", emoji: "👥" },
   { key: "5", label: "Check Maintenance Dues", emoji: "💰" },
   { key: "6", label: "Community Hall", emoji: "🏛️" },
-  { key: "7", label: "View My Profile", emoji: "👤" },
-  { key: "8", label: "Suggestions/Feedback", emoji: "💬" },
-  { key: "9", label: "Emergency Contacts", emoji: "🆘" },
+  { key: "7", label: "Visitor Entry Pass", emoji: "🎫" },
+  { key: "8", label: "View My Profile", emoji: "👤" },
+  { key: "9", label: "Suggestions/Feedback", emoji: "💬" },
+  { key: "10", label: "Emergency Contacts", emoji: "🆘" },
 ]
 
 /**

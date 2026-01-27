@@ -28,6 +28,8 @@ import {
   handleStatusFlow,
   initializeCancelFlow,
   handleCancelFlow,
+  initializeVisitorFlow,
+  handleVisitorFlow,
 } from "./handlers"
 
 // Divider constant for consistent styling
@@ -79,6 +81,8 @@ export async function processMessage(
         return await handleStatusFlow(trimmedMessage, profile, phoneNumber, userState)
       case "cancel":
         return await handleCancelFlow(trimmedMessage, profile, phoneNumber, userState)
+      case "visitor":
+        return await handleVisitorFlow(trimmedMessage, profile, phoneNumber, userState)
       default:
         return getMainMenu(profile.name)
     }
@@ -124,13 +128,16 @@ async function handleMainMenu(
     case "6": // Community Hall
       return initializeHallFlow(phoneNumber)
 
-    case "7": // View My Profile
+    case "7": // Visitor Entry Pass
+      return initializeVisitorFlow(phoneNumber)
+
+    case "8": // View My Profile
       return getProfileInfo(profile)
 
-    case "8": // Suggestions/Feedback
+    case "9": // Suggestions/Feedback
       return initializeFeedbackFlow(phoneNumber)
 
-    case "9": // Emergency Contacts
+    case "10": // Emergency Contacts
       return getEmergencyContacts()
 
     default:
@@ -138,7 +145,7 @@ async function handleMainMenu(
 
 ${DIVIDER}
 
-Please reply with a number from 1-9.
+Please reply with a number from 1-10.
 
 ${DIVIDER}
 

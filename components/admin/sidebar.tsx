@@ -18,6 +18,7 @@ import {
     ChevronRight,
     Menu,
     X,
+    Ticket,
 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -26,6 +27,7 @@ interface SidebarProps {
     newBookingsCount?: number
     newComplaintsCount?: number
     newFeedbackCount?: number
+    newVisitorsCount?: number
 }
 
 const navItems = [
@@ -50,6 +52,12 @@ const navItems = [
         href: "/admin/complaints",
         icon: AlertTriangle,
         badgeKey: "complaints" as const,
+    },
+    {
+        title: "Visitors",
+        href: "/admin/visitors",
+        icon: Ticket,
+        badgeKey: "visitors" as const,
     },
     {
         title: "Analytics",
@@ -78,6 +86,7 @@ export function AdminSidebar({
     newBookingsCount = 0,
     newComplaintsCount = 0,
     newFeedbackCount = 0,
+    newVisitorsCount = 0,
 }: SidebarProps) {
     const pathname = usePathname()
     const [collapsed, setCollapsed] = useState(false)
@@ -96,7 +105,7 @@ export function AdminSidebar({
         localStorage.setItem("admin-sidebar-collapsed", String(newState))
     }
 
-    const getBadgeCount = (badgeKey?: "bookings" | "complaints" | "feedback") => {
+    const getBadgeCount = (badgeKey?: "bookings" | "complaints" | "feedback" | "visitors") => {
         if (!badgeKey) return 0
         switch (badgeKey) {
             case "bookings":
@@ -105,6 +114,8 @@ export function AdminSidebar({
                 return newComplaintsCount
             case "feedback":
                 return newFeedbackCount
+            case "visitors":
+                return newVisitorsCount
             default:
                 return 0
         }

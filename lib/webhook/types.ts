@@ -14,6 +14,7 @@ export type FlowType =
   | "staff"
   | "feedback"
   | "hall"
+  | "visitor"
 
 /**
  * Complaint data structure during conversation
@@ -46,6 +47,16 @@ export interface StaffData {
 }
 
 /**
+ * Visitor data structure during conversation
+ */
+export interface VisitorData {
+  name?: string
+  cnic?: string
+  phone?: string
+  date?: string
+}
+
+/**
  * User state in the conversation flow
  */
 export interface UserState {
@@ -60,6 +71,7 @@ export interface UserState {
   staffList?: any[]
   booking?: any
   bookingList?: any[]
+  visitor?: VisitorData
 }
 
 /**
