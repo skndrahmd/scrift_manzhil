@@ -13,6 +13,7 @@ import {
     CheckCircle,
     Clock,
     Eye,
+    X,
 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -25,7 +26,29 @@ import {
     PaginationNext,
     PaginationPrevious,
 } from "@/components/ui/pagination"
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/ui/dialog"
 import { exportToPdf, filterByPeriod, periodLabel, type Period } from "@/lib/pdf"
+
+interface Complaint {
+    id: string
+    complaint_id: string
+    category: string
+    subcategory: string
+    description: string | null
+    status: string
+    created_at: string
+    updated_at: string
+    profiles?: {
+        name: string
+        apartment_number: string
+        phone_number?: string
+    }
+}
 
 export function ComplaintsTable() {
     const { complaints, fetchComplaints, setLastViewedComplaints } = useAdmin()
@@ -37,6 +60,8 @@ export function ComplaintsTable() {
     const [complaintsPeriod, setComplaintsPeriod] = useState<Period>("all")
     const [currentPage, setCurrentPage] = useState(1)
     const [updatingComplaintId, setUpdatingComplaintId] = useState<string | null>(null)
+    const [selectedComplaint, setSelectedComplaint] = useState<Complaint | null>(null)
+    const [isViewModalOpen, setIsViewModalOpen] = useState(false)
 
     const itemsPerPage = 10
 
@@ -104,6 +129,11 @@ export function ComplaintsTable() {
         } finally {
             setUpdatingComplaintId(null)
         }
+    }
+
+    const openViewModal = (complaint: Complaint) => {
+        setSelectedComplaint(complaint)
+        setIsViewModalOpen(true)
     }
 
     const formatDateTime = (dateString: string) => {
@@ -250,6 +280,15 @@ export function ComplaintsTable() {
                                         <TableCell className="text-gray-600 text-sm">{formatDateTime(complaint.created_at)}</TableCell>
                                         <TableCell className="text-right">
                                             <div className="flex gap-2 justify-end">
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    onClick={() => openViewModal(complaint)}
+                                                    className="h-8 w-8 p-0 border-manzhil-teal/30 hover:bg-manzhil-teal/10"
+                                                    title="View Details"
+                                                >
+                                                    <Eye className="h-4 w-4 text-manzhil-teal" />
+                                                </Button>
                                                 <Select
                                                     value={complaint.status}
                                                     onValueChange={(value) => updateComplaintStatus(complaint.id, value)}
@@ -297,9 +336,19 @@ export function ComplaintsTable() {
                                         <h3 className="font-medium text-manzhil-dark text-sm font-mono">{complaint.complaint_id}</h3>
                                         <p className="text-xs text-muted-foreground">{formatDateTime(complaint.created_at)}</p>
                                     </div>
-                                    <Badge className={`${getStatusBadgeClass(complaint.status)} text-xs`}>
-                                        {complaint.status}
-                                    </Badge>
+                                    <div className="flex items-center gap-2">
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => openViewModal(complaint)}
+                                            className="h-7 w-7 p-0 border-manzhil-teal/30"
+                                        >
+                                            <Eye className="h-3.5 w-3.5 text-manzhil-teal" />
+                                        </Button>
+                                        <Badge className={`${getStatusBadgeClass(complaint.status)} text-xs`}>
+                                            {complaint.status}
+                                        </Badge>
+                                    </div>
                                 </div>
 
                                 <div className="grid grid-cols-2 gap-3 text-sm">
@@ -383,6 +432,126 @@ export function ComplaintsTable() {
                     </PaginationContent>
                 </Pagination>
             )}
+
+            {/* Complaint Details Modal */}
+            <Dialog open={isViewModalOpen} onOpenChange={setIsViewModalOpen}>
+                <DialogContent className="sm:max-w-[500px]">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2 text-manzhil-dark">
+                            <Eye className="h-5 w-5 text-manzhil-teal" />
+                            Complaint Details
+                        </DialogTitle>
+                    </DialogHeader>
+                    {selectedComplaint && (
+                        <div className="space-y-6 py-4">
+                            {/* Complaint ID & Status */}
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <p className="text-xs text-gray-500 uppercase tracking-wide">Complaint ID</p>
+                                    <p className="font-mono font-medium text-lg">{selectedComplaint.complaint_id}</p>
+                                </div>
+                                <Badge className={`${getStatusBadgeClass(selectedComplaint.status)} text-sm px-3 py-1`}>
+                                    {selectedComplaint.status === "completed" && <CheckCircle className="h-3.5 w-3.5 mr-1" />}
+                                    {selectedComplaint.status === "pending" && <Clock className="h-3.5 w-3.5 mr-1" />}
+                                    <span className="capitalize">{selectedComplaint.status}</span>
+                                </Badge>
+                            </div>
+
+                            {/* Resident Info */}
+                            <div className="bg-gray-50 rounded-lg p-4 space-y-3">
+                                <p className="text-xs text-gray-500 uppercase tracking-wide font-medium">Resident Information</p>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <p className="text-xs text-gray-400">Name</p>
+                                        <p className="font-medium text-gray-800">{selectedComplaint.profiles?.name || "N/A"}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-xs text-gray-400">Apartment</p>
+                                        <p className="font-medium text-gray-800">{selectedComplaint.profiles?.apartment_number || "N/A"}</p>
+                                    </div>
+                                    {selectedComplaint.profiles?.phone_number && (
+                                        <div className="col-span-2">
+                                            <p className="text-xs text-gray-400">Phone</p>
+                                            <p className="font-medium text-gray-800">{selectedComplaint.profiles.phone_number}</p>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Complaint Details */}
+                            <div className="space-y-3">
+                                <p className="text-xs text-gray-500 uppercase tracking-wide font-medium">Complaint Details</p>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <p className="text-xs text-gray-400">Category</p>
+                                        <p className="font-medium text-gray-800 capitalize">{selectedComplaint.category}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-xs text-gray-400">Type</p>
+                                        <p className="font-medium text-gray-800 capitalize">{selectedComplaint.subcategory.replace(/_/g, " ")}</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Description */}
+                            <div className="space-y-2">
+                                <p className="text-xs text-gray-500 uppercase tracking-wide font-medium">Description</p>
+                                <div className="bg-white border border-gray-200 rounded-lg p-4 min-h-[80px]">
+                                    <p className="text-gray-700 whitespace-pre-wrap">
+                                        {selectedComplaint.description || "No description provided"}
+                                    </p>
+                                </div>
+                            </div>
+
+                            {/* Timestamps */}
+                            <div className="grid grid-cols-2 gap-4 pt-4 border-t border-gray-100">
+                                <div>
+                                    <p className="text-xs text-gray-400">Created</p>
+                                    <p className="text-sm text-gray-600">{formatDateTime(selectedComplaint.created_at)}</p>
+                                </div>
+                                <div>
+                                    <p className="text-xs text-gray-400">Last Updated</p>
+                                    <p className="text-sm text-gray-600">{formatDateTime(selectedComplaint.updated_at)}</p>
+                                </div>
+                            </div>
+
+                            {/* Actions */}
+                            <div className="flex gap-3 pt-4">
+                                <Select
+                                    value={selectedComplaint.status}
+                                    onValueChange={(value) => {
+                                        updateComplaintStatus(selectedComplaint.id, value)
+                                        setSelectedComplaint({ ...selectedComplaint, status: value })
+                                    }}
+                                    disabled={updatingComplaintId === selectedComplaint.id}
+                                >
+                                    <SelectTrigger className="flex-1">
+                                        {updatingComplaintId === selectedComplaint.id ? (
+                                            <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                                        ) : (
+                                            <>
+                                                Update Status: <SelectValue />
+                                            </>
+                                        )}
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="pending">Pending</SelectItem>
+                                        <SelectItem value="in-progress">In Progress</SelectItem>
+                                        <SelectItem value="completed">Completed</SelectItem>
+                                        <SelectItem value="cancelled">Cancelled</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                                <Button
+                                    variant="outline"
+                                    onClick={() => setIsViewModalOpen(false)}
+                                >
+                                    Close
+                                </Button>
+                            </div>
+                        </div>
+                    )}
+                </DialogContent>
+            </Dialog>
         </div>
     )
 }

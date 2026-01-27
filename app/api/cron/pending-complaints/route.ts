@@ -90,25 +90,36 @@ export async function POST(request: NextRequest) {
         }
 
         // Fallback message
-        const fallbackMessage = [
-          "Hello, this is Manzhil by Scrift.",
-          "",
-          "Pending Complaint Alert",
-          "",
-          `Complaint ID: ${complaint.complaint_id}`,
-          `Resident: ${complaint.profiles?.name || "Unknown"} (${complaint.profiles?.apartment_number || "N/A"})`,
-          `Category: ${categoryText} - ${subcategoryText}`,
-          `Description: ${sanitizedDescription}`,
-          "",
-          `Registered: ${formattedDate}`,
-          `Pending for: ${hoursPending} hours`,
-          "",
-          "Please review and address this complaint.",
-          "",
-          `View in Admin Panel: ${APP_BASE_URL}/admin`,
-          "",
-          "- Manzhil by Scrift Team",
-        ].join("\n")
+        const DIVIDER = "───────────────────"
+        const fallbackMessage = `⚠️ *Pending Complaint Alert*
+
+${DIVIDER}
+📋 *Complaint Details*
+${DIVIDER}
+
+• ID: ${complaint.complaint_id}
+• Resident: ${complaint.profiles?.name || "Unknown"}
+• Apartment: ${complaint.profiles?.apartment_number || "N/A"}
+• Category: ${categoryText}
+• Type: ${subcategoryText}
+
+${DIVIDER}
+⏱️ *Status*
+${DIVIDER}
+
+• Registered: ${formattedDate}
+• Pending for: *${hoursPending} hours*
+
+📝 ${sanitizedDescription}
+
+${DIVIDER}
+
+Please review and address this complaint.
+
+🔗 Admin Panel: ${APP_BASE_URL}/admin
+
+${DIVIDER}
+— Manzhil by Scrift`
 
         // Send reminder to all recipients
         for (const recipient of REMINDER_RECIPIENTS) {

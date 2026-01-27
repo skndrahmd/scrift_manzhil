@@ -13,6 +13,9 @@ import type {
   AccountReactivatedParams,
 } from "../types"
 
+// Divider constant for consistent styling
+const DIVIDER = "───────────────────"
+
 /**
  * Send welcome message to new resident
  * Sent when a new resident profile is created
@@ -28,24 +31,30 @@ export async function sendWelcomeMessage(
     "2": apartmentNumber,
   }
 
-  const fallbackMessage = [
-    "Hello, this is Manzhil by Scrift.",
-    "",
-    "Welcome to Manzhil!",
-    "",
-    `Hi ${name || "Resident"}, welcome to our building management system.`,
-    "",
-    `Apartment: ${apartmentNumber}`,
-    "",
-    "You will receive notifications for:",
-    "- Maintenance invoices and reminders",
-    "- Hall booking confirmations",
-    "- Complaint status updates",
-    "",
-    "If you have any questions, please contact the management office.",
-    "",
-    "- Manzhil by Scrift Team",
-  ].join("\n")
+  const fallbackMessage = `👋 *Welcome to Manzhil!*
+
+${DIVIDER}
+🏠 *Your Account*
+${DIVIDER}
+
+• Name: ${name || "Resident"}
+• Apartment: ${apartmentNumber}
+
+${DIVIDER}
+📋 *What's Next?*
+${DIVIDER}
+
+You will receive notifications for:
+• Maintenance invoices and reminders
+• Hall booking confirmations
+• Complaint status updates
+
+${DIVIDER}
+
+If you have any questions, please contact the management office.
+
+${DIVIDER}
+— Manzhil by Scrift`
 
   return sendWithFallback(phone, templateSid, templateVariables, fallbackMessage)
 }
@@ -67,24 +76,28 @@ export async function sendAccountBlocked(
     "4": totalDue ? formatCurrency(totalDue) : "",
   }
 
-  const dueInfo = totalDue
-    ? `\nOverdue months: ${overdueMonths}\nTotal due: Rs. ${formatCurrency(totalDue)}`
+  const dueDetails = totalDue
+    ? `• Overdue: ${overdueMonths}\n• Amount: Rs. ${formatCurrency(totalDue)}`
     : ""
 
-  const fallbackMessage = [
-    "Hello, this is Manzhil by Scrift.",
-    "",
-    "Account Status Update",
-    "",
-    `Hi ${name || "Resident"}, your account has been temporarily restricted.`,
-    "",
-    `Reason: ${reason}`,
-    dueInfo,
-    "",
-    "Please contact the management office to resolve this matter.",
-    "",
-    "- Manzhil by Scrift Team",
-  ].join("\n")
+  const fallbackMessage = `⚠️ *Account Restricted*
+
+${DIVIDER}
+🔒 *Account Status*
+${DIVIDER}
+
+• Status: Temporarily Restricted
+• Reason: ${reason}
+${dueDetails}
+
+${DIVIDER}
+
+Hi ${name || "Resident"}, your account has been temporarily restricted.
+
+Please contact the management office to resolve this matter.
+
+${DIVIDER}
+— Manzhil by Scrift`
 
   return sendWithFallback(phone, templateSid, templateVariables, fallbackMessage)
 }
@@ -103,20 +116,26 @@ export async function sendAccountReactivated(
     "1": name || "Resident",
   }
 
-  const customMessage = message ? `\n${message}` : ""
-  const fallbackMessage = [
-    "Hello, this is Manzhil by Scrift.",
-    "",
-    "Account Reactivated",
-    "",
-    `Hi ${name || "Resident"}, your account has been reactivated.`,
-    customMessage,
-    "",
-    "You now have full access to all services.",
-    "",
-    "Thank you!",
-    "- Manzhil by Scrift Team",
-  ].join("\n")
+  const customNote = message ? `\n📝 Note: ${message}` : ""
+
+  const fallbackMessage = `✅ *Account Reactivated*
+
+${DIVIDER}
+🔓 *Account Status*
+${DIVIDER}
+
+• Status: ✅ Active
+${customNote}
+
+${DIVIDER}
+
+Hi ${name || "Resident"}, your account has been reactivated.
+
+You now have full access to all services.
+
+${DIVIDER}
+Thank you!
+— Manzhil by Scrift`
 
   return sendWithFallback(phone, templateSid, templateVariables, fallbackMessage)
 }

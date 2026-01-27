@@ -142,27 +142,31 @@ export async function POST(request: NextRequest) {
     }
 
     // Fallback message
-    const fallbackMessage = [
-      "Hello, this is Manzhil by Scrift.",
-      "",
-      "Daily Report Summary",
-      "",
-      "Last 24 Hours:",
-      `${recentComplaints?.length || 0} new complaints`,
-      `${recentBookings?.length || 0} new bookings`,
-      "",
-      "Open Issues:",
-      `${pendingCount} pending complaints`,
-      `${inProgressCount} complaints in progress`,
-      "",
-      "View Reports:",
-      `Activity Report: ${activityReportLink}`,
-      `Complaints Report: ${complaintsReportLink}`,
-      "",
-      `Generated at: ${generationTime}`,
-      "",
-      "- Manzhil by Scrift Team",
-    ].join("\n")
+    const DIVIDER = "───────────────────"
+    const fallbackMessage = `📊 *Daily Report Summary*
+
+${DIVIDER}
+📅 *${reportDate}*
+${DIVIDER}
+
+*Last 24 Hours:*
+• ${recentComplaints?.length || 0} new complaints
+• ${recentBookings?.length || 0} new bookings
+
+*Open Issues:*
+• ${pendingCount} pending complaints
+• ${inProgressCount} in progress
+
+${DIVIDER}
+📄 *View Reports*
+${DIVIDER}
+
+• Activity: ${activityReportLink}
+• Complaints: ${complaintsReportLink}
+
+${DIVIDER}
+Generated at ${generationTime}
+— Manzhil by Scrift`
 
     let sentCount = 0
     for (const recipient of REPORT_RECIPIENTS) {

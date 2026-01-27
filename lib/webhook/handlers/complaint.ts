@@ -11,6 +11,9 @@ import { COMPLAINT_NOTIFICATION_NUMBERS, TEMPLATE_SIDS } from "../config"
 import { formatSubcategory } from "../utils"
 import { getComplaintCategoryMenu } from "../menu"
 
+// Divider constant for consistent styling
+const DIVIDER = "───────────────────"
+
 /**
  * Initialize complaint flow
  */
@@ -47,7 +50,14 @@ export async function handleComplaintFlow(
       return await createComplaint(profile, userState, phoneNumber)
 
     default:
-      return "❌ Oops! Something went wrong. Type 0 to return to the main menu."
+      return `❌ *Something Went Wrong*
+
+${DIVIDER}
+
+We couldn't process your request. Please try again.
+
+${DIVIDER}
+Reply *0* for the main menu`
   }
 }
 
@@ -64,7 +74,11 @@ function handleCategorySelection(
     userState.step = "complaint_subcategory"
     setState(phoneNumber, userState)
 
-    return `Great! Now, what kind of issue are you facing in your apartment?
+    return `🏠 *Apartment Complaint*
+
+${DIVIDER}
+📋 *Select Issue Type*
+${DIVIDER}
 
 1. 🔧 Plumbing
 2. ⚡ Electric
@@ -72,7 +86,8 @@ function handleCategorySelection(
 4. 🅿️ My Parking Complaint
 5. 🔧 Other
 
-Reply with the number (1-5) or type 'B' or 'back' to go back`
+${DIVIDER}
+Reply with number (1-5), or *B* to go back`
   }
 
   if (choice === "2") {
@@ -80,7 +95,11 @@ Reply with the number (1-5) or type 'B' or 'back' to go back`
     userState.step = "complaint_subcategory"
     setState(phoneNumber, userState)
 
-    return `Got it! What kind of building issue would you like to report?
+    return `🏢 *Building Complaint*
+
+${DIVIDER}
+📋 *Select Issue Type*
+${DIVIDER}
 
 1. 🛗 Lift/Elevator
 2. 💪 Gym
@@ -95,15 +114,20 @@ Reply with the number (1-5) or type 'B' or 'back' to go back`
 11. 🪑 Seating Area
 12. 📋 Other
 
-Reply with the number (1-12) or type 'B' or 'back' to go back`
+${DIVIDER}
+Reply with number (1-12), or *B* to go back`
   }
 
-  return `❓ I didn't understand that. Please reply with:
+  return `❓ *Invalid Selection*
 
-1 - For My Apartment Complaint
-2 - For Building Complaint
+${DIVIDER}
 
-Type 'B' or 'back' to go back or 0 for the main menu`
+Please reply with:
+• *1* — Apartment Complaint
+• *2* — Building Complaint
+
+${DIVIDER}
+Reply *B* to go back, or *0* for main menu`
 }
 
 /**
@@ -119,19 +143,19 @@ async function handleSubcategorySelection(
 
   const subcategories = isBuilding
     ? [
-        "lift_elevator",
-        "gym",
-        "snooker_room",
-        "play_area",
-        "parking",
-        "security",
-        "plumbing",
-        "electric",
-        "civil",
-        "collaboration_corner",
-        "seating_area",
-        "other",
-      ]
+      "lift_elevator",
+      "gym",
+      "snooker_room",
+      "play_area",
+      "parking",
+      "security",
+      "plumbing",
+      "electric",
+      "civil",
+      "collaboration_corner",
+      "seating_area",
+      "other",
+    ]
     : ["plumbing", "electric", "civil", "my_parking", "other"]
 
   const maxChoice = subcategories.length
@@ -148,9 +172,14 @@ async function handleSubcategorySelection(
     if (needsDescription) {
       userState.step = "complaint_description"
       setState(phoneNumber, userState)
-      return `📝 Please tell me more about the issue. Write a short description:
+      return `📝 *Add Description*
 
-Type 'B' or 'back' if you want to go back`
+${DIVIDER}
+
+Please provide a brief description of the issue you're experiencing.
+
+${DIVIDER}
+Reply *B* to go back`
     }
 
     // Create complaint directly for apartment predefined categories
@@ -158,9 +187,14 @@ Type 'B' or 'back' if you want to go back`
   }
 
   const rangeText = isBuilding ? "1-12" : "1-5"
-  return `❓ That's not a valid option. Please choose a number from ${rangeText}.
+  return `❓ *Invalid Selection*
 
-Type 'B' or 'back' to go back`
+${DIVIDER}
+
+Please choose a number from ${rangeText}.
+
+${DIVIDER}
+Reply *B* to go back`
 }
 
 /**
@@ -203,15 +237,20 @@ async function createComplaint(
 
     if (error) {
       console.error("[Complaint] Creation error:", error)
-      return `❌ Unable to register your complaint right now. Please try again.
+      return `❌ *Unable to Register Complaint*
 
-Type 0 to return to the main menu`
+${DIVIDER}
+
+We couldn't register your complaint. Please try again.
+
+${DIVIDER}
+Reply *0* for the main menu`
     }
 
     // Clear state
     clearState(phoneNumber)
 
-    const categoryText = complaint.category === "apartment" ? "apartment" : "building"
+    const categoryText = complaint.category === "apartment" ? "Apartment" : "Building"
     const subcategoryText = formatSubcategory(complaint.subcategory!)
 
     // Format registration timestamp in Pakistan time
@@ -230,49 +269,53 @@ Type 0 to return to the main menu`
     await sendNewComplaintNotification(complaintData, profile)
 
     // Try to send confirmation template to resident
-    try {
-      if (TEMPLATE_SIDS.complaintRegistered) {
-        await sendWhatsAppTemplate(phoneNumber, TEMPLATE_SIDS.complaintRegistered, {
-          "1": profile.name || "Resident",
-          "2": complaintData.complaint_id,
-          "3": categoryText.charAt(0).toUpperCase() + categoryText.slice(1),
-          "4": subcategoryText,
-          "5": finalDescription || "No description provided",
-          "6": formattedDateTime,
-        })
+    if (TEMPLATE_SIDS.complaintRegistered) {
+      const result = await sendWhatsAppTemplate(phoneNumber, TEMPLATE_SIDS.complaintRegistered, {
+        "1": profile.name || "Resident",
+        "2": complaintData.complaint_id,
+        "3": categoryText,
+        "4": subcategoryText,
+        "5": finalDescription || "No description provided",
+        "6": formattedDateTime,
+      })
+      if (result.ok) {
         // Template sent successfully, return empty string to avoid duplicate
         return ""
       }
-    } catch (templateError) {
-      console.error("[Complaint] Failed to send registered template:", templateError)
+      console.warn("[Complaint] Template failed, using fallback message")
     }
 
     // Fallback confirmation message
-    if (complaint.subcategory === "other") {
-      return `✅ Your complaint has been registered and forwarded to the maintenance team.
+    return `✅ *Complaint Registered*
 
-🎫 Complaint ID: ${complaintData.complaint_id}
-📋 Category: ${categoryText.charAt(0).toUpperCase() + categoryText.slice(1)} - ${subcategoryText}
-📅 Registered: ${formattedDateTime}
+${DIVIDER}
+🎫 *Reference Details*
+${DIVIDER}
 
-The management team has been notified and will address this matter promptly.
+• ID: ${complaintData.complaint_id}
+• Category: ${categoryText}
+• Type: ${subcategoryText}
+• Description: ${finalDescription || "No description provided"}
+• Registered: ${formattedDateTime}
 
-Type 0 to return to the main menu`
-    }
+${DIVIDER}
+📋 *Next Steps*
+${DIVIDER}
 
-    return `✅ Your complaint about the ${subcategoryText.toLowerCase()} issue in your ${categoryText} has been registered.
+Your complaint has been forwarded to the maintenance team. You'll be notified once there's an update.
 
-🎫 Complaint ID: ${complaintData.complaint_id}
-📅 Registered: ${formattedDateTime}
-
-The maintenance team has been notified and will resolve this as soon as possible.
-
-Type 0 to return to the main menu`
+${DIVIDER}
+Reply *0* for the main menu`
   } catch (error) {
     console.error("[Complaint] Create error:", error)
-    return `❌ Unable to create your complaint. Please try again.
+    return `❌ *Unable to Create Complaint*
 
-Type 0 to return to the main menu`
+${DIVIDER}
+
+We encountered an issue. Please try again.
+
+${DIVIDER}
+Reply *0* for the main menu`
   }
 }
 
@@ -332,36 +375,41 @@ async function sendNewComplaintNotification(
 
       // Try template if configured
       if (TEMPLATE_SIDS.newComplaint) {
-        try {
-          await sendWhatsAppTemplate(recipient, TEMPLATE_SIDS.newComplaint, templateVariables)
+        const result = await sendWhatsAppTemplate(recipient, TEMPLATE_SIDS.newComplaint, templateVariables)
+        if (result.ok) {
           templateSent = true
           console.log(
             `[Complaint] Template sent to ${recipient} for ${complaint.complaint_id}`
           )
-        } catch (error) {
-          console.error(`[Complaint] Failed to send template to ${recipient}:`, error)
+        } else {
+          console.warn(`[Complaint] Template failed for ${recipient}, using fallback`)
         }
       }
 
       // Fallback to plain text message
       if (!templateSent) {
         try {
-          const fallbackMessage = `Hello, this is Manzhil by Scrift.
+          const fallbackMessage = `🆕 *New Complaint Registered*
 
-🆕 New Complaint Registered
+${DIVIDER}
+📋 *Complaint Details*
+${DIVIDER}
 
-Complaint ID: ${complaint.complaint_id || "N/A"}
-Resident: ${profile.name || "Unknown"} (${profile.apartment_number || "N/A"})
-Category: ${categoryText} - ${subcategoryText}
-Description: ${sanitizedDescription}
+• ID: ${complaint.complaint_id || "N/A"}
+• Resident: ${profile.name || "Unknown"} (${profile.apartment_number || "N/A"})
+• Category: ${categoryText}
+• Type: ${subcategoryText}
+• Description: ${sanitizedDescription}
+• Registered: ${formattedDate} at ${formattedTime}
 
-Registered: ${formattedDate} at ${formattedTime}
+${DIVIDER}
 
 Please review and address this complaint.
 
-View in Admin Panel: ${baseUrl}/admin
+🔗 Admin Panel: ${baseUrl}/admin
 
-- Manzhil by Scrift Team`
+${DIVIDER}
+— Manzhil by Scrift`
 
           await sendWhatsAppMessage(recipient, fallbackMessage)
           console.log(

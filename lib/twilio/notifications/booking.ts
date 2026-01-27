@@ -13,6 +13,9 @@ import type {
   BookingCancelledParams,
 } from "../types"
 
+// Divider constant for consistent styling
+const DIVIDER = "───────────────────"
+
 /**
  * Send booking payment confirmed notification
  * Sent when a booking payment is marked as paid
@@ -39,21 +42,26 @@ export async function sendBookingConfirmation(
     "7": invoiceUrl,
   }
 
-  const fallbackMessage = [
-    "Hello, this is Manzhil by Scrift.",
-    "",
-    "PAYMENT CONFIRMED!",
-    "",
-    `Hi ${name || "Resident"}, your payment of Rs. ${formattedAmount} has been received.`,
-    "",
-    `Booking Date: ${formattedDate}`,
-    `Time: ${formattedStartTime} - ${formattedEndTime}`,
-    "",
-    `View Paid Invoice: ${invoiceUrl}`,
-    "",
-    "Thank you for your payment!",
-    "- Manzhil by Scrift Team",
-  ].join("\n")
+  const fallbackMessage = `✅ *Payment Confirmed*
+
+${DIVIDER}
+📋 *Booking Details*
+${DIVIDER}
+
+• Date: ${formattedDate}
+• Time: ${formattedStartTime} – ${formattedEndTime}
+• Amount: Rs. ${formattedAmount}
+• Booking ID: ${bookingId}
+
+${DIVIDER}
+
+Hi ${name || "Resident"}, your payment has been received successfully.
+
+📄 View Invoice: ${invoiceUrl}
+
+${DIVIDER}
+Thank you for your payment!
+— Manzhil by Scrift`
 
   return sendWithFallback(phone, templateSid, templateVariables, fallbackMessage)
 }
@@ -79,20 +87,24 @@ export async function sendBookingReminder(
     "4": formattedEndTime,
   }
 
-  const hallLabel = hallType ? ` for the ${hallType}` : ""
-  const fallbackMessage = [
-    "Hello, this is Manzhil by Scrift.",
-    "",
-    "BOOKING REMINDER",
-    "",
-    `Hi ${name || "Resident"}, this is a reminder about your upcoming booking${hallLabel}.`,
-    "",
-    `Date: ${formattedDate}`,
-    `Time: ${formattedStartTime} - ${formattedEndTime}`,
-    "",
-    "Please ensure you're available at the scheduled time.",
-    "- Manzhil by Scrift Team",
-  ].join("\n")
+  const hallLabel = hallType ? ` (${hallType})` : ""
+  const fallbackMessage = `🔔 *Booking Reminder*
+
+${DIVIDER}
+📅 *Upcoming Booking${hallLabel}*
+${DIVIDER}
+
+• Date: ${formattedDate}
+• Time: ${formattedStartTime} – ${formattedEndTime}
+
+${DIVIDER}
+
+Hi ${name || "Resident"}, this is a friendly reminder about your upcoming booking.
+
+Please ensure you're available at the scheduled time.
+
+${DIVIDER}
+— Manzhil by Scrift`
 
   return sendWithFallback(phone, templateSid, templateVariables, fallbackMessage)
 }
@@ -118,21 +130,24 @@ export async function sendBookingCancelled(
     "4": formattedEndTime,
   }
 
-  const reasonLine = reason ? `\nReason: ${reason}` : ""
-  const fallbackMessage = [
-    "Hello, this is Manzhil by Scrift.",
-    "",
-    "BOOKING CANCELLED",
-    "",
-    `Hi ${name || "Resident"}, your booking has been cancelled.`,
-    "",
-    `Date: ${formattedDate}`,
-    `Time: ${formattedStartTime} - ${formattedEndTime}`,
-    reasonLine,
-    "",
-    "If you have any questions, please contact us.",
-    "- Manzhil by Scrift Team",
-  ].join("\n")
+  const reasonLine = reason ? `• Reason: ${reason}\n` : ""
+  const fallbackMessage = `❌ *Booking Cancelled*
+
+${DIVIDER}
+📅 *Cancelled Booking*
+${DIVIDER}
+
+• Date: ${formattedDate}
+• Time: ${formattedStartTime} – ${formattedEndTime}
+${reasonLine}
+${DIVIDER}
+
+Hi ${name || "Resident"}, your booking has been cancelled.
+
+If you have any questions, please contact us.
+
+${DIVIDER}
+— Manzhil by Scrift`
 
   return sendWithFallback(phone, templateSid, templateVariables, fallbackMessage)
 }

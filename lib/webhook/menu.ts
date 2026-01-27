@@ -14,24 +14,28 @@ import {
 } from "./config"
 import { formatDate, formatCurrency, buildNumberedList } from "./utils"
 
+// Divider constant for consistent styling
+const DIVIDER = "───────────────────"
+
 /**
  * Get main menu display
  */
 export function getMainMenu(name: string): string {
-  const greeting = `Hello ${name}! 👋`
-  const intro = "Welcome to Manzhil by Scrift. How can I help you today?"
-
   const options = MAIN_MENU_OPTIONS.map(
     (opt) => `${opt.key}. ${opt.emoji} ${opt.label}`
   ).join("\n")
 
-  return `${greeting}
+  return `Hello ${name}! 👋
 
-${intro}
+Welcome to *Manzhil* — Your Building Management Assistant
+
+${DIVIDER}
 
 ${options}
 
-Reply with the number of your choice.`
+${DIVIDER}
+
+Reply with your choice (1-8)`
 }
 
 /**
@@ -45,17 +49,25 @@ export function getProfileInfo(profile: Profile): string {
 
   return `👤 *Your Profile*
 
-📛 Name: ${profile.name}
-🏠 Apartment: ${profile.apartment_number}
-📱 Phone: ${profile.phone_number}
-🏢 Building: ${profile.building_block || "Not specified"}
+${DIVIDER}
+📋 *Personal Details*
+${DIVIDER}
 
+• Name: ${profile.name}
+• Apartment: ${profile.apartment_number}
+• Phone: ${profile.phone_number}
+• Building: ${profile.building_block || "Not specified"}
+
+${DIVIDER}
 💰 *Maintenance Status*
-Status: ${paymentStatus}
-Monthly Charges: ${formatCurrency(profile.maintenance_charges || 0)}
-Last Payment: ${lastPayment}
+${DIVIDER}
 
-Type 0 to return to the main menu.`
+• Status: ${paymentStatus}
+• Monthly Charges: ${formatCurrency(profile.maintenance_charges || 0)}
+• Last Payment: ${lastPayment}
+
+${DIVIDER}
+Reply *0* for the main menu`
 }
 
 /**
@@ -69,18 +81,29 @@ export function getMaintenanceStatus(profile: Profile): string {
 
   let statusMessage = `💰 *Maintenance Status*
 
-Apartment: ${profile.apartment_number}
-Monthly Charges: ${formatCurrency(profile.maintenance_charges || 0)}
-Payment Status: ${paymentStatus}
-Last Payment: ${lastPayment}`
+${DIVIDER}
+📋 *Payment Details*
+${DIVIDER}
+
+• Apartment: ${profile.apartment_number}
+• Monthly Charges: ${formatCurrency(profile.maintenance_charges || 0)}
+• Status: ${paymentStatus}
+• Last Payment: ${lastPayment}`
 
   if (!profile.maintenance_paid) {
     statusMessage += `
 
-⚠️ Your maintenance payment is due. Please pay at your earliest convenience to avoid service interruptions.`
+${DIVIDER}
+⚠️ *Payment Due*
+${DIVIDER}
+
+Your maintenance payment is pending. Please complete the payment at your earliest convenience to avoid service interruptions.`
   }
 
-  statusMessage += "\n\nType 0 to return to the main menu."
+  statusMessage += `
+
+${DIVIDER}
+Reply *0* for the main menu`
 
   return statusMessage
 }
@@ -95,9 +118,12 @@ export function getEmergencyContacts(): string {
 
   return `🆘 *Emergency Contacts*
 
+${DIVIDER}
+
 ${contacts}
 
-Type 0 to return to the main menu.`
+${DIVIDER}
+Reply *0* for the main menu`
 }
 
 /**
@@ -110,11 +136,12 @@ export function getHallMenu(): string {
 
   return `🏛️ *Community Hall Management*
 
-What would you like to do?
+${DIVIDER}
 
 ${options}
 
-Reply with the number of your choice, or 0 for main menu.`
+${DIVIDER}
+Reply with your choice, or *0* for main menu`
 }
 
 /**
@@ -127,11 +154,12 @@ export function getStaffMenu(): string {
 
   return `👥 *Staff Management*
 
-What would you like to do?
+${DIVIDER}
 
 ${options}
 
-Reply with the number of your choice, or 0 for main menu.`
+${DIVIDER}
+Reply with your choice, or *0* for main menu`
 }
 
 /**
@@ -140,12 +168,15 @@ Reply with the number of your choice, or 0 for main menu.`
 export function getComplaintCategoryMenu(): string {
   return `📝 *Register a Complaint*
 
-Please select the type of complaint:
+${DIVIDER}
+📂 *Select Category*
+${DIVIDER}
 
 1. ${COMPLAINT_CATEGORIES.apartment.emoji} ${COMPLAINT_CATEGORIES.apartment.label}
 2. ${COMPLAINT_CATEGORIES.building.emoji} ${COMPLAINT_CATEGORIES.building.label}
 
-Reply with 1 or 2, or type 0 for the main menu.`
+${DIVIDER}
+Reply *1* or *2*, or *0* for main menu`
 }
 
 /**
@@ -158,11 +189,14 @@ export function getApartmentSubcategoryMenu(): string {
 
   return `🏠 *Apartment Complaint*
 
-What kind of issue would you like to report?
+${DIVIDER}
+📋 *Select Issue Type*
+${DIVIDER}
 
 ${subcategories}
 
-Reply with the number, or B to go back.`
+${DIVIDER}
+Reply with number, or *B* to go back`
 }
 
 /**
@@ -175,11 +209,14 @@ export function getBuildingSubcategoryMenu(): string {
 
   return `🏢 *Building Complaint*
 
-What kind of building issue would you like to report?
+${DIVIDER}
+📋 *Select Issue Type*
+${DIVIDER}
 
 ${subcategories}
 
-Reply with the number, or B to go back.`
+${DIVIDER}
+Reply with number, or *B* to go back`
 }
 
 /**
@@ -188,14 +225,15 @@ Reply with the number, or B to go back.`
 export function getTowerSelectionMenu(): string {
   return `🏗️ *Select Tower*
 
-Which tower is this complaint for?
+${DIVIDER}
 
 1. Tower A
 2. Tower B
 3. Tower C
 4. Tower D
 
-Reply with the number, or B to go back.`
+${DIVIDER}
+Reply with number, or *B* to go back`
 }
 
 /**
@@ -206,11 +244,12 @@ export function getStaffRoleMenu(): string {
 
   return `👤 *Select Staff Role*
 
-What role does this staff member have?
+${DIVIDER}
 
 ${roles}
 
-Reply with the number, or B to go back.`
+${DIVIDER}
+Reply with number, or *B* to go back`
 }
 
 /**
@@ -244,10 +283,10 @@ export function formatComplaintsList(complaints: any[]): string {
         c.status === "pending"
           ? "⏳ Pending"
           : c.status === "in_progress"
-          ? "🔄 In Progress"
-          : c.status === "completed"
-          ? "✅ Completed"
-          : "❌ Rejected"
+            ? "🔄 In Progress"
+            : c.status === "completed"
+              ? "✅ Completed"
+              : "❌ Rejected"
       const date = formatDate(c.created_at)
       return `${i + 1}. ${c.category} - ${c.subcategory}\n   Status: ${status} | Created: ${date}`
     })

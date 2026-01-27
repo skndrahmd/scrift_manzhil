@@ -10,6 +10,9 @@ import { getState, setState, clearState } from "../state"
 import { getCachedSettings } from "../profile"
 import { formatDate, formatCurrency } from "../utils"
 
+// Divider constant for consistent styling
+const DIVIDER = "───────────────────"
+
 /**
  * Initialize booking flow
  */
@@ -21,15 +24,20 @@ export function initializeBookingFlow(phoneNumber: string): string {
 
   return `📅 *Community Hall Booking*
 
+${DIVIDER}
+📋 *Enter Booking Date*
+${DIVIDER}
+
 Please enter the date you'd like to book the hall.
 
-You can enter the date in any of these formats:
+*Accepted Formats:*
 • DD-MM-YYYY (e.g., 25-12-2025)
 • Natural language (e.g., "1st December", "Dec 25")
 • Shortcuts (e.g., "today", "tomorrow")
 • Just the day (e.g., "15")
 
-Type B to go back, or 0 for main menu.`
+${DIVIDER}
+Type *B* to go back, or *0* for main menu`
 }
 
 /**
@@ -51,15 +59,19 @@ export async function handleBookingFlow(
     return await handleDateInput(message, profile, phoneNumber)
   }
 
-  return `❓ I didn't understand that date format.
+  return `❓ *Invalid Date Format*
 
-📅 Please try one of these formats:
+${DIVIDER}
+
+Please enter the date in one of these formats:
+
 • DD-MM-YYYY (e.g., 25-12-2025)
 • Natural language (e.g., "1st December", "Dec 25")
 • Shortcuts (e.g., "today", "tomorrow")
 • Just the day (e.g., "15")
 
-Type 'B' or 'back' to go back, or 0 for the main menu`
+${DIVIDER}
+Type *B* to go back, or *0* for main menu`
 }
 
 /**
@@ -73,11 +85,15 @@ async function handleDateInput(
   try {
     const parsedDate = parseDate(message)
     if (!parsedDate) {
-      return `❓ I couldn't understand that date format.
+      return `❓ *Invalid Date Format*
 
-📅 Please enter the date in DD-MM-YYYY format (Example: 25-12-2025)
+${DIVIDER}
 
-Type 'B' or 'back' to go back or 0 for the main menu`
+Please enter the date in DD-MM-YYYY format.
+Example: 25-12-2025
+
+${DIVIDER}
+Type *B* to go back, or *0* for main menu`
     }
 
     // Check if the date is in the past
@@ -90,11 +106,14 @@ Type 'B' or 'back' to go back or 0 for the main menu`
       String(today.getDate()).padStart(2, "0")
 
     if (parsedDate < todayString) {
-      return `⚠️ I can't book dates in the past!
+      return `⚠️ *Invalid Date*
 
-📅 Please select a future date and try again.
+${DIVIDER}
 
-Type 'B' or 'back' to go back or 0 for the main menu`
+The selected date is in the past. Please choose a future date.
+
+${DIVIDER}
+Type *B* to go back, or *0* for main menu`
     }
 
     // Get booking settings to check working days
@@ -102,11 +121,16 @@ Type 'B' or 'back' to go back or 0 for the main menu`
 
     if (settings && !isWorkingDay(parsedDate, settings.working_days)) {
       const dayName = getDayName(parsedDate)
-      return `⚠️ The community hall is closed on ${dayName}s.
+      return `⚠️ *Hall Unavailable*
+
+${DIVIDER}
+
+The community hall is closed on ${dayName}s.
 
 Please choose a date from our working days and try again.
 
-Type 'B' or 'back' to go back or 0 for the main menu`
+${DIVIDER}
+Type *B* to go back, or *0* for main menu`
     }
 
     // Check if date is already booked (ONE EVENT PER DAY)
@@ -117,13 +141,16 @@ Type 'B' or 'back' to go back or 0 for the main menu`
       .in("status", ["confirmed", "payment_pending"])
 
     if (existingBookings && existingBookings.length > 0) {
-      return `❌ Date Already Booked
+      return `❌ *Date Already Booked*
 
-Sorry, the community hall is already booked for ${formatDate(parsedDate)}.
+${DIVIDER}
 
-Someone else has reserved it for that day.
+The community hall is already reserved for ${formatDate(parsedDate)}.
 
-Please choose a different date or type 0 for the main menu`
+Please choose a different date.
+
+${DIVIDER}
+Type *B* to go back, or *0* for main menu`
     }
 
     // Date is available, show policies
@@ -136,24 +163,43 @@ Please choose a different date or type 0 for the main menu`
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://com3-bms.vercel.app"
     const policiesLink = `${baseUrl}/policies`
 
-    return `📋 Community Hall Booking Policies
+    return `📋 *Booking Terms & Conditions*
 
-📅 Date: ${formatDate(parsedDate)}
+${DIVIDER}
+📅 *Selected Date*
+${DIVIDER}
 
-📄 Please read our complete booking policies:
+• Date: ${formatDate(parsedDate)}
+• Charges: ${formatCurrency(bookingCharges)}
+
+${DIVIDER}
+📄 *Policies*
+${DIVIDER}
+
+Please review our complete booking policies:
 👉 ${policiesLink}
 
-Do you agree to these terms and conditions?
+${DIVIDER}
+⚖️ *Confirmation*
+${DIVIDER}
+
+Do you agree to the terms and conditions?
 
 1. ✅ Yes, I Agree
-2. ❌ No, I Don't Agree
+2. ❌ No, I Decline
 
-Reply with 1 or 2`
+${DIVIDER}
+Reply *1* or *2*`
   } catch (error) {
     console.error("[Booking] Date input error:", error)
-    return `❌ Unable to process that date.
+    return `❌ *Unable to Process*
 
-Type 0 to return to the main menu`
+${DIVIDER}
+
+We couldn't process your date selection. Please try again.
+
+${DIVIDER}
+Reply *0* for the main menu`
   }
 }
 
@@ -193,13 +239,23 @@ async function handlePoliciesAcceptance(
       if (bookingError) {
         console.error("[Booking] Error:", bookingError)
         if (bookingError.code === "23505") {
-          return `⚠️ Oops! That date was just taken by someone else.
+          return `⚠️ *Date No Longer Available*
 
-Please choose another date or type 0 for the main menu`
+${DIVIDER}
+
+This date was just booked by someone else. Please choose another date.
+
+${DIVIDER}
+Reply *0* for the main menu`
         }
-        return `❌ Unable to complete your booking.
+        return `❌ *Booking Failed*
 
-Please try again or type 0 for the main menu`
+${DIVIDER}
+
+We couldn't complete your booking. Please try again.
+
+${DIVIDER}
+Reply *0* for the main menu`
       }
 
       clearState(phoneNumber)
@@ -207,51 +263,70 @@ Please try again or type 0 for the main menu`
       const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
       const invoiceUrl = `${baseUrl}/booking-invoice/${booking.id}?payment=pending&booking=confirmed`
 
-      // Calculate payment due date (3 days from now)
-      const paymentDueDate = new Date()
-      paymentDueDate.setDate(paymentDueDate.getDate() + 3)
+      return `✅ *Booking Confirmed*
 
-      return `✅ Booking Confirmed!
+${DIVIDER}
+📋 *Booking Details*
+${DIVIDER}
 
-📋 Booking Details:
-📅 Date: ${formatDate(userState.date!)}
-🕐 Time: Full Day (9:00 AM - 9:00 PM)
-💰 Charges: ${formatCurrency(bookingCharges)}
-📊 Status: Payment Pending
+• Date: ${formatDate(userState.date!)}
+• Time: 9:00 AM – 9:00 PM (Full Day)
+• Charges: ${formatCurrency(bookingCharges)}
+• Payment: ⏳ Pending
 
-📝 Important:
-• Payment must be completed before the event date
-• Cancellations must be made 24 hours in advance
-• Please keep the hall clean after use
+${DIVIDER}
+📌 *Important Notes*
+${DIVIDER}
 
-📄 View Invoice: ${invoiceUrl}
+• Complete payment before the event date
+• Cancellations require 24-hour notice
+• Please leave the hall clean after use
 
-Type 0 to return to the main menu`
+${DIVIDER}
+📄 *Invoice*
+${DIVIDER}
+
+View your invoice here:
+👉 ${invoiceUrl}
+
+${DIVIDER}
+Reply *0* for the main menu`
     }
 
     if (choice === "2") {
       // User declined terms
       clearState(phoneNumber)
-      return `❌ Booking Cancelled
+      return `❌ *Booking Cancelled*
+
+${DIVIDER}
 
 You must agree to the terms and conditions to book the community hall.
 
-If you have any concerns, please contact the admin.
+If you have any concerns, please contact the building management.
 
-Type 0 to return to the main menu`
+${DIVIDER}
+Reply *0* for the main menu`
     }
 
-    return `❓ Invalid Response
+    return `❓ *Invalid Response*
+
+${DIVIDER}
 
 Please reply with:
-1 - To agree to the terms
-2 - To decline
+• *1* — Yes, I agree
+• *2* — No, I decline
 
-Type 0 for the main menu`
+${DIVIDER}
+Reply *0* for the main menu`
   } catch (error) {
     console.error("[Booking] Policies acceptance error:", error)
-    return `❌ Unable to process your response.
+    return `❌ *Unable to Process*
 
-Type 0 to return to the main menu`
+${DIVIDER}
+
+We encountered an issue. Please try again.
+
+${DIVIDER}
+Reply *0* for the main menu`
   }
 }

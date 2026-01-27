@@ -8,6 +8,9 @@ import { getPakistanISOString } from "@/lib/dateUtils"
 import type { Profile, UserState } from "../types"
 import { setState, clearState } from "../state"
 
+// Divider constant for consistent styling
+const DIVIDER = "───────────────────"
+
 /**
  * Initialize feedback flow
  */
@@ -17,13 +20,17 @@ export function initializeFeedbackFlow(phoneNumber: string): string {
     type: "feedback",
   })
 
-  return `💬 *Suggestions & Feedback*
+  return `💬 *Share Your Feedback*
 
-We value your input! Please share your suggestions, feedback, or any thoughts you have about our services or the building.
+${DIVIDER}
+
+We value your input! Please share your suggestions, feedback, or any thoughts about our services or the building.
 
 Your message will be reviewed by our management team.
 
-Type your message below, or type 0 to return to the main menu.`
+${DIVIDER}
+
+Type your message below, or *0* for main menu`
 }
 
 /**
@@ -50,28 +57,52 @@ export async function handleFeedbackFlow(
 
       if (error) {
         console.error("[Feedback] Creation error:", error)
-        return `❌ I'm sorry, I couldn't save your feedback right now. Please try again.
+        return `❌ *Unable to Save Feedback*
 
-Type 0 to return to the main menu`
+${DIVIDER}
+
+We encountered an issue while saving your feedback. Please try again in a moment.
+
+${DIVIDER}
+Reply *0* for the main menu`
       }
 
       // Clear state
       clearState(phoneNumber)
 
-      return `✅ Thank you so much for your feedback!
+      return `✅ *Feedback Received*
 
-I've received your message and will make sure it reaches the right people. Your input helps us improve our services and make the building a better place for everyone.
+${DIVIDER}
 
-If you have any urgent concerns, feel free to register a complaint instead.
+Thank you for sharing your thoughts with us. Your feedback has been forwarded to the management team for review.
 
-Type 0 to return to the main menu`
+We appreciate your input — it helps us improve our services.
+
+${DIVIDER}
+
+💡 For urgent issues, please register a complaint from the main menu.
+
+${DIVIDER}
+Reply *0* for the main menu`
     }
 
-    return "❌ Oops! Something went wrong. Type 0 to return to the main menu."
+    return `❌ *Something Went Wrong*
+
+${DIVIDER}
+
+We couldn't process your request. Please try again.
+
+${DIVIDER}
+Reply *0* for the main menu`
   } catch (error) {
     console.error("[Feedback] Flow error:", error)
-    return `❌ I'm sorry, I had trouble processing your feedback.
+    return `❌ *Unable to Process Request*
 
-Please try again or type 0 for the main menu`
+${DIVIDER}
+
+We encountered an issue while processing your feedback. Please try again shortly.
+
+${DIVIDER}
+Reply *0* for the main menu`
   }
 }

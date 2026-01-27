@@ -8,6 +8,9 @@ import { getTemplateSid } from "../templates"
 import { formatSubcategory } from "../formatters"
 import type { TwilioResult, ComplaintRegisteredParams, ComplaintStatusParams } from "../types"
 
+// Divider constant for consistent styling
+const DIVIDER = "───────────────────"
+
 /**
  * Send complaint registered notification
  * Sent when a new complaint is submitted
@@ -27,17 +30,24 @@ export async function sendComplaintRegistered(
     "4": registeredTime,
   }
 
-  const fallbackMessage = [
-    "Hello, this is Manzhil by Scrift.",
-    "",
-    "Complaint Registered",
-    "",
-    `Hi ${name || "Resident"}, your ${subcategoryDisplay} complaint (${complaintId}) has been registered on ${registeredTime}.`,
-    "",
-    "The team will review and address this matter shortly.",
-    "",
-    "- Manzhil by Scrift Team",
-  ].join("\n")
+  const fallbackMessage = `✅ *Complaint Registered*
+
+${DIVIDER}
+📋 *Your Complaint*
+${DIVIDER}
+
+• ID: ${complaintId}
+• Type: ${subcategoryDisplay}
+• Registered: ${registeredTime}
+
+${DIVIDER}
+
+Hi ${name || "Resident"}, your complaint has been submitted successfully.
+
+Our team will review and address this matter shortly.
+
+${DIVIDER}
+— Manzhil by Scrift`
 
   return sendWithFallback(phone, templateSid, templateVariables, fallbackMessage)
 }
@@ -61,17 +71,26 @@ export async function sendComplaintInProgress(
     "4": registeredTime,
   }
 
-  const fallbackMessage = [
-    "Hello, this is Manzhil by Scrift.",
-    "",
-    "Complaint In Progress",
-    "",
-    `Hi ${name || "Resident"}, your ${subcategoryDisplay} complaint (${complaintId}) registered on ${registeredTime} is now in progress.`,
-    "",
-    "The maintenance team is actively working to resolve this matter.",
-    "",
-    "- Manzhil by Scrift Team",
-  ].join("\n")
+  const fallbackMessage = `🔧 *Complaint In Progress*
+
+${DIVIDER}
+📋 *Complaint Details*
+${DIVIDER}
+
+• ID: ${complaintId}
+• Type: ${subcategoryDisplay}
+• Registered: ${registeredTime}
+
+${DIVIDER}
+📊 *Status Update*
+${DIVIDER}
+
+Hi ${name || "Resident"}, your complaint is now being addressed.
+
+Our maintenance team is actively working to resolve this matter.
+
+${DIVIDER}
+— Manzhil by Scrift`
 
   return sendWithFallback(phone, templateSid, templateVariables, fallbackMessage)
 }
@@ -96,17 +115,25 @@ export async function sendComplaintCompleted(
     "5": resolvedTime || new Date().toLocaleString(),
   }
 
-  const fallbackMessage = [
-    "Hello, this is Manzhil by Scrift.",
-    "",
-    "Complaint Resolved",
-    "",
-    `Hi ${name || "Resident"}, your ${subcategoryDisplay} complaint (${complaintId}) registered on ${registeredTime} has been resolved at ${resolvedTime || "now"}.`,
-    "",
-    "If you require further assistance, please contact us.",
-    "",
-    "- Manzhil by Scrift Team",
-  ].join("\n")
+  const fallbackMessage = `✅ *Complaint Resolved*
+
+${DIVIDER}
+📋 *Complaint Details*
+${DIVIDER}
+
+• ID: ${complaintId}
+• Type: ${subcategoryDisplay}
+• Registered: ${registeredTime}
+• Resolved: ${resolvedTime || "Now"}
+
+${DIVIDER}
+
+Hi ${name || "Resident"}, your complaint has been successfully resolved.
+
+If you require further assistance, please contact us.
+
+${DIVIDER}
+— Manzhil by Scrift`
 
   return sendWithFallback(phone, templateSid, templateVariables, fallbackMessage)
 }
@@ -130,17 +157,24 @@ export async function sendComplaintRejected(
     "4": registeredTime,
   }
 
-  const fallbackMessage = [
-    "Hello, this is Manzhil by Scrift.",
-    "",
-    "Complaint Cancelled",
-    "",
-    `Hi ${name || "Resident"}, your ${subcategoryDisplay} complaint (${complaintId}) registered on ${registeredTime} has been cancelled.`,
-    "",
-    "If this was unexpected or you require further assistance, please contact us.",
-    "",
-    "- Manzhil by Scrift Team",
-  ].join("\n")
+  const fallbackMessage = `❌ *Complaint Cancelled*
+
+${DIVIDER}
+📋 *Complaint Details*
+${DIVIDER}
+
+• ID: ${complaintId}
+• Type: ${subcategoryDisplay}
+• Registered: ${registeredTime}
+
+${DIVIDER}
+
+Hi ${name || "Resident"}, your complaint has been cancelled.
+
+If this was unexpected or you require further assistance, please contact us.
+
+${DIVIDER}
+— Manzhil by Scrift`
 
   return sendWithFallback(phone, templateSid, templateVariables, fallbackMessage)
 }
@@ -155,18 +189,25 @@ export async function sendComplaintPending(
   const { phone, name, complaintId, subcategory, registeredTime } = params
   const subcategoryDisplay = formatSubcategory(subcategory)
 
-  // No specific template for pending status, use fallback
-  const fallbackMessage = [
-    "Hello, this is Manzhil by Scrift.",
-    "",
-    "Complaint Status Update",
-    "",
-    `Hi ${name || "Resident"}, your ${subcategoryDisplay} complaint (${complaintId}) registered on ${registeredTime} is currently pending review.`,
-    "",
-    "The team will address this matter shortly.",
-    "",
-    "- Manzhil by Scrift Team",
-  ].join("\n")
+  const fallbackMessage = `⏳ *Complaint Status Update*
+
+${DIVIDER}
+📋 *Complaint Details*
+${DIVIDER}
+
+• ID: ${complaintId}
+• Type: ${subcategoryDisplay}
+• Registered: ${registeredTime}
+• Status: Pending Review
+
+${DIVIDER}
+
+Hi ${name || "Resident"}, your complaint is currently pending review.
+
+Our team will address this matter shortly.
+
+${DIVIDER}
+— Manzhil by Scrift`
 
   // Use sendWithFallback with undefined template to always use fallback
   return sendWithFallback(phone, undefined, {}, fallbackMessage)

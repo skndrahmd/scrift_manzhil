@@ -13,6 +13,9 @@ import type {
   MaintenancePaymentConfirmedParams,
 } from "../types"
 
+// Divider constant for consistent styling
+const DIVIDER = "───────────────────"
+
 /**
  * Send maintenance invoice notification
  * Sent on the 1st of each month when a new invoice is generated
@@ -31,19 +34,25 @@ export async function sendMaintenanceInvoice(
     "4": invoiceUrl,
   }
 
-  const fallbackMessage = [
-    "Hello, this is Manzhil by Scrift.",
-    "",
-    `Hi ${name || "Resident"}, your ${monthYear} maintenance invoice is ready.`,
-    "",
-    `Amount: Rs. ${formattedAmount}`,
-    `Due Date: ${dueDate}`,
-    "",
-    `View Invoice: ${invoiceUrl}`,
-    "",
-    "Please pay at your earliest convenience.",
-    "- Manzhil by Scrift Team",
-  ].join("\n")
+  const fallbackMessage = `📄 *Maintenance Invoice*
+
+${DIVIDER}
+💰 *${monthYear} Invoice*
+${DIVIDER}
+
+• Amount: Rs. ${formattedAmount}
+• Due Date: ${dueDate}
+
+${DIVIDER}
+
+Hi ${name || "Resident"}, your maintenance invoice for ${monthYear} is ready.
+
+📄 View Invoice: ${invoiceUrl}
+
+Please pay at your earliest convenience.
+
+${DIVIDER}
+— Manzhil by Scrift`
 
   return sendWithFallback(phone, templateSid, templateVariables, fallbackMessage)
 }
@@ -65,19 +74,25 @@ export async function sendMaintenanceReminder(
     "3": invoiceUrl,
   }
 
-  const fallbackMessage = [
-    "Hello, this is Manzhil by Scrift.",
-    "",
-    `Hi ${name || "Resident"}, reminder: your maintenance payment is due.`,
-    "",
-    `Due months: ${monthsList}`,
-    `Total amount: Rs. ${formattedAmount}`,
-    "",
-    `View Invoice: ${invoiceUrl}`,
-    "",
-    "Please pay as soon as possible. Thank you.",
-    "- Manzhil by Scrift Team",
-  ].join("\n")
+  const fallbackMessage = `⚠️ *Payment Reminder*
+
+${DIVIDER}
+💰 *Overdue Maintenance*
+${DIVIDER}
+
+• Due Months: ${monthsList}
+• Total Amount: Rs. ${formattedAmount}
+
+${DIVIDER}
+
+Hi ${name || "Resident"}, your maintenance payment is overdue.
+
+📄 View Invoice: ${invoiceUrl}
+
+Please pay as soon as possible to avoid service interruptions.
+
+${DIVIDER}
+— Manzhil by Scrift`
 
   return sendWithFallback(phone, templateSid, templateVariables, fallbackMessage)
 }
@@ -100,18 +115,25 @@ export async function sendMaintenancePaymentConfirmed(
     "4": receiptUrl,
   }
 
-  const fallbackMessage = [
-    "Hello, this is Manzhil by Scrift.",
-    "",
-    "PAYMENT CONFIRMED!",
-    "",
-    `Hi ${name || "Resident"}, your maintenance payment of Rs. ${formattedAmount} for ${monthYear} has been received.`,
-    "",
-    `View Receipt: ${receiptUrl}`,
-    "",
-    "Thank you for your payment!",
-    "- Manzhil by Scrift Team",
-  ].join("\n")
+  const fallbackMessage = `✅ *Payment Confirmed*
+
+${DIVIDER}
+💰 *Maintenance Payment*
+${DIVIDER}
+
+• Month: ${monthYear}
+• Amount: Rs. ${formattedAmount}
+• Status: ✅ Paid
+
+${DIVIDER}
+
+Hi ${name || "Resident"}, your maintenance payment has been received successfully.
+
+📄 View Receipt: ${receiptUrl}
+
+${DIVIDER}
+Thank you for your payment!
+— Manzhil by Scrift`
 
   return sendWithFallback(phone, templateSid, templateVariables, fallbackMessage)
 }

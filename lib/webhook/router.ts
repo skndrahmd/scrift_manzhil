@@ -30,6 +30,9 @@ import {
   handleCancelFlow,
 } from "./handlers"
 
+// Divider constant for consistent styling
+const DIVIDER = "───────────────────"
+
 /**
  * Process incoming message and route to appropriate handler
  */
@@ -81,9 +84,14 @@ export async function processMessage(
     }
   } catch (error) {
     console.error("[Webhook] Process message error:", error)
-    return `❌ Unable to process your message.
+    return `❌ *Unable to Process Request*
 
-Please try again or type 0 to return to the main menu.`
+${DIVIDER}
+
+We encountered an issue processing your message. Please try again.
+
+${DIVIDER}
+Reply *0* for the main menu`
   }
 }
 
@@ -126,9 +134,13 @@ async function handleMainMenu(
       return getEmergencyContacts()
 
     default:
-      return `❓ I didn't understand that option.
+      return `❓ *Invalid Selection*
+
+${DIVIDER}
 
 Please reply with a number from 1-9.
+
+${DIVIDER}
 
 ${getMainMenu(profile.name)}`
   }
@@ -153,9 +165,11 @@ function handleBackCommand(
       step: "complaint_subcategory",
       message: () => {
         if (userState.complaint?.category === "building") {
-          return `🔙 Taking you back!
+          return `🔙 *Going Back*
 
-What kind of building issue would you like to report?
+${DIVIDER}
+🏢 *Building Complaint*
+${DIVIDER}
 
 1. 🛗 Lift/Elevator
 2. 💪 Gym
@@ -170,11 +184,14 @@ What kind of building issue would you like to report?
 11. 🪑 Seating Area
 12. 📋 Other
 
-Reply with the number, or type 'B' to go back`
+${DIVIDER}
+Reply with number, or *B* to go back`
         }
-        return `🔙 Taking you back!
+        return `🔙 *Going Back*
 
-What kind of issue are you facing in your apartment?
+${DIVIDER}
+🏠 *Apartment Complaint*
+${DIVIDER}
 
 1. 🔧 Plumbing
 2. ⚡ Electric
@@ -182,34 +199,52 @@ What kind of issue are you facing in your apartment?
 4. 🅿️ My Parking Complaint
 5. 🔧 Other
 
-Reply with the number, or type 'B' to go back`
+${DIVIDER}
+Reply with number, or *B* to go back`
       },
     },
 
     // Staff flow
     staff_add_phone: {
       step: "staff_add_name",
-      message: () => `🔙 Taking you back!
+      message: () => `🔙 *Going Back*
 
-Please enter the staff member's full name:`,
+${DIVIDER}
+
+Please enter the staff member's full name:
+
+${DIVIDER}
+Reply *B* to go back, or *0* for main menu`,
     },
     staff_add_cnic: {
       step: "staff_add_phone",
-      message: () => `🔙 Taking you back!
+      message: () => `🔙 *Going Back*
 
-Please enter the staff member's phone number:`,
+${DIVIDER}
+
+Please enter the staff member's phone number:
+
+${DIVIDER}
+Reply *B* to go back`,
     },
     staff_add_role_select: {
       step: "staff_add_cnic",
-      message: () => `🔙 Taking you back!
+      message: () => `🔙 *Going Back*
 
-Please enter the CNIC number:`,
+${DIVIDER}
+
+Please enter the CNIC number:
+
+${DIVIDER}
+Reply *B* to go back`,
     },
     staff_add_role_custom: {
       step: "staff_add_role_select",
-      message: () => `🔙 Taking you back!
+      message: () => `🔙 *Going Back*
 
-Please choose the role:
+${DIVIDER}
+👔 *Select Staff Role*
+${DIVIDER}
 
 1. 🚗 Driver
 2. 👨‍🍳 Cook
@@ -220,38 +255,50 @@ Please choose the role:
 7. 🔒 Security Guard
 8. 📋 Other (Specify)
 
-Reply with the number (1-8)`,
+${DIVIDER}
+Reply with number (1-8), or *B* to go back`,
     },
 
     // Booking flow
     booking_policies: {
       step: "booking_date",
-      message: () => `🔙 Taking you back!
+      message: () => `🔙 *Going Back*
 
-Please enter the date you'd like to book the hall:`,
+${DIVIDER}
+
+Please enter the date you'd like to book the hall:
+
+${DIVIDER}
+Reply *B* to go back, or *0* for main menu`,
     },
 
     // Hall flow
     hall_new_booking_date: {
       step: "hall_menu",
-      message: () => `🔙 Taking you back!
+      message: () => `🔙 *Going Back*
 
+${DIVIDER}
 🏛️ *Community Hall Management*
-
-What would you like to do?
+${DIVIDER}
 
 1. 📅 New Booking
 2. ❌ Cancel Booking
 3. ✏️ Edit Booking
 4. 📋 View My Bookings
 
-Reply with the number, or 0 for main menu`,
+${DIVIDER}
+Reply with your choice, or *0* for main menu`,
     },
     hall_new_booking_policies: {
       step: "hall_new_booking_date",
-      message: () => `🔙 Taking you back!
+      message: () => `🔙 *Going Back*
 
-Please enter the date you'd like to book:`,
+${DIVIDER}
+
+Please enter the date you'd like to book:
+
+${DIVIDER}
+Reply *B* to go back, or *0* for main menu`,
     },
   }
 
