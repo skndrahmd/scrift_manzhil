@@ -29,11 +29,9 @@ export async function POST(request: NextRequest) {
 
     // Check for media messages (images, voice notes, videos, documents, etc.)
     if (numMedia && parseInt(numMedia) > 0) {
-      const errorMessage = `❌ Unsupported Message Type
- 
-I can only process text messages at the moment.
- 
-Please send your message as text, or type 0 to return to the main menu.`
+      const errorMessage = `❌ *Unsupported Message*
+
+I can only process text messages. Please send text or type *0* for menu.`
 
       try {
         await sendWhatsAppMessage(phoneNumber, errorMessage)
@@ -46,9 +44,9 @@ Please send your message as text, or type 0 to return to the main menu.`
 
     // Check if message body is empty
     if (!messageBody || messageBody.trim() === "") {
-      const errorMessage = `❌ Empty Message
- 
-Please send a text message, or type 0 to return to the main menu.`
+      const errorMessage = `❌ *Empty Message*
+
+Please send a text message, or type *0* for menu.`
 
       try {
         await sendWhatsAppMessage(phoneNumber, errorMessage)
@@ -63,19 +61,19 @@ Please send a text message, or type 0 to return to the main menu.`
     const profile = await getProfile(phoneNumber)
 
     if (!profile) {
-      return createXmlResponse(`Hello, this is Manzhil by Scrift.
- 
-❌ This number is not registered in the system. Please contact the administration to register for access to services.
- 
-📞 Admin Contact: [Contact Admin]`)
+      return createXmlResponse(`👋 Hello! This is Manzhil.
+
+❌ This number is not registered. Please contact administration to register.
+
+📞 Contact Admin`)
     }
 
     if (!profile.is_active) {
-      return createXmlResponse(`⚠️ Your account is currently inactive.
- 
-Please contact the administration if you believe this is an error.
- 
-📞 Admin Contact: [Contact Admin]`)
+      return createXmlResponse(`⚠️ *Account Inactive*
+
+Please contact administration if this is an error.
+
+📞 Contact Admin`)
     }
 
     // Process the message through the router
@@ -96,7 +94,7 @@ Please contact the administration if you believe this is an error.
     return createXmlResponse()
   } catch (error) {
     console.error("[Webhook] Unexpected error:", error)
-    return createXmlResponse(`❌ An error occurred. Please try again or type 0 for the main menu.`)
+    return createXmlResponse(`❌ An error occurred. Try again or type *0* for menu.`)
   }
 }
 

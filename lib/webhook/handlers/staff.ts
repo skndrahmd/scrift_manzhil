@@ -10,9 +10,6 @@ import { getState, setState, clearState } from "../state"
 import { validateName, validatePhoneNumber, validateCNIC, isYesResponse, isNoResponse } from "../utils"
 import { getStaffMenu } from "../menu"
 
-// Divider constant for consistent styling
-const DIVIDER = "───────────────────"
-
 /**
  * Initialize staff management flow
  */
@@ -61,22 +58,16 @@ export async function handleStaffFlow(
 
     return `❌ *Something Went Wrong*
 
-${DIVIDER}
+Please try again.
 
-We couldn't process your request. Please try again.
-
-${DIVIDER}
-Reply *0* for the main menu`
+Reply *0* for menu`
   } catch (error) {
     console.error("[Staff] Flow error:", error)
-    return `❌ *Unable to Process Request*
+    return `❌ *Unable to Process*
 
-${DIVIDER}
+Please try again shortly.
 
-We encountered an issue. Please try again shortly.
-
-${DIVIDER}
-Reply *0* for the main menu`
+Reply *0* for menu`
   }
 }
 
@@ -96,12 +87,9 @@ async function handleStaffMenuSelection(
       setState(phoneNumber, userState)
       return `➕ *Add New Staff*
 
-${DIVIDER}
+Enter staff member's full name:
 
-Please enter the staff member's full name:
-
-${DIVIDER}
-Reply *B* to go back, or *0* for main menu`
+*B* to go back, *0* for menu`
 
     case "2": // View staff
       return await viewStaffList(profile, phoneNumber)
@@ -115,12 +103,9 @@ Reply *B* to go back, or *0* for main menu`
     default:
       return `❓ *Invalid Selection*
 
-${DIVIDER}
+Please choose 1-4.
 
-Please choose a number from 1-4.
-
-${DIVIDER}
-Reply *0* for the main menu`
+Reply *0* for menu`
   }
 }
 
@@ -146,16 +131,9 @@ async function handleAddStaffFlow(
     setState(phoneNumber, userState)
     return `📱 *Enter Phone Number*
 
-${DIVIDER}
+Format: 03001234567
 
-Please enter the staff member's phone number.
-
-*Examples:*
-• 03001234567
-• +923001234567
-
-${DIVIDER}
-Reply *B* to go back`
+*B* to go back`
   }
 
   if (userState.step === "staff_add_phone") {
@@ -175,31 +153,20 @@ Reply *B* to go back`
     if (existingStaff) {
       return `⚠️ *Duplicate Entry*
 
-${DIVIDER}
+This phone is already in your staff list.
 
-This phone number is already registered in your staff list.
-
-Please use a different number.
-
-${DIVIDER}
-Reply *0* for the main menu`
+Reply *0* for menu`
     }
 
     userState.staff!.phone = phoneValidation.normalized!
     userState.step = "staff_add_cnic"
     setState(phoneNumber, userState)
-    return `🆔 *Enter CNIC Number*
+    return `🆔 *Enter CNIC*
 
-${DIVIDER}
+Format: 13 digits
+Example: 1234512345671
 
-Please enter the CNIC number.
-
-*Examples:*
-• 12345-1234567-1
-• 1234512345671
-
-${DIVIDER}
-Reply *B* to go back`
+*B* to go back`
   }
 
   if (userState.step === "staff_add_cnic") {
@@ -211,9 +178,7 @@ Reply *B* to go back`
     userState.staff!.cnic = cnicValidation.normalized!
     userState.step = "staff_add_role_select"
     setState(phoneNumber, userState)
-    return `👔 *Select Staff Role*
-
-${DIVIDER}
+    return `👔 *Select Role*
 
 1. 🚗 Driver
 2. 👨‍🍳 Cook
@@ -222,10 +187,9 @@ ${DIVIDER}
 5. ⚡ Electrician
 6. 🛠️ Maintenance
 7. 🔒 Security Guard
-8. 📋 Other (Specify)
+8. 📋 Other
 
-${DIVIDER}
-Reply with number (1-8), or *B* to go back`
+Reply 1-8, or *B* to go back`
   }
 
   if (userState.step === "staff_add_role_select") {
@@ -241,39 +205,26 @@ Reply with number (1-8), or *B* to go back`
       setState(phoneNumber, userState)
       return `📋 *Custom Role*
 
-${DIVIDER}
+Enter role name (3-30 characters):
+Examples: Gardener, Helper
 
-Please specify the role.
-(Only letters and spaces, 3-30 characters)
-
-*Examples:* Gardener, Cleaner, Helper
-
-${DIVIDER}
-Reply *B* to go back`
+*B* to go back`
     }
 
     return `❓ *Invalid Selection*
 
-${DIVIDER}
+Please choose 1-8.
 
-Please choose a number from 1-8.
-
-${DIVIDER}
-Reply *B* to go back`
+*B* to go back`
   }
 
   if (userState.step === "staff_add_role_custom") {
     if (message.trim().length < 3 || message.trim().length > 30) {
       return `❌ *Invalid Role*
 
-${DIVIDER}
+Must be 3-30 characters.
 
-Role must be between 3 and 30 characters.
-
-Please try again.
-
-${DIVIDER}
-Reply *B* to go back`
+*B* to go back`
     }
 
     userState.staff!.role = message.trim()
@@ -282,12 +233,9 @@ Reply *B* to go back`
 
   return `❌ *Something Went Wrong*
 
-${DIVIDER}
+Please try again.
 
-We couldn't process your request. Please try again.
-
-${DIVIDER}
-Reply *0* for the main menu`
+Reply *0* for menu`
 }
 
 /**
@@ -317,44 +265,29 @@ async function createStaffMember(
       console.error("[Staff] Creation error:", error)
       return `❌ *Unable to Add Staff*
 
-${DIVIDER}
+Please try again.
 
-We couldn't add the staff member. Please try again.
-
-${DIVIDER}
-Reply *0* for the main menu`
+Reply *0* for menu`
     }
 
     clearState(phoneNumber)
     return `✅ *Staff Member Added*
 
-${DIVIDER}
-📋 *Staff Details*
-${DIVIDER}
+👤 ${staff.name}
+🆔 ${staff.cnic}
+📱 ${staff.phone}
+👔 ${staff.role}
 
-• Name: ${staff.name}
-• CNIC: ${staff.cnic}
-• Phone: ${staff.phone}
-• Role: ${staff.role}
+📌 Please submit their CNIC to maintenance for card issuance.
 
-${DIVIDER}
-📌 *Next Steps*
-${DIVIDER}
-
-Please have their CNIC ready and deliver to the maintenance department for issuance of physical card.
-
-${DIVIDER}
-Reply *0* for the main menu`
+Reply *0* for menu`
   } catch (error) {
     console.error("[Staff] Creation error:", error)
     return `❌ *Unable to Add Staff*
 
-${DIVIDER}
+Please try again.
 
-We encountered an issue. Please try again.
-
-${DIVIDER}
-Reply *0* for the main menu`
+Reply *0* for menu`
   }
 }
 
@@ -373,25 +306,17 @@ async function viewStaffList(profile: Profile, phoneNumber: string): Promise<str
       console.error("[Staff] Fetch error:", error)
       return `❌ *Unable to Load Staff*
 
-${DIVIDER}
+Please try again.
 
-We encountered an issue loading your staff list.
-
-${DIVIDER}
-Reply *0* for the main menu`
+Reply *0* for menu`
     }
 
     if (!staffList || staffList.length === 0) {
       return `📋 *No Staff Found*
 
-${DIVIDER}
+You haven't added any staff yet.
 
-You don't have any staff members registered yet.
-
-You can add a new staff member from the Staff Management menu.
-
-${DIVIDER}
-Reply *0* for the main menu`
+Reply *0* for menu`
     }
 
     const listText = staffList
@@ -403,24 +328,18 @@ Reply *0* for the main menu`
       .join("\n\n")
 
     clearState(phoneNumber)
-    return `📋 *Your Staff List*
-
-${DIVIDER}
+    return `📋 *Your Staff*
 
 ${listText}
 
-${DIVIDER}
-Reply *0* for the main menu`
+Reply *0* for menu`
   } catch (error) {
     console.error("[Staff] View error:", error)
     return `❌ *Unable to Load Staff*
 
-${DIVIDER}
+Please try again.
 
-We encountered an issue. Please try again.
-
-${DIVIDER}
-Reply *0* for the main menu`
+Reply *0* for menu`
   }
 }
 
@@ -438,12 +357,9 @@ async function initializeDeleteStaff(profile: Profile, phoneNumber: string): Pro
     if (error || !staffList || staffList.length === 0) {
       return `📋 *No Staff Found*
 
-${DIVIDER}
+No staff members to delete.
 
-You don't have any staff members to delete.
-
-${DIVIDER}
-Reply *0* for the main menu`
+Reply *0* for menu`
     }
 
     const userState = getState(phoneNumber)
@@ -453,26 +369,18 @@ Reply *0* for the main menu`
 
     const listText = staffList.map((s, i) => `${i + 1}. ${s.name} (${s.role})`).join("\n")
 
-    return `🗑️ *Remove Staff Member*
-
-${DIVIDER}
-📋 *Your Staff*
-${DIVIDER}
+    return `🗑️ *Remove Staff*
 
 ${listText}
 
-${DIVIDER}
-Reply with number to remove, or *0* for main menu`
+Reply with number to remove, or *0* for menu`
   } catch (error) {
     console.error("[Staff] Delete init error:", error)
     return `❌ *Unable to Load Staff*
 
-${DIVIDER}
+Please try again.
 
-We encountered an issue. Please try again.
-
-${DIVIDER}
-Reply *0* for the main menu`
+Reply *0* for menu`
   }
 }
 
@@ -492,12 +400,9 @@ async function handleDeleteStaffFlow(
     if (isNaN(staffIndex) || staffIndex < 1 || staffIndex > userState.staffList!.length) {
       return `❓ *Invalid Selection*
 
-${DIVIDER}
+Please choose 1-${userState.staffList!.length}
 
-Please choose a number from 1-${userState.staffList!.length}
-
-${DIVIDER}
-Reply *0* for the main menu`
+Reply *0* for menu`
     }
 
     const selectedStaff = userState.staffList![staffIndex - 1]
@@ -507,22 +412,15 @@ Reply *0* for the main menu`
 
     return `⚠️ *Confirm Removal*
 
-${DIVIDER}
-📋 *Staff Details*
-${DIVIDER}
+👤 ${selectedStaff.name}
+🆔 ${selectedStaff.cnic}
+📱 ${selectedStaff.phone_number}
 
-• Name: ${selectedStaff.name}
-• CNIC: ${selectedStaff.cnic}
-• Phone: ${selectedStaff.phone_number}
-
-${DIVIDER}
-
-Are you sure you want to remove this staff member?
+Remove this staff member?
 
 1. ✅ Yes, remove
 2. ❌ No, cancel
 
-${DIVIDER}
 Reply *1* or *2*`
   }
 
@@ -535,57 +433,40 @@ Reply *1* or *2*`
         console.error("[Staff] Deletion error:", error)
         return `❌ *Removal Failed*
 
-${DIVIDER}
+Please try again.
 
-We couldn't remove the staff member. Please try again.
-
-${DIVIDER}
-Reply *0* for the main menu`
+Reply *0* for menu`
       }
 
       clearState(phoneNumber)
-      return `✅ *Staff Member Removed*
+      return `✅ *Staff Removed*
 
-${DIVIDER}
+${selectedStaff.name} removed from your list.
 
-${selectedStaff.name} has been removed from your staff list.
-
-${DIVIDER}
-Reply *0* for the main menu`
+Reply *0* for menu`
     }
 
     if (isNoResponse(message)) {
       clearState(phoneNumber)
       return `✅ *Removal Cancelled*
 
-${DIVIDER}
+Staff list unchanged.
 
-Your staff list remains unchanged.
-
-${DIVIDER}
-Reply *0* for the main menu`
+Reply *0* for menu`
     }
 
     return `❓ *Invalid Response*
 
-${DIVIDER}
+Reply *1* (Yes) or *2* (No)
 
-Please reply with:
-• *1* — Yes, remove
-• *2* — No, cancel
-
-${DIVIDER}
-Reply *0* for the main menu`
+Reply *0* for menu`
   }
 
   return `❌ *Something Went Wrong*
 
-${DIVIDER}
+Please try again.
 
-We couldn't process your request. Please try again.
-
-${DIVIDER}
-Reply *0* for the main menu`
+Reply *0* for menu`
 }
 
 /**
@@ -602,12 +483,9 @@ async function initializeEditStaff(profile: Profile, phoneNumber: string): Promi
     if (error || !staffList || staffList.length === 0) {
       return `📋 *No Staff Found*
 
-${DIVIDER}
+No staff members to edit.
 
-You don't have any staff members to edit.
-
-${DIVIDER}
-Reply *0* for the main menu`
+Reply *0* for menu`
     }
 
     const userState = getState(phoneNumber)
@@ -617,26 +495,18 @@ Reply *0* for the main menu`
 
     const listText = staffList.map((s, i) => `${i + 1}. ${s.name} (${s.role})`).join("\n")
 
-    return `✏️ *Edit Staff Member*
-
-${DIVIDER}
-📋 *Your Staff*
-${DIVIDER}
+    return `✏️ *Edit Staff*
 
 ${listText}
 
-${DIVIDER}
-Reply with number to edit, or *0* for main menu`
+Reply with number to edit, or *0* for menu`
   } catch (error) {
     console.error("[Staff] Edit init error:", error)
     return `❌ *Unable to Load Staff*
 
-${DIVIDER}
+Please try again.
 
-We encountered an issue. Please try again.
-
-${DIVIDER}
-Reply *0* for the main menu`
+Reply *0* for menu`
   }
 }
 
@@ -656,12 +526,9 @@ async function handleEditStaffFlow(
     if (isNaN(staffIndex) || staffIndex < 1 || staffIndex > userState.staffList!.length) {
       return `❓ *Invalid Selection*
 
-${DIVIDER}
+Please choose 1-${userState.staffList!.length}
 
-Please choose a number from 1-${userState.staffList!.length}
-
-${DIVIDER}
-Reply *0* for the main menu`
+Reply *0* for menu`
     }
 
     const selectedStaff = userState.staffList![staffIndex - 1]
@@ -671,16 +538,11 @@ Reply *0* for the main menu`
 
     return `✏️ *Edit: ${selectedStaff.name}*
 
-${DIVIDER}
-📋 *Select Field to Update*
-${DIVIDER}
-
 1. 👤 Name
 2. 🆔 CNIC
-3. 📱 Phone Number
+3. 📱 Phone
 
-${DIVIDER}
-Reply with number (1-3)`
+Reply 1-3`
   }
 
   if (userState.step === "staff_edit_field") {
@@ -688,32 +550,19 @@ Reply with number (1-3)`
     const prompts: Record<string, string> = {
       "1": `📝 *Update Name*
 
-${DIVIDER}
+Enter new name for ${(userState as any).selectedStaff.name}:
 
-Please enter the new name for ${(userState as any).selectedStaff.name}:
-
-${DIVIDER}
-Reply *B* to go back`,
+*B* to go back`,
       "2": `🆔 *Update CNIC*
 
-${DIVIDER}
+Enter new 13-digit CNIC:
 
-Please enter the new CNIC (13 digits).
-
-*Example:* 1234567890123
-
-${DIVIDER}
-Reply *B* to go back`,
+*B* to go back`,
       "3": `📱 *Update Phone*
 
-${DIVIDER}
+Enter new phone (e.g., 03001234567):
 
-Please enter the new phone number.
-
-*Example:* 03001234567
-
-${DIVIDER}
-Reply *B* to go back`,
+*B* to go back`,
     }
 
     if (fields[choice]) {
@@ -725,12 +574,9 @@ Reply *B* to go back`,
 
     return `❓ *Invalid Selection*
 
-${DIVIDER}
-
 Please choose 1, 2, or 3.
 
-${DIVIDER}
-Reply *0* for the main menu`
+Reply *0* for menu`
   }
 
   if (userState.step === "staff_edit_value") {
@@ -744,28 +590,18 @@ Reply *0* for the main menu`
       if (!/^\d{13}$/.test(newValue)) {
         return `❌ *Invalid CNIC*
 
-${DIVIDER}
+Enter exactly 13 digits.
 
-Please enter exactly 13 digits.
-
-*Example:* 1234567890123
-
-${DIVIDER}
-Reply *B* to go back`
+*B* to go back`
       }
     } else if (editField === "phone_number") {
       newValue = newValue.replace(/[-\s]/g, "")
       if (!/^03\d{9}$/.test(newValue)) {
-        return `❌ *Invalid Phone Number*
+        return `❌ *Invalid Phone*
 
-${DIVIDER}
+Enter valid mobile number (e.g., 03001234567).
 
-Please enter a valid Pakistani mobile number.
-
-*Example:* 03001234567
-
-${DIVIDER}
-Reply *B* to go back`
+*B* to go back`
       }
     }
 
@@ -779,37 +615,28 @@ Reply *B* to go back`
       console.error("[Staff] Update error:", error)
       return `❌ *Update Failed*
 
-${DIVIDER}
+Please try again.
 
-We couldn't update the staff member. Please try again.
-
-${DIVIDER}
-Reply *0* for the main menu`
+Reply *0* for menu`
     }
 
     const fieldNames: Record<string, string> = {
       name: "Name",
       cnic: "CNIC",
-      phone_number: "Phone Number",
+      phone_number: "Phone",
     }
 
     clearState(phoneNumber)
     return `✅ *Staff Updated*
 
-${DIVIDER}
+${fieldNames[editField]} changed to: ${newValue}
 
-${fieldNames[editField]} for ${selectedStaff.name} has been updated.
-
-${DIVIDER}
-Reply *0* for the main menu`
+Reply *0* for menu`
   }
 
   return `❌ *Something Went Wrong*
 
-${DIVIDER}
+Please try again.
 
-We couldn't process your request. Please try again.
-
-${DIVIDER}
-Reply *0* for the main menu`
+Reply *0* for menu`
 }

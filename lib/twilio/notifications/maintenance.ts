@@ -13,9 +13,6 @@ import type {
   MaintenancePaymentConfirmedParams,
 } from "../types"
 
-// Divider constant for consistent styling
-const DIVIDER = "───────────────────"
-
 /**
  * Send maintenance invoice notification
  * Sent on the 1st of each month when a new invoice is generated
@@ -34,25 +31,16 @@ export async function sendMaintenanceInvoice(
     "4": invoiceUrl,
   }
 
-  const fallbackMessage = `📄 *Maintenance Invoice*
+  const fallbackMessage = `📄 *Maintenance Invoice - ${monthYear}*
 
-${DIVIDER}
-💰 *${monthYear} Invoice*
-${DIVIDER}
+💰 Amount: Rs. ${formattedAmount}
+📅 Due: ${dueDate}
 
-• Amount: Rs. ${formattedAmount}
-• Due Date: ${dueDate}
+Hi ${name || "Resident"}, your invoice is ready. Please pay at your convenience.
 
-${DIVIDER}
+📄 Invoice: ${invoiceUrl}
 
-Hi ${name || "Resident"}, your maintenance invoice for ${monthYear} is ready.
-
-📄 View Invoice: ${invoiceUrl}
-
-Please pay at your earliest convenience.
-
-${DIVIDER}
-— Manzhil by Scrift`
+— Manzhil`
 
   return sendWithFallback(phone, templateSid, templateVariables, fallbackMessage)
 }
@@ -76,23 +64,14 @@ export async function sendMaintenanceReminder(
 
   const fallbackMessage = `⚠️ *Payment Reminder*
 
-${DIVIDER}
-💰 *Overdue Maintenance*
-${DIVIDER}
+📅 Due: ${monthsList}
+💰 Total: Rs. ${formattedAmount}
 
-• Due Months: ${monthsList}
-• Total Amount: Rs. ${formattedAmount}
+Hi ${name || "Resident"}, your payment is overdue. Please pay soon to avoid service interruptions.
 
-${DIVIDER}
+📄 Invoice: ${invoiceUrl}
 
-Hi ${name || "Resident"}, your maintenance payment is overdue.
-
-📄 View Invoice: ${invoiceUrl}
-
-Please pay as soon as possible to avoid service interruptions.
-
-${DIVIDER}
-— Manzhil by Scrift`
+— Manzhil`
 
   return sendWithFallback(phone, templateSid, templateVariables, fallbackMessage)
 }
@@ -117,23 +96,14 @@ export async function sendMaintenancePaymentConfirmed(
 
   const fallbackMessage = `✅ *Payment Confirmed*
 
-${DIVIDER}
-💰 *Maintenance Payment*
-${DIVIDER}
+📅 Month: ${monthYear}
+💰 Amount: Rs. ${formattedAmount}
 
-• Month: ${monthYear}
-• Amount: Rs. ${formattedAmount}
-• Status: ✅ Paid
+Hi ${name || "Resident"}, your payment has been received. Thank you!
 
-${DIVIDER}
+📄 Receipt: ${receiptUrl}
 
-Hi ${name || "Resident"}, your maintenance payment has been received successfully.
-
-📄 View Receipt: ${receiptUrl}
-
-${DIVIDER}
-Thank you for your payment!
-— Manzhil by Scrift`
+— Manzhil`
 
   return sendWithFallback(phone, templateSid, templateVariables, fallbackMessage)
 }

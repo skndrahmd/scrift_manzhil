@@ -9,9 +9,6 @@ import type { Profile, UserState, VisitorData } from "../types"
 import { setState, clearState } from "../state"
 import { formatDate, validateCNIC, validatePhoneNumber, validateName } from "../utils"
 
-// Divider constant for consistent styling
-const DIVIDER = "───────────────────"
-
 /**
  * Initialize visitor registration flow
  */
@@ -24,14 +21,9 @@ export function initializeVisitorFlow(phoneNumber: string): string {
 
     return `🎫 *Visitor Entry Pass*
 
-${DIVIDER}
-📋 *Register Your Visitor*
-${DIVIDER}
+Enter your visitor's *full name*.
 
-Please enter your visitor's *full name*.
-
-${DIVIDER}
-Type *B* to go back, or *0* for main menu`
+*B* to go back, *0* for menu`
 }
 
 /**
@@ -80,14 +72,11 @@ function handleNameInput(
     if (!validation.valid) {
         return `❌ *Invalid Name*
 
-${DIVIDER}
-
 ${validation.error}
 
-Please enter a valid full name (letters and spaces only).
+Enter a valid full name (letters and spaces only).
 
-${DIVIDER}
-Type *B* to go back, or *0* for main menu`
+*B* to go back, *0* for menu`
     }
 
     setState(phoneNumber, {
@@ -98,17 +87,12 @@ Type *B* to go back, or *0* for main menu`
 
     return `✅ *Name Recorded*
 
-${DIVIDER}
-👤 *Visitor:* ${validation.normalized}
-${DIVIDER}
+👤 ${validation.normalized}
 
-Please enter your visitor's *CNIC number*.
-
-*Format:* 13 digits without dashes
+Enter visitor's *CNIC* (13 digits).
 Example: 4210112345678
 
-${DIVIDER}
-Type *B* to go back, or *0* for main menu`
+*B* to go back, *0* for menu`
 }
 
 /**
@@ -124,15 +108,12 @@ function handleCNICInput(
     if (!validation.valid) {
         return `❌ *Invalid CNIC*
 
-${DIVIDER}
-
 ${validation.error}
 
-Please enter a valid 13-digit CNIC number.
+Enter 13-digit CNIC.
 Example: 4210112345678
 
-${DIVIDER}
-Type *B* to go back, or *0* for main menu`
+*B* to go back, *0* for menu`
     }
 
     setState(phoneNumber, {
@@ -143,17 +124,13 @@ Type *B* to go back, or *0* for main menu`
 
     return `✅ *CNIC Recorded*
 
-${DIVIDER}
-👤 *Visitor:* ${visitor.name}
-🪪 *CNIC:* ${validation.normalized}
-${DIVIDER}
+👤 ${visitor.name}
+🪪 ${validation.normalized}
 
-Please enter your visitor's *phone number*.
+Enter visitor's *phone number*.
+Format: 03XXXXXXXXX
 
-*Format:* 03XXXXXXXXX or +923XXXXXXXXX
-
-${DIVIDER}
-Type *B* to go back, or *0* for main menu`
+*B* to go back, *0* for menu`
 }
 
 /**
@@ -167,17 +144,14 @@ function handlePhoneInput(
     const validation = validatePhoneNumber(message)
 
     if (!validation.valid) {
-        return `❌ *Invalid Phone Number*
-
-${DIVIDER}
+        return `❌ *Invalid Phone*
 
 ${validation.error}
 
-Please enter a valid phone number.
+Enter valid phone number.
 Example: 03001234567
 
-${DIVIDER}
-Type *B* to go back, or *0* for main menu`
+*B* to go back, *0* for menu`
     }
 
     setState(phoneNumber, {
@@ -188,21 +162,14 @@ Type *B* to go back, or *0* for main menu`
 
     return `✅ *Phone Recorded*
 
-${DIVIDER}
-👤 *Visitor:* ${visitor.name}
-🪪 *CNIC:* ${visitor.cnic}
-📱 *Phone:* ${validation.normalized}
-${DIVIDER}
+👤 ${visitor.name}
+🪪 ${visitor.cnic}
+📱 ${validation.normalized}
 
-Please enter the *date of visit*.
+Enter *date of visit*.
+Formats: DD-MM-YYYY, "tomorrow", "next Monday"
 
-*Accepted Formats:*
-• DD-MM-YYYY (e.g., 25-01-2026)
-• Natural language (e.g., "tomorrow", "next Monday")
-• Just the day (e.g., "28")
-
-${DIVIDER}
-Type *B* to go back, or *0* for main menu`
+*B* to go back, *0* for menu`
 }
 
 /**
@@ -216,27 +183,18 @@ function handleDateInput(
     if (!isDateFormat(message)) {
         return `❌ *Invalid Date*
 
-${DIVIDER}
+Try: DD-MM-YYYY, "tomorrow", "next Monday"
 
-Please enter the date in one of these formats:
-• DD-MM-YYYY (e.g., 25-01-2026)
-• Natural language (e.g., "tomorrow", "next Monday")
-• Just the day (e.g., "28")
-
-${DIVIDER}
-Type *B* to go back, or *0* for main menu`
+*B* to go back, *0* for menu`
     }
 
     const parsedDateStr = parseDate(message)
     if (!parsedDateStr) {
         return `❌ *Invalid Date*
 
-${DIVIDER}
+Couldn't understand that date. Try again.
 
-Could not understand the date. Please try again.
-
-${DIVIDER}
-Type *B* to go back, or *0* for main menu`
+*B* to go back, *0* for menu`
     }
 
     // Convert string to Date for comparison
@@ -248,13 +206,9 @@ Type *B* to go back, or *0* for main menu`
     if (parsedDate < today) {
         return `❌ *Invalid Date*
 
-${DIVIDER}
+Visit date cannot be in the past.
 
-The visit date cannot be in the past.
-Please enter a future date.
-
-${DIVIDER}
-Type *B* to go back, or *0* for main menu`
+*B* to go back, *0* for menu`
     }
 
     // Check if date is too far in the future (30 days)
@@ -263,12 +217,9 @@ Type *B* to go back, or *0* for main menu`
     if (parsedDate > maxDate) {
         return `❌ *Invalid Date*
 
-${DIVIDER}
-
 Visitor passes can only be registered up to 30 days in advance.
 
-${DIVIDER}
-Type *B* to go back, or *0* for main menu`
+*B* to go back, *0* for menu`
     }
 
     const dateStr = parsedDateStr
@@ -282,24 +233,19 @@ Type *B* to go back, or *0* for main menu`
 
     return `✅ *Date Recorded*
 
-${DIVIDER}
-📋 *Visitor Entry Pass Summary*
-${DIVIDER}
+📋 *Visitor Entry Pass*
 
-👤 *Visitor Name:* ${visitor.name}
-🪪 *CNIC:* ${visitor.cnic}
-📱 *Phone:* ${visitor.phone}
-📅 *Visit Date:* ${formattedDate}
+👤 ${visitor.name}
+🪪 ${visitor.cnic}
+📱 ${visitor.phone}
+📅 ${formattedDate}
 
-${DIVIDER}
+Confirm registration?
 
-Please confirm this visitor entry pass:
-
-*1.* ✅ Confirm & Register
+*1.* ✅ Confirm
 *2.* ❌ Cancel
 
-${DIVIDER}
-Type *B* to go back, or *0* for main menu`
+*B* to go back, *0* for menu`
 }
 
 /**
@@ -317,25 +263,18 @@ async function handleConfirmation(
         clearState(phoneNumber)
         return `❌ *Registration Cancelled*
 
-${DIVIDER}
+Visitor entry pass cancelled.
 
-Your visitor entry pass registration has been cancelled.
-
-${DIVIDER}
-Reply *0* for the main menu`
+Reply *0* for menu`
     }
 
     if (choice !== "1") {
         return `❓ *Invalid Choice*
 
-${DIVIDER}
-
-Please select:
-*1.* ✅ Confirm & Register
+*1.* ✅ Confirm
 *2.* ❌ Cancel
 
-${DIVIDER}
-Type *B* to go back, or *0* for main menu`
+*B* to go back, *0* for menu`
     }
 
     try {
@@ -357,13 +296,9 @@ Type *B* to go back, or *0* for main menu`
             console.error("[Visitor] Error saving visitor pass:", error)
             return `❌ *Registration Failed*
 
-${DIVIDER}
-
-Sorry, we couldn't register your visitor pass.
 Please try again later.
 
-${DIVIDER}
-Reply *0* for the main menu`
+Reply *0* for menu`
         }
 
         clearState(phoneNumber)
@@ -371,35 +306,21 @@ Reply *0* for the main menu`
 
         return `✅ *Visitor Pass Registered!*
 
-${DIVIDER}
-🎫 *Entry Pass Details*
-${DIVIDER}
+👤 ${visitor.name}
+🪪 ${visitor.cnic}
+📱 ${visitor.phone}
+📅 ${formattedDate}
 
-👤 *Visitor:* ${visitor.name}
-🪪 *CNIC:* ${visitor.cnic}
-📱 *Phone:* ${visitor.phone}
-📅 *Visit Date:* ${formattedDate}
+Security will be notified. You'll get a message when your visitor arrives.
 
-${DIVIDER}
-
-Your visitor has been registered successfully.
-The security will be notified about this visit.
-
-You will receive a notification when your visitor arrives.
-
-${DIVIDER}
-Reply *0* for the main menu`
+Reply *0* for menu`
     } catch (error) {
         console.error("[Visitor] Error:", error)
         clearState(phoneNumber)
         return `❌ *Registration Failed*
 
-${DIVIDER}
+An unexpected error occurred. Try again later.
 
-An unexpected error occurred.
-Please try again later.
-
-${DIVIDER}
-Reply *0* for the main menu`
+Reply *0* for menu`
     }
 }

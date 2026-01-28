@@ -13,9 +13,6 @@ import type {
   BookingCancelledParams,
 } from "../types"
 
-// Divider constant for consistent styling
-const DIVIDER = "───────────────────"
-
 /**
  * Send booking payment confirmed notification
  * Sent when a booking payment is marked as paid
@@ -31,7 +28,6 @@ export async function sendBookingConfirmation(
   const formattedEndTime = formatTime(endTime)
 
   const templateSid = getTemplateSid("booking_payment_confirmed")
-  // Template variables: 1=Name, 2=Date, 3=StartTime, 4=EndTime, 5=Amount, 6=BookingID, 7=ReceiptLink
   const templateVariables = {
     "1": name || "Resident",
     "2": formattedDate,
@@ -44,24 +40,14 @@ export async function sendBookingConfirmation(
 
   const fallbackMessage = `✅ *Payment Confirmed*
 
-${DIVIDER}
-📋 *Booking Details*
-${DIVIDER}
+📅 ${formattedDate} | ⏰ ${formattedStartTime} – ${formattedEndTime}
+💰 Rs. ${formattedAmount} | 🎫 ID: ${bookingId}
 
-• Date: ${formattedDate}
-• Time: ${formattedStartTime} – ${formattedEndTime}
-• Amount: Rs. ${formattedAmount}
-• Booking ID: ${bookingId}
+Hi ${name || "Resident"}, your payment is received!
 
-${DIVIDER}
+📄 Invoice: ${invoiceUrl}
 
-Hi ${name || "Resident"}, your payment has been received successfully.
-
-📄 View Invoice: ${invoiceUrl}
-
-${DIVIDER}
-Thank you for your payment!
-— Manzhil by Scrift`
+— Manzhil`
 
   return sendWithFallback(phone, templateSid, templateVariables, fallbackMessage)
 }
@@ -90,21 +76,12 @@ export async function sendBookingReminder(
   const hallLabel = hallType ? ` (${hallType})` : ""
   const fallbackMessage = `🔔 *Booking Reminder*
 
-${DIVIDER}
-📅 *Upcoming Booking${hallLabel}*
-${DIVIDER}
+📅 ${formattedDate}${hallLabel}
+⏰ ${formattedStartTime} – ${formattedEndTime}
 
-• Date: ${formattedDate}
-• Time: ${formattedStartTime} – ${formattedEndTime}
+Hi ${name || "Resident"}, reminder about your upcoming booking. Please be available at the scheduled time.
 
-${DIVIDER}
-
-Hi ${name || "Resident"}, this is a friendly reminder about your upcoming booking.
-
-Please ensure you're available at the scheduled time.
-
-${DIVIDER}
-— Manzhil by Scrift`
+— Manzhil`
 
   return sendWithFallback(phone, templateSid, templateVariables, fallbackMessage)
 }
@@ -130,24 +107,14 @@ export async function sendBookingCancelled(
     "4": formattedEndTime,
   }
 
-  const reasonLine = reason ? `• Reason: ${reason}\n` : ""
+  const reasonLine = reason ? `\n📝 Reason: ${reason}` : ""
   const fallbackMessage = `❌ *Booking Cancelled*
 
-${DIVIDER}
-📅 *Cancelled Booking*
-${DIVIDER}
+📅 ${formattedDate} | ⏰ ${formattedStartTime} – ${formattedEndTime}${reasonLine}
 
-• Date: ${formattedDate}
-• Time: ${formattedStartTime} – ${formattedEndTime}
-${reasonLine}
-${DIVIDER}
+Hi ${name || "Resident"}, your booking has been cancelled. Contact us if you have questions.
 
-Hi ${name || "Resident"}, your booking has been cancelled.
-
-If you have any questions, please contact us.
-
-${DIVIDER}
-— Manzhil by Scrift`
+— Manzhil`
 
   return sendWithFallback(phone, templateSid, templateVariables, fallbackMessage)
 }

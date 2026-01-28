@@ -7,9 +7,6 @@ import { sendWithFallback } from "../send"
 import { getTemplateSid } from "../templates"
 import type { TwilioResult } from "../types"
 
-// Divider constant for consistent styling
-const DIVIDER = "───────────────────"
-
 export interface ParcelArrivalParams {
     phone: string
     residentName: string
@@ -37,10 +34,12 @@ export async function sendParcelArrivalNotification(
         imageUrl
     } = params
 
-    // Build description line
-    const descLine = description ? `• Description: ${description}` : ""
-    const senderLine = senderName ? `• From: ${senderName}` : ""
-    const courierLine = courierName ? `• Courier: ${courierName}` : ""
+    // Build optional details
+    const details = [
+        description ? `📝 ${description}` : null,
+        courierName ? `🚚 ${courierName}` : null,
+        senderName ? `📍 From: ${senderName}` : null,
+    ].filter(Boolean).join(" | ")
 
     const templateSid = getTemplateSid("parcel_arrival")
     const templateVariables = {
@@ -49,37 +48,15 @@ export async function sendParcelArrivalNotification(
         "3": imageUrl,
     }
 
-    const fallbackMessage = `📦 *Parcel Arrival Notification*
+    const fallbackMessage = `📦 *Parcel Arrived!*
 
-${DIVIDER}
-🎁 *You Have a Delivery!*
-${DIVIDER}
+${details || "📝 Package"}
 
-${descLine}
-${senderLine}
-${courierLine}
+Hi ${residentName || "Resident"} (${apartmentNumber}), your parcel is at reception!
 
-${DIVIDER}
-🏠 *Your Details*
-${DIVIDER}
+📸 Photo: ${imageUrl}
 
-• Name: ${residentName}
-• Apartment: ${apartmentNumber}
-
-${DIVIDER}
-📸 *View Your Parcel*
-${DIVIDER}
-
-${imageUrl}
-
-${DIVIDER}
-
-Hi ${residentName || "Resident"}, a parcel has arrived for you at the building reception.
-
-Please collect it at your earliest convenience.
-
-${DIVIDER}
-— Manzhil by Scrift`
+— Manzhil`
 
     return sendWithFallback(phone, templateSid, templateVariables, fallbackMessage)
 }

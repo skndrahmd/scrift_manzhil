@@ -8,9 +8,6 @@ import { getTemplateSid } from "../templates"
 import { formatDate } from "../formatters"
 import type { TwilioResult } from "../types"
 
-// Divider constant for consistent styling
-const DIVIDER = "───────────────────"
-
 export interface VisitorArrivalParams {
     phone: string
     residentName: string
@@ -48,32 +45,15 @@ export async function sendVisitorArrivalNotification(
         "4": visitorPhone,
     }
 
-    const fallbackMessage = `🔔 *Visitor Arrival Notification*
+    const fallbackMessage = `🔔 *Visitor Arrived!*
 
-${DIVIDER}
-👤 *Your Visitor Has Arrived*
-${DIVIDER}
+👤 ${visitorName}
+📞 ${visitorPhone}
+📅 ${formattedDate}
 
-• Visitor Name: ${visitorName}
-• CNIC: ${visitorCnic}
-• Phone: ${visitorPhone}
-• Visit Date: ${formattedDate}
+Hi ${residentName || "Resident"} (${apartmentNumber}), your visitor is at the entrance. Please receive your guest.
 
-${DIVIDER}
-🏠 *Your Details*
-${DIVIDER}
-
-• Name: ${residentName}
-• Apartment: ${apartmentNumber}
-
-${DIVIDER}
-
-Hi ${residentName || "Resident"}, your visitor has arrived at the building entrance.
-
-Please proceed to receive your guest or inform the security if any changes are needed.
-
-${DIVIDER}
-— Manzhil by Scrift`
+— Manzhil`
 
     return sendWithFallback(phone, templateSid, templateVariables, fallbackMessage)
 }

@@ -10,9 +10,6 @@ import { getState, setState, clearState } from "../state"
 import { formatDate, formatSubcategory, isYesResponse, isNoResponse } from "../utils"
 import { getActiveComplaints } from "../profile"
 
-// Divider constant for consistent styling
-const DIVIDER = "───────────────────"
-
 /**
  * Initialize status check flow
  */
@@ -25,14 +22,9 @@ export async function initializeStatusFlow(
   if (!complaints || complaints.length === 0) {
     return `📋 *No Active Complaints*
 
-${DIVIDER}
+You don't have any active complaints. All resolved or none registered yet.
 
-You don't have any active complaints at the moment.
-
-All your complaints have been resolved, or you haven't registered any yet.
-
-${DIVIDER}
-Reply *0* for the main menu`
+Reply *0* for menu`
   }
 
   setState(phoneNumber, {
@@ -50,16 +42,11 @@ Reply *0* for the main menu`
     })
     .join("\n\n")
 
-  return `🔍 *Check Complaint Status*
-
-${DIVIDER}
-📋 *Your Active Complaints*
-${DIVIDER}
+  return `🔍 *Complaint Status*
 
 ${listText}
 
-${DIVIDER}
-Reply with number to view details, or *0* for main menu`
+Reply with number to view, or *0* for menu`
 }
 
 /**
@@ -82,12 +69,9 @@ export async function handleStatusFlow(
     ) {
       return `❓ *Invalid Selection*
 
-${DIVIDER}
+Please choose 1-${userState.statusItems!.length}
 
-Please choose a number from 1-${userState.statusItems!.length}
-
-${DIVIDER}
-Reply *0* for the main menu`
+Reply *0* for menu`
     }
 
     const complaint = userState.statusItems![complaintIndex - 1]
@@ -112,48 +96,31 @@ Reply *0* for the main menu`
 
     let response = `📋 *Complaint Details*
 
-${DIVIDER}
-🎫 *Reference*
-${DIVIDER}
+🎫 ID: ${complaint.complaint_id}
+🔧 Type: ${formatSubcategory(complaint.subcategory)}
+📝 ${complaint.description || "No description"}
+📅 Registered: ${formattedDate}
 
-• ID: ${complaint.complaint_id}
-• Category: ${complaint.category === "apartment" ? "Apartment" : "Building"}
-• Type: ${formatSubcategory(complaint.subcategory)}
-• Description: ${complaint.description || "No description provided"}
-
-${DIVIDER}
-📊 *Status*
-${DIVIDER}
-
-${statusText}
-Registered: ${formattedDate}`
+📊 Status: ${statusText}`
 
     if ((complaint as any).admin_notes) {
       response += `
 
-${DIVIDER}
-📝 *Admin Notes*
-${DIVIDER}
-
-${(complaint as any).admin_notes}`
+📝 Admin Notes: ${(complaint as any).admin_notes}`
     }
 
     response += `
 
-${DIVIDER}
-Reply *0* for the main menu`
+Reply *0* for menu`
 
     return response
   }
 
   return `❌ *Something Went Wrong*
 
-${DIVIDER}
+Please try again.
 
-We couldn't process your request. Please try again.
-
-${DIVIDER}
-Reply *0* for the main menu`
+Reply *0* for menu`
 }
 
 /**
@@ -174,14 +141,9 @@ export async function initializeCancelFlow(
   if (error || !complaints || complaints.length === 0) {
     return `📋 *No Cancellable Complaints*
 
-${DIVIDER}
+No pending complaints to cancel. Only pending complaints can be cancelled.
 
-You don't have any pending complaints that can be cancelled.
-
-Only pending complaints (not yet being worked on) can be cancelled.
-
-${DIVIDER}
-Reply *0* for the main menu`
+Reply *0* for menu`
   }
 
   setState(phoneNumber, {
@@ -200,14 +162,9 @@ Reply *0* for the main menu`
 
   return `❌ *Cancel Complaint*
 
-${DIVIDER}
-📋 *Pending Complaints*
-${DIVIDER}
-
 ${listText}
 
-${DIVIDER}
-Reply with number to cancel, or *0* for main menu`
+Reply with number to cancel, or *0* for menu`
 }
 
 /**
@@ -230,12 +187,9 @@ export async function handleCancelFlow(
     ) {
       return `❓ *Invalid Selection*
 
-${DIVIDER}
+Please choose 1-${userState.cancelItems!.length}
 
-Please choose a number from 1-${userState.cancelItems!.length}
-
-${DIVIDER}
-Reply *0* for the main menu`
+Reply *0* for menu`
     }
 
     const selectedComplaint = userState.cancelItems![complaintIndex - 1]
@@ -245,22 +199,15 @@ Reply *0* for the main menu`
 
     return `⚠️ *Confirm Cancellation*
 
-${DIVIDER}
-📋 *Complaint Details*
-${DIVIDER}
+📋 ID: ${selectedComplaint.complaint_id}
+🔧 Type: ${formatSubcategory(selectedComplaint.subcategory)}
+📝 ${selectedComplaint.description || "No description"}
 
-• ID: ${selectedComplaint.complaint_id}
-• Type: ${formatSubcategory(selectedComplaint.subcategory)}
-• Description: ${selectedComplaint.description || "No description"}
+Cancel this complaint?
 
-${DIVIDER}
+1. ✅ Yes, cancel
+2. ❌ No, keep
 
-Are you sure you want to cancel this complaint?
-
-1. ✅ Yes, cancel it
-2. ❌ No, keep it
-
-${DIVIDER}
 Reply *1* or *2*`
   }
 
@@ -280,55 +227,38 @@ Reply *1* or *2*`
         console.error("[Status] Cancel error:", error)
         return `❌ *Cancellation Failed*
 
-${DIVIDER}
+Please try again.
 
-We couldn't cancel the complaint. Please try again.
-
-${DIVIDER}
-Reply *0* for the main menu`
+Reply *0* for menu`
       }
 
       clearState(phoneNumber)
       return `✅ *Complaint Cancelled*
 
-${DIVIDER}
+Complaint ${selectedComplaint.complaint_id} has been cancelled.
 
-Your complaint (${selectedComplaint.complaint_id}) has been cancelled successfully.
-
-${DIVIDER}
-Reply *0* for the main menu`
+Reply *0* for menu`
     }
 
     if (isNoResponse(message)) {
       clearState(phoneNumber)
       return `✅ *Cancellation Aborted*
 
-${DIVIDER}
+Your complaint remains active. No changes made.
 
-Your complaint remains active. No changes were made.
-
-${DIVIDER}
-Reply *0* for the main menu`
+Reply *0* for menu`
     }
 
     return `❓ *Invalid Response*
 
-${DIVIDER}
+Reply *1* (Yes) or *2* (No)
 
-Please reply with:
-• *1* — Yes, cancel
-• *2* — No, keep it
-
-${DIVIDER}
-Reply *0* for the main menu`
+Reply *0* for menu`
   }
 
   return `❌ *Something Went Wrong*
 
-${DIVIDER}
+Please try again.
 
-We couldn't process your request. Please try again.
-
-${DIVIDER}
-Reply *0* for the main menu`
+Reply *0* for menu`
 }

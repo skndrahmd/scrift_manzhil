@@ -11,9 +11,6 @@ import { getCachedSettings, getUserBookings } from "../profile"
 import { formatDate, formatCurrency, isYesResponse, isNoResponse } from "../utils"
 import { getHallMenu } from "../menu"
 
-// Divider constant for consistent styling
-const DIVIDER = "───────────────────"
-
 /**
  * Initialize hall management flow
  */
@@ -52,12 +49,9 @@ export async function handleHallFlow(
         default:
           return `❓ *Invalid Selection*
 
-${DIVIDER}
+Please choose 1-4.
 
-Please choose a number from 1-4.
-
-${DIVIDER}
-Reply *0* for the main menu`
+Reply *0* for menu`
       }
     }
 
@@ -90,22 +84,16 @@ Reply *0* for the main menu`
 
     return `❌ *Something Went Wrong*
 
-${DIVIDER}
+Please try again.
 
-We couldn't process your request. Please try again.
-
-${DIVIDER}
-Reply *0* for the main menu`
+Reply *0* for menu`
   } catch (error) {
     console.error("[Hall] Flow error:", error)
-    return `❌ *Unable to Process Request*
+    return `❌ *Unable to Process*
 
-${DIVIDER}
+Please try again shortly.
 
-We encountered an issue. Please try again shortly.
-
-${DIVIDER}
-Reply *0* for the main menu`
+Reply *0* for menu`
   }
 }
 
@@ -119,19 +107,13 @@ function initializeNewBooking(phoneNumber: string): string {
 
   return `📅 *New Hall Booking*
 
-${DIVIDER}
-📋 *Enter Booking Date*
-${DIVIDER}
+Enter your booking date.
 
-Please enter the date you'd like to book the hall.
-
-*Accepted Formats:*
+*Formats:*
 • DD-MM-YYYY (e.g., 25-12-2025)
-• Natural language (e.g., "1st December", "Dec 25")
-• Shortcuts (e.g., "today", "tomorrow")
+• "today", "tomorrow", "Dec 25"
 
-${DIVIDER}
-Reply *B* to go back, or *0* for main menu`
+*B* to go back, *0* for menu`
 }
 
 /**
@@ -144,30 +126,22 @@ async function handleNewBookingDate(
   userState: UserState
 ): Promise<string> {
   if (!isDateFormat(message)) {
-    return `❓ *Invalid Date Format*
+    return `❓ *Invalid Date*
 
-${DIVIDER}
-
-Please enter the date in one of these formats:
-
+Try formats like:
 • DD-MM-YYYY (e.g., 25-12-2025)
-• Natural language (e.g., "1st December")
-• Shortcuts (e.g., "today", "tomorrow")
+• "today", "tomorrow"
 
-${DIVIDER}
-Reply *B* to go back, or *0* for main menu`
+*B* to go back, *0* for menu`
   }
 
   const parsedDate = parseDate(message)
   if (!parsedDate) {
     return `❓ *Invalid Date*
 
-${DIVIDER}
+We couldn't understand that. Please try again.
 
-We couldn't understand that date. Please try again.
-
-${DIVIDER}
-Reply *0* for the main menu`
+Reply *0* for menu`
   }
 
   // Check if date is in the past
@@ -177,12 +151,9 @@ Reply *0* for the main menu`
   if (parsedDate < todayString) {
     return `⚠️ *Invalid Date*
 
-${DIVIDER}
+Date is in the past. Please choose a future date.
 
-The selected date is in the past. Please choose a future date.
-
-${DIVIDER}
-Reply *B* to go back, or *0* for main menu`
+*B* to go back, *0* for menu`
   }
 
   // Check working days
@@ -191,14 +162,9 @@ Reply *B* to go back, or *0* for main menu`
     const dayName = getDayName(parsedDate)
     return `⚠️ *Hall Unavailable*
 
-${DIVIDER}
+Hall is closed on ${dayName}s. Please choose another date.
 
-The community hall is closed on ${dayName}s.
-
-Please choose a different date.
-
-${DIVIDER}
-Reply *B* to go back, or *0* for main menu`
+*B* to go back, *0* for menu`
   }
 
   // Check if date is already booked
@@ -211,14 +177,9 @@ Reply *B* to go back, or *0* for main menu`
   if (existingBookings && existingBookings.length > 0) {
     return `❌ *Date Already Booked*
 
-${DIVIDER}
+Hall is reserved for ${formatDate(parsedDate)}. Please choose another date.
 
-The community hall is already reserved for ${formatDate(parsedDate)}.
-
-Please choose a different date.
-
-${DIVIDER}
-Reply *B* to go back, or *0* for main menu`
+*B* to go back, *0* for menu`
   }
 
   // Date is available, show policies
@@ -230,32 +191,18 @@ Reply *B* to go back, or *0* for main menu`
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://com3-bms.vercel.app"
   const policiesLink = `${baseUrl}/policies`
 
-  return `📋 *Booking Terms & Conditions*
+  return `📋 *Terms & Conditions*
 
-${DIVIDER}
-📅 *Selected Date*
-${DIVIDER}
+📅 Date: ${formatDate(parsedDate)}
+💰 Charges: ${formatCurrency(bookingCharges)}
 
-• Date: ${formatDate(parsedDate)}
-• Charges: ${formatCurrency(bookingCharges)}
+📄 Policies: ${policiesLink}
 
-${DIVIDER}
-📄 *Policies*
-${DIVIDER}
-
-Please review our complete booking policies:
-👉 ${policiesLink}
-
-${DIVIDER}
-⚖️ *Confirmation*
-${DIVIDER}
-
-Do you agree to the terms and conditions?
+Do you agree to the terms?
 
 1. ✅ Yes, I Agree
 2. ❌ No, I Decline
 
-${DIVIDER}
 Reply *1* or *2*`
 }
 
@@ -295,21 +242,15 @@ async function handleBookingPolicies(
       if (error.code === "23505") {
         return `⚠️ *Date No Longer Available*
 
-${DIVIDER}
+Just booked by someone else. Please choose another date.
 
-This date was just booked by someone else. Please choose another date.
-
-${DIVIDER}
-Reply *0* for the main menu`
+Reply *0* for menu`
       }
       return `❌ *Booking Failed*
 
-${DIVIDER}
+Please try again.
 
-We couldn't complete your booking. Please try again.
-
-${DIVIDER}
-Reply *0* for the main menu`
+Reply *0* for menu`
     }
 
     clearState(phoneNumber)
@@ -319,56 +260,33 @@ Reply *0* for the main menu`
 
     return `✅ *Booking Confirmed*
 
-${DIVIDER}
-📋 *Booking Details*
-${DIVIDER}
+📅 ${formatDate(userState.date!)} | ⏰ 9AM – 9PM
+💰 ${formatCurrency(bookingCharges)} | ⏳ Payment Pending
 
-• Date: ${formatDate(userState.date!)}
-• Time: 9:00 AM – 9:00 PM (Full Day)
-• Charges: ${formatCurrency(bookingCharges)}
-• Payment: ⏳ Pending
+📌 Notes:
+• Pay within 3 days
+• 24hr cancellation notice
+• Leave hall clean
 
-${DIVIDER}
-📌 *Important Notes*
-${DIVIDER}
+📄 Invoice: ${invoiceUrl}
 
-• Complete payment within 3 days
-• Cancellations require 24-hour notice
-• Please leave the hall clean after use
-
-${DIVIDER}
-📄 *Invoice*
-${DIVIDER}
-
-View your invoice here:
-👉 ${invoiceUrl}
-
-${DIVIDER}
-Reply *0* for the main menu`
+Reply *0* for menu`
   }
 
   if (choice === "2") {
     clearState(phoneNumber)
     return `❌ *Booking Cancelled*
 
-${DIVIDER}
+You must agree to terms to book.
 
-You must agree to the terms and conditions to book the community hall.
-
-${DIVIDER}
-Reply *0* for the main menu`
+Reply *0* for menu`
   }
 
   return `❓ *Invalid Response*
 
-${DIVIDER}
+Reply *1* (Yes) or *2* (No)
 
-Please reply with:
-• *1* — Yes, I agree
-• *2* — No, I decline
-
-${DIVIDER}
-Reply *0* for the main menu`
+Reply *0* for menu`
 }
 
 /**
@@ -380,12 +298,9 @@ async function initializeCancelBooking(profile: Profile, phoneNumber: string): P
   if (!bookings || bookings.length === 0) {
     return `📋 *No Bookings Found*
 
-${DIVIDER}
-
 You don't have any confirmed bookings to cancel.
 
-${DIVIDER}
-Reply *0* for the main menu`
+Reply *0* for menu`
   }
 
   const userState = getState(phoneNumber)
@@ -399,14 +314,9 @@ Reply *0* for the main menu`
 
   return `❌ *Cancel Booking*
 
-${DIVIDER}
-📋 *Your Bookings*
-${DIVIDER}
-
 ${listText}
 
-${DIVIDER}
-Reply with number to cancel, or *0* for main menu`
+Reply with number to cancel, or *0* for menu`
 }
 
 /**
@@ -422,12 +332,9 @@ async function handleCancelSelect(
   if (isNaN(bookingIndex) || bookingIndex < 1 || bookingIndex > userState.bookingList!.length) {
     return `❓ *Invalid Selection*
 
-${DIVIDER}
+Please choose 1-${userState.bookingList!.length}
 
-Please choose a number from 1-${userState.bookingList!.length}
-
-${DIVIDER}
-Reply *0* for the main menu`
+Reply *0* for menu`
   }
 
   const selectedBooking = userState.bookingList![bookingIndex - 1]
@@ -437,34 +344,23 @@ Reply *0* for the main menu`
 
   let response = `⚠️ *Confirm Cancellation*
 
-${DIVIDER}
-📋 *Booking Details*
-${DIVIDER}
-
-• Date: ${formatDate(selectedBooking.booking_date)}
-• Charges: ${formatCurrency(selectedBooking.booking_charges)}
-• Payment: ${selectedBooking.payment_status === "paid" ? "✅ Paid" : "⏳ Pending"}`
+📅 Date: ${formatDate(selectedBooking.booking_date)}
+💰 Charges: ${formatCurrency(selectedBooking.booking_charges)}
+💳 Payment: ${selectedBooking.payment_status === "paid" ? "✅ Paid" : "⏳ Pending"}`
 
   if (selectedBooking.payment_status === "paid") {
     response += `
 
-${DIVIDER}
-💡 *Note*
-${DIVIDER}
-
-Refund will be processed according to our cancellation policy.`
+💡 Note: Refund per cancellation policy.`
   }
 
   response += `
 
-${DIVIDER}
-
-Are you sure you want to cancel?
+Cancel this booking?
 
 1. ✅ Yes, cancel
-2. ❌ No, keep it
+2. ❌ No, keep
 
-${DIVIDER}
 Reply *1* or *2*`
 
   return response
@@ -491,32 +387,26 @@ async function handleCancelConfirm(
       console.error("[Hall] Cancel error:", error)
       return `❌ *Cancellation Failed*
 
-${DIVIDER}
+Please try again.
 
-We couldn't cancel the booking. Please try again.
-
-${DIVIDER}
-Reply *0* for the main menu`
+Reply *0* for menu`
     }
 
     clearState(phoneNumber)
 
     let response = `✅ *Booking Cancelled*
 
-${DIVIDER}
-
 Your booking for ${formatDate(selectedBooking.booking_date)} has been cancelled.`
 
     if (selectedBooking.payment_status === "paid") {
       response += `
 
-Refund will be processed according to our cancellation policy.`
+Refund per cancellation policy.`
     }
 
     response += `
 
-${DIVIDER}
-Reply *0* for the main menu`
+Reply *0* for menu`
 
     return response
   }
@@ -525,24 +415,16 @@ Reply *0* for the main menu`
     clearState(phoneNumber)
     return `✅ *Cancellation Aborted*
 
-${DIVIDER}
+Your booking remains active. No changes made.
 
-Your booking remains active. No changes were made.
-
-${DIVIDER}
-Reply *0* for the main menu`
+Reply *0* for menu`
   }
 
   return `❓ *Invalid Response*
 
-${DIVIDER}
+Reply *1* (Yes) or *2* (No)
 
-Please reply with:
-• *1* — Yes, cancel
-• *2* — No, keep it
-
-${DIVIDER}
-Reply *0* for the main menu`
+Reply *0* for menu`
 }
 
 /**
@@ -554,12 +436,9 @@ async function initializeEditBooking(profile: Profile, phoneNumber: string): Pro
   if (!bookings || bookings.length === 0) {
     return `📋 *No Bookings Found*
 
-${DIVIDER}
-
 You don't have any confirmed bookings to edit.
 
-${DIVIDER}
-Reply *0* for the main menu`
+Reply *0* for menu`
   }
 
   const userState = getState(phoneNumber)
@@ -571,14 +450,9 @@ Reply *0* for the main menu`
 
   return `✏️ *Edit Booking*
 
-${DIVIDER}
-📋 *Your Bookings*
-${DIVIDER}
-
 ${listText}
 
-${DIVIDER}
-Reply with number to reschedule, or *0* for main menu`
+Reply with number to reschedule, or *0* for menu`
 }
 
 /**
@@ -594,12 +468,9 @@ async function handleEditSelect(
   if (isNaN(bookingIndex) || bookingIndex < 1 || bookingIndex > userState.bookingList!.length) {
     return `❓ *Invalid Selection*
 
-${DIVIDER}
+Please choose 1-${userState.bookingList!.length}
 
-Please choose a number from 1-${userState.bookingList!.length}
-
-${DIVIDER}
-Reply *0* for the main menu`
+Reply *0* for menu`
   }
 
   const selectedBooking = userState.bookingList![bookingIndex - 1]
@@ -609,18 +480,11 @@ Reply *0* for the main menu`
 
   return `✏️ *Reschedule Booking*
 
-${DIVIDER}
-📅 *Current Date*
-${DIVIDER}
+📅 Current: ${formatDate(selectedBooking.booking_date)}
 
-${formatDate(selectedBooking.booking_date)}
+Enter the new date:
 
-${DIVIDER}
-
-Please enter the new date:
-
-${DIVIDER}
-Reply *B* to go back, or *0* for main menu`
+*B* to go back, *0* for menu`
 }
 
 /**
@@ -633,27 +497,21 @@ async function handleEditDate(
   userState: UserState
 ): Promise<string> {
   if (!isDateFormat(message)) {
-    return `❓ *Invalid Date Format*
+    return `❓ *Invalid Date*
 
-${DIVIDER}
-
-Please enter the date in DD-MM-YYYY format.
+Enter in DD-MM-YYYY format.
 Example: 25-12-2025
 
-${DIVIDER}
-Reply *B* to go back, or *0* for main menu`
+*B* to go back, *0* for menu`
   }
 
   const parsedDate = parseDate(message)
   if (!parsedDate) {
     return `❓ *Invalid Date*
 
-${DIVIDER}
+We couldn't understand that. Please try again.
 
-We couldn't understand that date. Please try again.
-
-${DIVIDER}
-Reply *0* for the main menu`
+Reply *0* for menu`
   }
 
   // Check if date is in the past
@@ -661,12 +519,9 @@ Reply *0* for the main menu`
   if (parsedDate < today) {
     return `⚠️ *Invalid Date*
 
-${DIVIDER}
+Date is in the past. Please choose a future date.
 
-The selected date is in the past. Please choose a future date.
-
-${DIVIDER}
-Reply *B* to go back, or *0* for main menu`
+*B* to go back, *0* for menu`
   }
 
   // Check if date is already booked
@@ -681,12 +536,9 @@ Reply *B* to go back, or *0* for main menu`
   if (existingBookings && existingBookings.length > 0) {
     return `❌ *Date Already Booked*
 
-${DIVIDER}
+That date is reserved. Please choose another.
 
-That date is already reserved. Please choose a different date.
-
-${DIVIDER}
-Reply *0* for the main menu`
+Reply *0* for menu`
   }
 
   // Update booking
@@ -699,28 +551,20 @@ Reply *0* for the main menu`
     console.error("[Hall] Edit error:", error)
     return `❌ *Update Failed*
 
-${DIVIDER}
+Please try again.
 
-We couldn't update the booking. Please try again.
-
-${DIVIDER}
-Reply *0* for the main menu`
+Reply *0* for menu`
   }
 
   clearState(phoneNumber)
   return `✅ *Booking Updated*
 
-${DIVIDER}
-📅 *Rescheduled*
-${DIVIDER}
+📅 From: ${formatDate(selectedBooking.booking_date)}
+📅 To: ${formatDate(parsedDate)}
 
-• From: ${formatDate(selectedBooking.booking_date)}
-• To: ${formatDate(parsedDate)}
+Successfully rescheduled!
 
-Your booking has been successfully rescheduled.
-
-${DIVIDER}
-Reply *0* for the main menu`
+Reply *0* for menu`
 }
 
 /**
@@ -732,14 +576,9 @@ async function viewMyBookings(profile: Profile, phoneNumber: string): Promise<st
   if (!bookings || bookings.length === 0) {
     return `📋 *No Bookings Found*
 
-${DIVIDER}
+You don't have any bookings yet. Create one from the Hall menu.
 
-You don't have any bookings yet.
-
-You can create a new booking from the Hall menu.
-
-${DIVIDER}
-Reply *0* for the main menu`
+Reply *0* for menu`
   }
 
   const listText = bookings
@@ -756,10 +595,7 @@ Reply *0* for the main menu`
   clearState(phoneNumber)
   return `📋 *Your Bookings*
 
-${DIVIDER}
-
 ${listText}
 
-${DIVIDER}
-Reply *0* for the main menu`
+Reply *0* for menu`
 }

@@ -10,9 +10,6 @@ import { getState, setState, clearState } from "../state"
 import { getCachedSettings } from "../profile"
 import { formatDate, formatCurrency } from "../utils"
 
-// Divider constant for consistent styling
-const DIVIDER = "───────────────────"
-
 /**
  * Initialize booking flow
  */
@@ -24,20 +21,14 @@ export function initializeBookingFlow(phoneNumber: string): string {
 
   return `📅 *Community Hall Booking*
 
-${DIVIDER}
-📋 *Enter Booking Date*
-${DIVIDER}
+Enter your booking date.
 
-Please enter the date you'd like to book the hall.
-
-*Accepted Formats:*
+*Formats:*
 • DD-MM-YYYY (e.g., 25-12-2025)
-• Natural language (e.g., "1st December", "Dec 25")
-• Shortcuts (e.g., "today", "tomorrow")
+• "today", "tomorrow", "Dec 25"
 • Just the day (e.g., "15")
 
-${DIVIDER}
-Type *B* to go back, or *0* for main menu`
+*B* to go back, *0* for menu`
 }
 
 /**
@@ -59,19 +50,14 @@ export async function handleBookingFlow(
     return await handleDateInput(message, profile, phoneNumber)
   }
 
-  return `❓ *Invalid Date Format*
+  return `❓ *Invalid Date*
 
-${DIVIDER}
-
-Please enter the date in one of these formats:
-
+Try formats like:
 • DD-MM-YYYY (e.g., 25-12-2025)
-• Natural language (e.g., "1st December", "Dec 25")
-• Shortcuts (e.g., "today", "tomorrow")
+• "today", "tomorrow"
 • Just the day (e.g., "15")
 
-${DIVIDER}
-Type *B* to go back, or *0* for main menu`
+*B* to go back, *0* for menu`
 }
 
 /**
@@ -85,15 +71,12 @@ async function handleDateInput(
   try {
     const parsedDate = parseDate(message)
     if (!parsedDate) {
-      return `❓ *Invalid Date Format*
+      return `❓ *Invalid Date*
 
-${DIVIDER}
-
-Please enter the date in DD-MM-YYYY format.
+Please enter in DD-MM-YYYY format.
 Example: 25-12-2025
 
-${DIVIDER}
-Type *B* to go back, or *0* for main menu`
+*B* to go back, *0* for menu`
     }
 
     // Check if the date is in the past
@@ -108,12 +91,9 @@ Type *B* to go back, or *0* for main menu`
     if (parsedDate < todayString) {
       return `⚠️ *Invalid Date*
 
-${DIVIDER}
+Date is in the past. Please choose a future date.
 
-The selected date is in the past. Please choose a future date.
-
-${DIVIDER}
-Type *B* to go back, or *0* for main menu`
+*B* to go back, *0* for menu`
     }
 
     // Get booking settings to check working days
@@ -123,14 +103,9 @@ Type *B* to go back, or *0* for main menu`
       const dayName = getDayName(parsedDate)
       return `⚠️ *Hall Unavailable*
 
-${DIVIDER}
+Hall is closed on ${dayName}s. Please choose another date.
 
-The community hall is closed on ${dayName}s.
-
-Please choose a date from our working days and try again.
-
-${DIVIDER}
-Type *B* to go back, or *0* for main menu`
+*B* to go back, *0* for menu`
     }
 
     // Check if date is already booked (ONE EVENT PER DAY)
@@ -143,14 +118,9 @@ Type *B* to go back, or *0* for main menu`
     if (existingBookings && existingBookings.length > 0) {
       return `❌ *Date Already Booked*
 
-${DIVIDER}
+Hall is reserved for ${formatDate(parsedDate)}. Please choose another date.
 
-The community hall is already reserved for ${formatDate(parsedDate)}.
-
-Please choose a different date.
-
-${DIVIDER}
-Type *B* to go back, or *0* for main menu`
+*B* to go back, *0* for menu`
     }
 
     // Date is available, show policies
@@ -163,43 +133,26 @@ Type *B* to go back, or *0* for main menu`
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://com3-bms.vercel.app"
     const policiesLink = `${baseUrl}/policies`
 
-    return `📋 *Booking Terms & Conditions*
+    return `📋 *Terms & Conditions*
 
-${DIVIDER}
-📅 *Selected Date*
-${DIVIDER}
+📅 Date: ${formatDate(parsedDate)}
+💰 Charges: ${formatCurrency(bookingCharges)}
 
-• Date: ${formatDate(parsedDate)}
-• Charges: ${formatCurrency(bookingCharges)}
+📄 Policies: ${policiesLink}
 
-${DIVIDER}
-📄 *Policies*
-${DIVIDER}
-
-Please review our complete booking policies:
-👉 ${policiesLink}
-
-${DIVIDER}
-⚖️ *Confirmation*
-${DIVIDER}
-
-Do you agree to the terms and conditions?
+Do you agree to the terms?
 
 1. ✅ Yes, I Agree
 2. ❌ No, I Decline
 
-${DIVIDER}
 Reply *1* or *2*`
   } catch (error) {
     console.error("[Booking] Date input error:", error)
     return `❌ *Unable to Process*
 
-${DIVIDER}
+Please try again.
 
-We couldn't process your date selection. Please try again.
-
-${DIVIDER}
-Reply *0* for the main menu`
+Reply *0* for menu`
   }
 }
 
@@ -241,21 +194,15 @@ async function handlePoliciesAcceptance(
         if (bookingError.code === "23505") {
           return `⚠️ *Date No Longer Available*
 
-${DIVIDER}
+Just booked by someone else. Please choose another date.
 
-This date was just booked by someone else. Please choose another date.
-
-${DIVIDER}
-Reply *0* for the main menu`
+Reply *0* for menu`
         }
         return `❌ *Booking Failed*
 
-${DIVIDER}
+Please try again.
 
-We couldn't complete your booking. Please try again.
-
-${DIVIDER}
-Reply *0* for the main menu`
+Reply *0* for menu`
       }
 
       clearState(phoneNumber)
@@ -265,32 +212,17 @@ Reply *0* for the main menu`
 
       return `✅ *Booking Confirmed*
 
-${DIVIDER}
-📋 *Booking Details*
-${DIVIDER}
+📅 ${formatDate(userState.date!)} | ⏰ 9AM – 9PM
+💰 ${formatCurrency(bookingCharges)} | ⏳ Payment Pending
 
-• Date: ${formatDate(userState.date!)}
-• Time: 9:00 AM – 9:00 PM (Full Day)
-• Charges: ${formatCurrency(bookingCharges)}
-• Payment: ⏳ Pending
+📌 Notes:
+• Pay before event date
+• 24hr cancellation notice required
+• Leave hall clean
 
-${DIVIDER}
-📌 *Important Notes*
-${DIVIDER}
+📄 Invoice: ${invoiceUrl}
 
-• Complete payment before the event date
-• Cancellations require 24-hour notice
-• Please leave the hall clean after use
-
-${DIVIDER}
-📄 *Invoice*
-${DIVIDER}
-
-View your invoice here:
-👉 ${invoiceUrl}
-
-${DIVIDER}
-Reply *0* for the main menu`
+Reply *0* for menu`
     }
 
     if (choice === "2") {
@@ -298,35 +230,22 @@ Reply *0* for the main menu`
       clearState(phoneNumber)
       return `❌ *Booking Cancelled*
 
-${DIVIDER}
+You must agree to terms to book the hall. Contact management if you have concerns.
 
-You must agree to the terms and conditions to book the community hall.
-
-If you have any concerns, please contact the building management.
-
-${DIVIDER}
-Reply *0* for the main menu`
+Reply *0* for menu`
     }
 
     return `❓ *Invalid Response*
 
-${DIVIDER}
+Reply *1* (Yes) or *2* (No)
 
-Please reply with:
-• *1* — Yes, I agree
-• *2* — No, I decline
-
-${DIVIDER}
-Reply *0* for the main menu`
+Reply *0* for menu`
   } catch (error) {
     console.error("[Booking] Policies acceptance error:", error)
     return `❌ *Unable to Process*
 
-${DIVIDER}
+Please try again.
 
-We encountered an issue. Please try again.
-
-${DIVIDER}
-Reply *0* for the main menu`
+Reply *0* for menu`
   }
 }

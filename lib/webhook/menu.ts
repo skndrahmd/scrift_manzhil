@@ -14,9 +14,6 @@ import {
 } from "./config"
 import { formatDate, formatCurrency, buildNumberedList } from "./utils"
 
-// Divider constant for consistent styling
-const DIVIDER = "───────────────────"
-
 /**
  * Get main menu display
  */
@@ -25,17 +22,13 @@ export function getMainMenu(name: string): string {
     (opt) => `${opt.key}. ${opt.emoji} ${opt.label}`
   ).join("\n")
 
-  return `Hello ${name}! 👋
+  return `👋 Hello ${name}!
 
-Welcome to *Manzhil* — Your Building Management Assistant
-
-${DIVIDER}
+Welcome to *Manzhil*
 
 ${options}
 
-${DIVIDER}
-
-Reply with your choice (1-10)`
+Reply 1-10`
 }
 
 /**
@@ -49,25 +42,18 @@ export function getProfileInfo(profile: Profile): string {
 
   return `👤 *Your Profile*
 
-${DIVIDER}
-📋 *Personal Details*
-${DIVIDER}
-
+📋 *Details*
 • Name: ${profile.name}
 • Apartment: ${profile.apartment_number}
 • Phone: ${profile.phone_number}
 • Building: ${profile.building_block || "Not specified"}
 
-${DIVIDER}
-💰 *Maintenance Status*
-${DIVIDER}
-
+💰 *Maintenance*
 • Status: ${paymentStatus}
-• Monthly Charges: ${formatCurrency(profile.maintenance_charges || 0)}
+• Monthly: ${formatCurrency(profile.maintenance_charges || 0)}
 • Last Payment: ${lastPayment}
 
-${DIVIDER}
-Reply *0* for the main menu`
+Reply *0* for menu`
 }
 
 /**
@@ -81,29 +67,21 @@ export function getMaintenanceStatus(profile: Profile): string {
 
   let statusMessage = `💰 *Maintenance Status*
 
-${DIVIDER}
-📋 *Payment Details*
-${DIVIDER}
-
 • Apartment: ${profile.apartment_number}
-• Monthly Charges: ${formatCurrency(profile.maintenance_charges || 0)}
+• Monthly: ${formatCurrency(profile.maintenance_charges || 0)}
 • Status: ${paymentStatus}
 • Last Payment: ${lastPayment}`
 
   if (!profile.maintenance_paid) {
     statusMessage += `
 
-${DIVIDER}
 ⚠️ *Payment Due*
-${DIVIDER}
-
-Your maintenance payment is pending. Please complete the payment at your earliest convenience to avoid service interruptions.`
+Please pay soon to avoid service interruptions.`
   }
 
   statusMessage += `
 
-${DIVIDER}
-Reply *0* for the main menu`
+Reply *0* for menu`
 
   return statusMessage
 }
@@ -118,12 +96,9 @@ export function getEmergencyContacts(): string {
 
   return `🆘 *Emergency Contacts*
 
-${DIVIDER}
-
 ${contacts}
 
-${DIVIDER}
-Reply *0* for the main menu`
+Reply *0* for menu`
 }
 
 /**
@@ -134,14 +109,11 @@ export function getHallMenu(): string {
     (opt) => `${opt.key}. ${opt.emoji} ${opt.label}`
   ).join("\n")
 
-  return `🏛️ *Community Hall Management*
-
-${DIVIDER}
+  return `🏛️ *Community Hall*
 
 ${options}
 
-${DIVIDER}
-Reply with your choice, or *0* for main menu`
+Reply 1-4 or *0* for menu`
 }
 
 /**
@@ -154,29 +126,21 @@ export function getStaffMenu(): string {
 
   return `👥 *Staff Management*
 
-${DIVIDER}
-
 ${options}
 
-${DIVIDER}
-Reply with your choice, or *0* for main menu`
+Reply 1-4 or *0* for menu`
 }
 
 /**
  * Get complaint category selection menu
  */
 export function getComplaintCategoryMenu(): string {
-  return `📝 *Register a Complaint*
-
-${DIVIDER}
-📂 *Select Category*
-${DIVIDER}
+  return `📝 *Register Complaint*
 
 1. ${COMPLAINT_CATEGORIES.apartment.emoji} ${COMPLAINT_CATEGORIES.apartment.label}
 2. ${COMPLAINT_CATEGORIES.building.emoji} ${COMPLAINT_CATEGORIES.building.label}
 
-${DIVIDER}
-Reply *1* or *2*, or *0* for main menu`
+Reply *1* or *2*, or *0* for menu`
 }
 
 /**
@@ -189,13 +153,8 @@ export function getApartmentSubcategoryMenu(): string {
 
   return `🏠 *Apartment Complaint*
 
-${DIVIDER}
-📋 *Select Issue Type*
-${DIVIDER}
-
 ${subcategories}
 
-${DIVIDER}
 Reply with number, or *B* to go back`
 }
 
@@ -209,13 +168,8 @@ export function getBuildingSubcategoryMenu(): string {
 
   return `🏢 *Building Complaint*
 
-${DIVIDER}
-📋 *Select Issue Type*
-${DIVIDER}
-
 ${subcategories}
 
-${DIVIDER}
 Reply with number, or *B* to go back`
 }
 
@@ -225,15 +179,12 @@ Reply with number, or *B* to go back`
 export function getTowerSelectionMenu(): string {
   return `🏗️ *Select Tower*
 
-${DIVIDER}
-
 1. Tower A
 2. Tower B
 3. Tower C
 4. Tower D
 
-${DIVIDER}
-Reply with number, or *B* to go back`
+Reply 1-4, or *B* to go back`
 }
 
 /**
@@ -244,11 +195,8 @@ export function getStaffRoleMenu(): string {
 
   return `👤 *Select Staff Role*
 
-${DIVIDER}
-
 ${roles}
 
-${DIVIDER}
 Reply with number, or *B* to go back`
 }
 

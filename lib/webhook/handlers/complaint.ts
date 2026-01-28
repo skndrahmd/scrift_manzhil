@@ -11,9 +11,6 @@ import { COMPLAINT_NOTIFICATION_NUMBERS, TEMPLATE_SIDS } from "../config"
 import { formatSubcategory } from "../utils"
 import { getComplaintCategoryMenu } from "../menu"
 
-// Divider constant for consistent styling
-const DIVIDER = "───────────────────"
-
 /**
  * Initialize complaint flow
  */
@@ -52,12 +49,9 @@ export async function handleComplaintFlow(
     default:
       return `❌ *Something Went Wrong*
 
-${DIVIDER}
-
 We couldn't process your request. Please try again.
 
-${DIVIDER}
-Reply *0* for the main menu`
+Reply *0* for menu`
   }
 }
 
@@ -76,18 +70,13 @@ function handleCategorySelection(
 
     return `🏠 *Apartment Complaint*
 
-${DIVIDER}
-📋 *Select Issue Type*
-${DIVIDER}
-
 1. 🔧 Plumbing
 2. ⚡ Electric
 3. 🔨 Civil
 4. 🅿️ My Parking Complaint
 5. 🔧 Other
 
-${DIVIDER}
-Reply with number (1-5), or *B* to go back`
+Reply 1-5, or *B* to go back`
   }
 
   if (choice === "2") {
@@ -96,10 +85,6 @@ Reply with number (1-5), or *B* to go back`
     setState(phoneNumber, userState)
 
     return `🏢 *Building Complaint*
-
-${DIVIDER}
-📋 *Select Issue Type*
-${DIVIDER}
 
 1. 🛗 Lift/Elevator
 2. 💪 Gym
@@ -114,20 +99,14 @@ ${DIVIDER}
 11. 🪑 Seating Area
 12. 📋 Other
 
-${DIVIDER}
-Reply with number (1-12), or *B* to go back`
+Reply 1-12, or *B* to go back`
   }
 
   return `❓ *Invalid Selection*
 
-${DIVIDER}
+Reply *1* for Apartment or *2* for Building
 
-Please reply with:
-• *1* — Apartment Complaint
-• *2* — Building Complaint
-
-${DIVIDER}
-Reply *B* to go back, or *0* for main menu`
+*B* to go back, *0* for menu`
 }
 
 /**
@@ -174,11 +153,8 @@ async function handleSubcategorySelection(
       setState(phoneNumber, userState)
       return `📝 *Add Description*
 
-${DIVIDER}
+Please describe the issue briefly.
 
-Please provide a brief description of the issue you're experiencing.
-
-${DIVIDER}
 Reply *B* to go back`
     }
 
@@ -189,11 +165,8 @@ Reply *B* to go back`
   const rangeText = isBuilding ? "1-12" : "1-5"
   return `❓ *Invalid Selection*
 
-${DIVIDER}
+Please choose ${rangeText}.
 
-Please choose a number from ${rangeText}.
-
-${DIVIDER}
 Reply *B* to go back`
 }
 
@@ -239,12 +212,9 @@ async function createComplaint(
       console.error("[Complaint] Creation error:", error)
       return `❌ *Unable to Register Complaint*
 
-${DIVIDER}
-
 We couldn't register your complaint. Please try again.
 
-${DIVIDER}
-Reply *0* for the main menu`
+Reply *0* for menu`
     }
 
     // Clear state
@@ -288,34 +258,21 @@ Reply *0* for the main menu`
     // Fallback confirmation message
     return `✅ *Complaint Registered*
 
-${DIVIDER}
-🎫 *Reference Details*
-${DIVIDER}
+📋 ID: ${complaintData.complaint_id}
+🔧 Type: ${subcategoryText}
+📝 ${finalDescription || "No description"}
+📅 Registered: ${formattedDateTime}
 
-• ID: ${complaintData.complaint_id}
-• Category: ${categoryText}
-• Type: ${subcategoryText}
-• Description: ${finalDescription || "No description provided"}
-• Registered: ${formattedDateTime}
+Your complaint has been forwarded to maintenance. We'll notify you of updates.
 
-${DIVIDER}
-📋 *Next Steps*
-${DIVIDER}
-
-Your complaint has been forwarded to the maintenance team. You'll be notified once there's an update.
-
-${DIVIDER}
-Reply *0* for the main menu`
+Reply *0* for menu`
   } catch (error) {
     console.error("[Complaint] Create error:", error)
     return `❌ *Unable to Create Complaint*
 
-${DIVIDER}
-
 We encountered an issue. Please try again.
 
-${DIVIDER}
-Reply *0* for the main menu`
+Reply *0* for menu`
   }
 }
 
@@ -389,27 +346,17 @@ async function sendNewComplaintNotification(
       // Fallback to plain text message
       if (!templateSent) {
         try {
-          const fallbackMessage = `🆕 *New Complaint Registered*
+          const fallbackMessage = `🆕 *New Complaint*
 
-${DIVIDER}
-📋 *Complaint Details*
-${DIVIDER}
+📋 ID: ${complaint.complaint_id || "N/A"}
+👤 ${profile.name || "Unknown"} (${profile.apartment_number || "N/A"})
+🔧 ${categoryText} - ${subcategoryText}
+📝 ${sanitizedDescription}
+📅 ${formattedDate} at ${formattedTime}
 
-• ID: ${complaint.complaint_id || "N/A"}
-• Resident: ${profile.name || "Unknown"} (${profile.apartment_number || "N/A"})
-• Category: ${categoryText}
-• Type: ${subcategoryText}
-• Description: ${sanitizedDescription}
-• Registered: ${formattedDate} at ${formattedTime}
+🔗 Admin: ${baseUrl}/admin
 
-${DIVIDER}
-
-Please review and address this complaint.
-
-🔗 Admin Panel: ${baseUrl}/admin
-
-${DIVIDER}
-— Manzhil by Scrift`
+— Manzhil`
 
           await sendWhatsAppMessage(recipient, fallbackMessage)
           console.log(

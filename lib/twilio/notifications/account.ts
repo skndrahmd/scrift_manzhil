@@ -13,9 +13,6 @@ import type {
   AccountReactivatedParams,
 } from "../types"
 
-// Divider constant for consistent styling
-const DIVIDER = "───────────────────"
-
 /**
  * Send welcome message to new resident
  * Sent when a new resident profile is created
@@ -33,28 +30,16 @@ export async function sendWelcomeMessage(
 
   const fallbackMessage = `👋 *Welcome to Manzhil!*
 
-${DIVIDER}
-🏠 *Your Account*
-${DIVIDER}
+🏠 ${name || "Resident"} | Apt ${apartmentNumber}
 
-• Name: ${name || "Resident"}
-• Apartment: ${apartmentNumber}
+You'll receive notifications for:
+• 💰 Maintenance invoices
+• 🏛️ Hall bookings
+• 📋 Complaint updates
 
-${DIVIDER}
-📋 *What's Next?*
-${DIVIDER}
+Questions? Contact management.
 
-You will receive notifications for:
-• Maintenance invoices and reminders
-• Hall booking confirmations
-• Complaint status updates
-
-${DIVIDER}
-
-If you have any questions, please contact the management office.
-
-${DIVIDER}
-— Manzhil by Scrift`
+— Manzhil`
 
   return sendWithFallback(phone, templateSid, templateVariables, fallbackMessage)
 }
@@ -77,27 +62,17 @@ export async function sendAccountBlocked(
   }
 
   const dueDetails = totalDue
-    ? `• Overdue: ${overdueMonths}\n• Amount: Rs. ${formatCurrency(totalDue)}`
+    ? `\n📅 Overdue: ${overdueMonths}\n💰 Amount: Rs. ${formatCurrency(totalDue)}`
     : ""
 
   const fallbackMessage = `⚠️ *Account Restricted*
 
-${DIVIDER}
-🔒 *Account Status*
-${DIVIDER}
+🔒 Status: Temporarily Restricted
+📝 Reason: ${reason}${dueDetails}
 
-• Status: Temporarily Restricted
-• Reason: ${reason}
-${dueDetails}
+Hi ${name || "Resident"}, your account is restricted. Contact management to resolve this.
 
-${DIVIDER}
-
-Hi ${name || "Resident"}, your account has been temporarily restricted.
-
-Please contact the management office to resolve this matter.
-
-${DIVIDER}
-— Manzhil by Scrift`
+— Manzhil`
 
   return sendWithFallback(phone, templateSid, templateVariables, fallbackMessage)
 }
@@ -120,22 +95,11 @@ export async function sendAccountReactivated(
 
   const fallbackMessage = `✅ *Account Reactivated*
 
-${DIVIDER}
-🔓 *Account Status*
-${DIVIDER}
+🔓 Status: Active${customNote}
 
-• Status: ✅ Active
-${customNote}
+Hi ${name || "Resident"}, your account is reactivated. You now have full access to all services.
 
-${DIVIDER}
-
-Hi ${name || "Resident"}, your account has been reactivated.
-
-You now have full access to all services.
-
-${DIVIDER}
-Thank you!
-— Manzhil by Scrift`
+— Manzhil`
 
   return sendWithFallback(phone, templateSid, templateVariables, fallbackMessage)
 }

@@ -8,9 +8,6 @@ import { getPakistanISOString } from "@/lib/dateUtils"
 import type { Profile, UserState } from "../types"
 import { setState, clearState } from "../state"
 
-// Divider constant for consistent styling
-const DIVIDER = "───────────────────"
-
 /**
  * Initialize feedback flow
  */
@@ -22,15 +19,9 @@ export function initializeFeedbackFlow(phoneNumber: string): string {
 
   return `💬 *Share Your Feedback*
 
-${DIVIDER}
+We value your input! Share suggestions or thoughts about our services.
 
-We value your input! Please share your suggestions, feedback, or any thoughts about our services or the building.
-
-Your message will be reviewed by our management team.
-
-${DIVIDER}
-
-Type your message below, or *0* for main menu`
+Type your message, or *0* for menu`
 }
 
 /**
@@ -59,12 +50,9 @@ export async function handleFeedbackFlow(
         console.error("[Feedback] Creation error:", error)
         return `❌ *Unable to Save Feedback*
 
-${DIVIDER}
+Please try again.
 
-We encountered an issue while saving your feedback. Please try again in a moment.
-
-${DIVIDER}
-Reply *0* for the main menu`
+Reply *0* for menu`
       }
 
       // Clear state
@@ -72,37 +60,24 @@ Reply *0* for the main menu`
 
       return `✅ *Feedback Received*
 
-${DIVIDER}
+Thank you! Your feedback has been forwarded to management.
 
-Thank you for sharing your thoughts with us. Your feedback has been forwarded to the management team for review.
+💡 For urgent issues, register a complaint from the main menu.
 
-We appreciate your input — it helps us improve our services.
-
-${DIVIDER}
-
-💡 For urgent issues, please register a complaint from the main menu.
-
-${DIVIDER}
-Reply *0* for the main menu`
+Reply *0* for menu`
     }
 
     return `❌ *Something Went Wrong*
 
-${DIVIDER}
+Please try again.
 
-We couldn't process your request. Please try again.
-
-${DIVIDER}
-Reply *0* for the main menu`
+Reply *0* for menu`
   } catch (error) {
     console.error("[Feedback] Flow error:", error)
-    return `❌ *Unable to Process Request*
+    return `❌ *Unable to Process*
 
-${DIVIDER}
+Please try again shortly.
 
-We encountered an issue while processing your feedback. Please try again shortly.
-
-${DIVIDER}
-Reply *0* for the main menu`
+Reply *0* for menu`
   }
 }
