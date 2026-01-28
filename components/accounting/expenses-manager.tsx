@@ -241,14 +241,14 @@ export function ExpensesManager({
                             type="date"
                             value={filters.startDate}
                             onChange={(e) => setFilters({ ...filters, startDate: e.target.value })}
-                            className="flex-1 sm:w-[140px]"
+                            className="flex-1 sm:w-[150px]"
                             placeholder="Start"
                         />
                         <Input
                             type="date"
                             value={filters.endDate}
                             onChange={(e) => setFilters({ ...filters, endDate: e.target.value })}
-                            className="flex-1 sm:w-[140px]"
+                            className="flex-1 sm:w-[150px]"
                             placeholder="End"
                         />
                     </div>

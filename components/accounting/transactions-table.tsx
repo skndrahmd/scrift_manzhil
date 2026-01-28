@@ -152,14 +152,14 @@ export function TransactionsTable({
                         placeholder="Start"
                         value={filters.startDate}
                         onChange={(e) => handleFilterChange("startDate", e.target.value)}
-                        className="flex-1 sm:w-[130px]"
+                        className="flex-1 sm:w-[150px]"
                     />
                     <Input
                         type="date"
                         placeholder="End"
                         value={filters.endDate}
                         onChange={(e) => handleFilterChange("endDate", e.target.value)}
-                        className="flex-1 sm:w-[130px]"
+                        className="flex-1 sm:w-[150px]"
                     />
                 </div>
             </div>

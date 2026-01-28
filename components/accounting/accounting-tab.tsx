@@ -18,6 +18,13 @@ import {
     generateOutstandingDuesPdf,
     generateAnnualSummaryPdf,
 } from "@/lib/accounting-reports"
+import {
+    generateIncomeStatementCsv,
+    generateCollectionReportCsv,
+    generateExpenseReportCsv,
+    generateOutstandingDuesCsv,
+    generateAnnualSummaryCsv,
+} from "@/lib/csv-export"
 import type { FinancialSummary, Transaction, Expense, ExpenseCategory } from "@/lib/supabase"
 
 export function AccountingTab() {
@@ -167,7 +174,7 @@ export function AccountingTab() {
     }
 
     // Report generation handlers
-    const handleGenerateReport = async (reportType: string) => {
+    const handleGenerateReport = async (reportType: string, format: 'pdf' | 'csv') => {
         if (!summary) {
             toast({
                 title: "Error",
@@ -177,29 +184,37 @@ export function AccountingTab() {
             return
         }
 
-        setGeneratingReport(reportType)
+        const reportId = `${reportType}-${format}`
+        setGeneratingReport(reportId)
+
         try {
-            switch (reportType) {
-                case "income":
-                    await generateIncomeStatementPdf(summary, selectedYear)
-                    break
-                case "collection":
-                    await generateCollectionReportPdf(summary, selectedYear)
-                    break
-                case "expense":
-                    const allExpenses = await fetchAllExpenses()
-                    await generateExpenseReportPdf(allExpenses, categories, selectedYear)
-                    break
-                case "outstanding":
-                    await generateOutstandingDuesPdf(summary, selectedYear)
-                    break
-                case "annual":
-                    await generateAnnualSummaryPdf(summary, selectedYear)
-                    break
+            if (format === 'pdf') {
+                switch (reportType) {
+                    case "income": await generateIncomeStatementPdf(summary, selectedYear); break
+                    case "collection": await generateCollectionReportPdf(summary, selectedYear); break
+                    case "expense":
+                        const allExpenses = await fetchAllExpenses()
+                        await generateExpenseReportPdf(allExpenses, categories, selectedYear)
+                        break
+                    case "outstanding": await generateOutstandingDuesPdf(summary, selectedYear); break
+                    case "annual": await generateAnnualSummaryPdf(summary, selectedYear); break
+                }
+            } else {
+                switch (reportType) {
+                    case "income": generateIncomeStatementCsv(summary, selectedYear); break
+                    case "collection": generateCollectionReportCsv(summary, selectedYear); break
+                    case "expense":
+                        const allExpenses = await fetchAllExpenses()
+                        generateExpenseReportCsv(allExpenses, categories, selectedYear)
+                        break
+                    case "outstanding": generateOutstandingDuesCsv(summary, selectedYear); break
+                    case "annual": generateAnnualSummaryCsv(summary, selectedYear); break
+                }
             }
+
             toast({
                 title: "Report Downloaded",
-                description: "Your PDF report has been generated"
+                description: `Your ${format.toUpperCase()} report has been generated`
             })
         } catch (error) {
             console.error("Error generating report:", error)
@@ -299,19 +314,19 @@ export function AccountingTab() {
             {/* Sub-tabs */}
             <Tabs value={activeSubTab} onValueChange={setActiveSubTab}>
                 <TabsList className="grid w-full grid-cols-4">
-                    <TabsTrigger value="dashboard" className="flex items-center gap-2">
+                    <TabsTrigger value="dashboard" className="flex items-center gap-2 whitespace-nowrap px-3 sm:px-4">
                         <BarChart3 className="h-4 w-4" />
                         <span className="hidden sm:inline">Dashboard</span>
                     </TabsTrigger>
-                    <TabsTrigger value="transactions" className="flex items-center gap-2">
-                        <Receipt className="h-6 w-6" />
+                    <TabsTrigger value="transactions" className="flex items-center gap-2 whitespace-nowrap px-3 sm:px-4">
+                        <Receipt className="h-4 w-4" />
                         <span className="hidden sm:inline">Transactions</span>
                     </TabsTrigger>
-                    <TabsTrigger value="expenses" className="flex items-center gap-2">
+                    <TabsTrigger value="expenses" className="flex items-center gap-2 whitespace-nowrap px-3 sm:px-4">
                         <Wallet className="h-4 w-4" />
                         <span className="hidden sm:inline">Expenses</span>
                     </TabsTrigger>
-                    <TabsTrigger value="reports" className="flex items-center gap-2">
+                    <TabsTrigger value="reports" className="flex items-center gap-2 whitespace-nowrap px-3 sm:px-4">
                         <FileText className="h-4 w-4" />
                         <span className="hidden sm:inline">Reports</span>
                     </TabsTrigger>
@@ -379,32 +394,60 @@ export function AccountingTab() {
                             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                                 {reportCards.map((report) => {
                                     const Icon = report.icon
-                                    const isGenerating = generatingReport === report.id
+                                    const isGeneratingPdf = generatingReport === `${report.id}-pdf`
+                                    const isGeneratingCsv = generatingReport === `${report.id}-csv`
+                                    const isGenerating = isGeneratingPdf || isGeneratingCsv
 
                                     return (
                                         <Card
                                             key={report.id}
-                                            className={`cursor-pointer border-0 shadow-lg shadow-manzhil-teal/10 bg-[#0F766E] text-white hover:shadow-xl hover:-translate-y-0.5 transition-all relative overflow-hidden group ${isGenerating ? 'opacity-75' : ''}`}
-                                            onClick={() => !isGenerating && handleGenerateReport(report.id)}
+                                            className="border-0 shadow-lg shadow-manzhil-teal/10 bg-[#0F766E] text-white relative overflow-hidden group"
                                         >
-                                            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                                            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity pointer-events-none">
                                                 <Icon className="w-24 h-24 -mr-8 -mt-8 rotate-12" />
                                             </div>
-                                            <CardContent className="p-5 relative z-10">
+                                            <CardContent className="p-5 relative z-10 flex flex-col h-full justify-between gap-4">
                                                 <div className="flex items-center gap-4">
-                                                    <div className="p-3 bg-white/10 rounded-full backdrop-blur-sm">
-                                                        {isGenerating ? (
-                                                            <Loader2 className="h-6 w-6 text-white animate-spin" />
-                                                        ) : (
-                                                            <Icon className="h-6 w-6 text-white" />
-                                                        )}
+                                                    <div className="p-3 bg-white/10 rounded-full backdrop-blur-sm shrink-0">
+                                                        <Icon className="h-6 w-6 text-white" />
                                                     </div>
                                                     <div>
                                                         <h3 className="font-medium text-lg">{report.title}</h3>
                                                         <p className="text-sm text-white/80">
-                                                            {isGenerating ? "Generating PDF..." : report.description}
+                                                            {report.description}
                                                         </p>
                                                     </div>
+                                                </div>
+
+                                                <div className="flex gap-2 mt-2">
+                                                    <Button
+                                                        variant="secondary"
+                                                        className="flex-1 bg-white/10 hover:bg-white/20 text-white border-0"
+                                                        size="sm"
+                                                        disabled={isGenerating}
+                                                        onClick={() => handleGenerateReport(report.id, 'pdf')}
+                                                    >
+                                                        {isGeneratingPdf ? (
+                                                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                                        ) : (
+                                                            <FileText className="h-4 w-4 mr-2" />
+                                                        )}
+                                                        PDF
+                                                    </Button>
+                                                    <Button
+                                                        variant="secondary"
+                                                        className="flex-1 bg-white/10 hover:bg-white/20 text-white border-0"
+                                                        size="sm"
+                                                        disabled={isGenerating}
+                                                        onClick={() => handleGenerateReport(report.id, 'csv')}
+                                                    >
+                                                        {isGeneratingCsv ? (
+                                                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                                        ) : (
+                                                            <Receipt className="h-4 w-4 mr-2" />
+                                                        )}
+                                                        CSV
+                                                    </Button>
                                                 </div>
                                             </CardContent>
                                         </Card>
@@ -414,7 +457,7 @@ export function AccountingTab() {
 
                             <div className="mt-6 p-4 bg-muted rounded-lg">
                                 <p className="text-sm text-muted-foreground text-center">
-                                    Click on any report to generate and download as PDF for {selectedYear}
+                                    Select report format to download financial data for {selectedYear}
                                 </p>
                             </div>
                         </CardContent>
