@@ -215,143 +215,17 @@ export function ExpensesManager({
         return categories.find(c => c.id === id)
     }
 
-    const ExpenseForm = ({ isEdit = false }: { isEdit?: boolean }) => (
-        <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                    <Label htmlFor="category">Category</Label>
-                    <Select
-                        value={formData.category_id}
-                        onValueChange={(value) => setFormData({ ...formData, category_id: value })}
-                    >
-                        <SelectTrigger>
-                            <SelectValue placeholder="Select category" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            {categories.map((cat) => (
-                                <SelectItem key={cat.id} value={cat.id}>
-                                    {cat.name}
-                                </SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
-                </div>
-                <div className="space-y-2">
-                    <Label htmlFor="amount">Amount (PKR) *</Label>
-                    <Input
-                        id="amount"
-                        type="number"
-                        placeholder="5000"
-                        value={formData.amount}
-                        onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
-                        required
-                    />
-                </div>
-            </div>
-
-            <div className="space-y-2">
-                <Label htmlFor="description">Description *</Label>
-                <Input
-                    id="description"
-                    placeholder="Enter expense description"
-                    value={formData.description}
-                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                    required
-                />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                    <Label htmlFor="expense_date">Date *</Label>
-                    <Input
-                        id="expense_date"
-                        type="date"
-                        value={formData.expense_date}
-                        onChange={(e) => setFormData({ ...formData, expense_date: e.target.value })}
-                        required
-                    />
-                </div>
-                <div className="space-y-2">
-                    <Label htmlFor="vendor_name">Vendor Name</Label>
-                    <Input
-                        id="vendor_name"
-                        placeholder="Enter vendor name"
-                        value={formData.vendor_name}
-                        onChange={(e) => setFormData({ ...formData, vendor_name: e.target.value })}
-                    />
-                </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                    <Label htmlFor="payment_method">Payment Method</Label>
-                    <Select
-                        value={formData.payment_method}
-                        onValueChange={(value) => setFormData({ ...formData, payment_method: value })}
-                    >
-                        <SelectTrigger>
-                            <SelectValue placeholder="Select method" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="cash">Cash</SelectItem>
-                            <SelectItem value="bank_transfer">Bank Transfer</SelectItem>
-                            <SelectItem value="online">Online</SelectItem>
-                            <SelectItem value="cheque">Cheque</SelectItem>
-                            <SelectItem value="other">Other</SelectItem>
-                        </SelectContent>
-                    </Select>
-                </div>
-                <div className="space-y-2 flex items-end gap-4">
-                    <div className="flex items-center space-x-2">
-                        <Checkbox
-                            id="is_recurring"
-                            checked={formData.is_recurring}
-                            onCheckedChange={(checked) => setFormData({ ...formData, is_recurring: !!checked })}
-                        />
-                        <Label htmlFor="is_recurring">Recurring</Label>
-                    </div>
-                    {formData.is_recurring && (
-                        <Select
-                            value={formData.recurrence_interval}
-                            onValueChange={(value) => setFormData({ ...formData, recurrence_interval: value })}
-                        >
-                            <SelectTrigger className="w-[130px]">
-                                <SelectValue placeholder="Interval" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="weekly">Weekly</SelectItem>
-                                <SelectItem value="monthly">Monthly</SelectItem>
-                                <SelectItem value="quarterly">Quarterly</SelectItem>
-                                <SelectItem value="yearly">Yearly</SelectItem>
-                            </SelectContent>
-                        </Select>
-                    )}
-                </div>
-            </div>
-
-            <div className="space-y-2">
-                <Label htmlFor="notes">Notes</Label>
-                <Textarea
-                    id="notes"
-                    placeholder="Additional notes..."
-                    value={formData.notes}
-                    onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                    rows={2}
-                />
-            </div>
-        </div>
-    )
-
     return (
         <div className="space-y-4">
             {/* Header with Add Button */}
-            <div className="flex justify-between items-center">
-                <div className="flex gap-4 items-center">
+            <div className="flex flex-col gap-4">
+                {/* Filters - stack on mobile */}
+                <div className="flex flex-wrap gap-2 sm:gap-4 items-center">
                     <Select
                         value={filters.categoryId}
                         onValueChange={(value) => setFilters({ ...filters, categoryId: value })}
                     >
-                        <SelectTrigger className="w-[180px]">
+                        <SelectTrigger className="w-full sm:w-[180px]">
                             <Filter className="h-4 w-4 mr-2" />
                             <SelectValue placeholder="Category" />
                         </SelectTrigger>
@@ -362,51 +236,175 @@ export function ExpensesManager({
                             ))}
                         </SelectContent>
                     </Select>
-                    <Input
-                        type="date"
-                        value={filters.startDate}
-                        onChange={(e) => setFilters({ ...filters, startDate: e.target.value })}
-                        className="w-[150px]"
-                        placeholder="Start Date"
-                    />
-                    <Input
-                        type="date"
-                        value={filters.endDate}
-                        onChange={(e) => setFilters({ ...filters, endDate: e.target.value })}
-                        className="w-[150px]"
-                        placeholder="End Date"
-                    />
-                </div>
+                    <div className="flex gap-2 flex-1 sm:flex-none">
+                        <Input
+                            type="date"
+                            value={filters.startDate}
+                            onChange={(e) => setFilters({ ...filters, startDate: e.target.value })}
+                            className="flex-1 sm:w-[140px]"
+                            placeholder="Start"
+                        />
+                        <Input
+                            type="date"
+                            value={filters.endDate}
+                            onChange={(e) => setFilters({ ...filters, endDate: e.target.value })}
+                            className="flex-1 sm:w-[140px]"
+                            placeholder="End"
+                        />
+                    </div>
+                    <Dialog open={isAddOpen} onOpenChange={(open) => {
+                        setIsAddOpen(open)
+                        if (!open) resetForm()
+                    }}>
+                        <DialogTrigger asChild>
+                            <Button className="gap-2 bg-gradient-to-r from-manzhil-dark to-manzhil-teal hover:shadow-lg hover:shadow-manzhil-teal/30 transition-all w-full sm:w-auto">
+                                <Plus className="h-4 w-4" />
+                                <span className="sm:inline">Add Expense</span>
+                            </Button>
+                        </DialogTrigger>
+                        <DialogContent className="max-w-lg">
+                            <DialogHeader>
+                                <DialogTitle>Add New Expense</DialogTitle>
+                            </DialogHeader>
+                            <div className="grid gap-4 py-4">
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                        <Label htmlFor="add-category">Category</Label>
+                                        <Select
+                                            value={formData.category_id}
+                                            onValueChange={(value) => setFormData({ ...formData, category_id: value })}
+                                        >
+                                            <SelectTrigger>
+                                                <SelectValue placeholder="Select category" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {categories.map((cat) => (
+                                                    <SelectItem key={cat.id} value={cat.id}>
+                                                        {cat.name}
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="add-amount">Amount (PKR) *</Label>
+                                        <Input
+                                            id="add-amount"
+                                            type="number"
+                                            placeholder="5000"
+                                            value={formData.amount}
+                                            onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
+                                            required
+                                        />
+                                    </div>
+                                </div>
 
-                <Dialog open={isAddOpen} onOpenChange={(open) => {
-                    setIsAddOpen(open)
-                    if (!open) resetForm()
-                }}>
-                    <DialogTrigger asChild>
-                        <Button className="gap-2 bg-gradient-to-r from-manzhil-dark to-manzhil-teal hover:shadow-lg hover:shadow-manzhil-teal/30 transition-all">
-                            <Plus className="h-4 w-4" />
-                            Add Expense
-                        </Button>
-                    </DialogTrigger>
-                    <DialogContent className="max-w-lg">
-                        <DialogHeader>
-                            <DialogTitle>Add New Expense</DialogTitle>
-                        </DialogHeader>
-                        <ExpenseForm />
-                        <DialogFooter>
-                            <Button variant="outline" onClick={() => setIsAddOpen(false)}>
-                                Cancel
-                            </Button>
-                            <Button onClick={() => handleSubmit(false)} disabled={submitting} className="bg-gradient-to-r from-manzhil-dark to-manzhil-teal hover:shadow-lg transition-all">
-                                {submitting ? "Saving..." : "Add Expense"}
-                            </Button>
-                        </DialogFooter>
-                    </DialogContent>
-                </Dialog>
+                                <div className="space-y-2">
+                                    <Label htmlFor="add-description">Description *</Label>
+                                    <Input
+                                        id="add-description"
+                                        placeholder="Enter expense description"
+                                        value={formData.description}
+                                        onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                                        required
+                                    />
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                        <Label htmlFor="add-expense_date">Date *</Label>
+                                        <Input
+                                            id="add-expense_date"
+                                            type="date"
+                                            value={formData.expense_date}
+                                            onChange={(e) => setFormData({ ...formData, expense_date: e.target.value })}
+                                            required
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="add-vendor_name">Vendor Name</Label>
+                                        <Input
+                                            id="add-vendor_name"
+                                            placeholder="Enter vendor name"
+                                            value={formData.vendor_name}
+                                            onChange={(e) => setFormData({ ...formData, vendor_name: e.target.value })}
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                        <Label htmlFor="add-payment_method">Payment Method</Label>
+                                        <Select
+                                            value={formData.payment_method}
+                                            onValueChange={(value) => setFormData({ ...formData, payment_method: value })}
+                                        >
+                                            <SelectTrigger>
+                                                <SelectValue placeholder="Select method" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="cash">Cash</SelectItem>
+                                                <SelectItem value="bank_transfer">Bank Transfer</SelectItem>
+                                                <SelectItem value="online">Online</SelectItem>
+                                                <SelectItem value="cheque">Cheque</SelectItem>
+                                                <SelectItem value="other">Other</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                    <div className="space-y-2 flex items-end gap-4">
+                                        <div className="flex items-center space-x-2">
+                                            <Checkbox
+                                                id="add-is_recurring"
+                                                checked={formData.is_recurring}
+                                                onCheckedChange={(checked) => setFormData({ ...formData, is_recurring: !!checked })}
+                                            />
+                                            <Label htmlFor="add-is_recurring">Recurring</Label>
+                                        </div>
+                                        {formData.is_recurring && (
+                                            <Select
+                                                value={formData.recurrence_interval}
+                                                onValueChange={(value) => setFormData({ ...formData, recurrence_interval: value })}
+                                            >
+                                                <SelectTrigger className="w-[130px]">
+                                                    <SelectValue placeholder="Interval" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="weekly">Weekly</SelectItem>
+                                                    <SelectItem value="monthly">Monthly</SelectItem>
+                                                    <SelectItem value="quarterly">Quarterly</SelectItem>
+                                                    <SelectItem value="yearly">Yearly</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                        )}
+                                    </div>
+                                </div>
+
+                                <div className="space-y-2">
+                                    <Label htmlFor="add-notes">Notes</Label>
+                                    <Textarea
+                                        id="add-notes"
+                                        placeholder="Additional notes..."
+                                        value={formData.notes}
+                                        onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                                        rows={2}
+                                    />
+                                </div>
+                            </div>
+                            <DialogFooter>
+                                <Button variant="outline" onClick={() => setIsAddOpen(false)}>
+                                    Cancel
+                                </Button>
+                                <Button onClick={() => handleSubmit(false)} disabled={submitting} className="bg-gradient-to-r from-manzhil-dark to-manzhil-teal hover:shadow-lg transition-all">
+                                    {submitting ? "Saving..." : "Add Expense"}
+                                </Button>
+                            </DialogFooter>
+                        </DialogContent>
+                    </Dialog>
+                </div>
             </div>
 
-            {/* Expenses Table */}
-            <div className="border border-manzhil-teal/10 rounded-lg overflow-hidden">
+            {/* Desktop Table View - hidden on mobile */}
+            <div className="hidden md:block border border-manzhil-teal/10 rounded-lg overflow-hidden">
                 <Table>
                     <TableHeader>
                         <TableRow className="bg-gradient-to-r from-manzhil-teal/5 to-transparent">
@@ -498,6 +496,98 @@ export function ExpensesManager({
                 </Table>
             </div>
 
+            {/* Mobile Card View */}
+            <div className="md:hidden space-y-3">
+                {loading ? (
+                    [...Array(3)].map((_, i) => (
+                        <div key={i} className="bg-white rounded-lg border border-manzhil-teal/10 p-4 shadow-sm animate-pulse space-y-3">
+                            <div className="flex justify-between">
+                                <div className="h-4 w-24 bg-gray-200 rounded" />
+                                <div className="h-4 w-20 bg-gray-200 rounded" />
+                            </div>
+                            <div className="h-4 w-full bg-gray-200 rounded" />
+                            <div className="flex justify-between pt-2">
+                                <div className="h-4 w-16 bg-gray-200 rounded" />
+                                <div className="h-8 w-20 bg-gray-200 rounded" />
+                            </div>
+                        </div>
+                    ))
+                ) : expenses.length === 0 ? (
+                    <div className="text-center py-8 bg-white rounded-lg border border-dashed border-gray-200">
+                        <p className="text-muted-foreground">No expenses found</p>
+                        <p className="text-sm text-gray-400 mt-1">Tap "Add Expense" to create one</p>
+                    </div>
+                ) : (
+                    expenses.map((expense) => {
+                        const category = getCategoryById(expense.category_id)
+                        return (
+                            <div key={expense.id} className="bg-white rounded-xl border border-manzhil-teal/10 shadow-sm p-4 space-y-3">
+                                {/* Header: Date, Category, Amount */}
+                                <div className="flex justify-between items-start">
+                                    <div>
+                                        <p className="text-xs text-muted-foreground mb-1">{formatDate(expense.expense_date)}</p>
+                                        {category ? (
+                                            <Badge
+                                                variant="outline"
+                                                className="text-xs"
+                                                style={{ borderColor: category.color, color: category.color }}
+                                            >
+                                                {category.name}
+                                            </Badge>
+                                        ) : (
+                                            <Badge variant="outline" className="text-xs">Uncategorized</Badge>
+                                        )}
+                                    </div>
+                                    <div className="text-right">
+                                        <p className="font-semibold text-lg text-amber-600">
+                                            {formatCurrency(expense.amount)}
+                                        </p>
+                                        {expense.is_recurring && (
+                                            <Badge variant="secondary" className="text-xs mt-1">
+                                                {expense.recurrence_interval}
+                                            </Badge>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* Description */}
+                                <div>
+                                    <p className="text-sm text-gray-800 font-medium">{expense.description}</p>
+                                    {expense.vendor_name && (
+                                        <p className="text-xs text-gray-500 mt-1">Vendor: {expense.vendor_name}</p>
+                                    )}
+                                </div>
+
+                                {/* Footer: Payment method and actions */}
+                                <div className="pt-2 border-t border-gray-100 flex justify-between items-center">
+                                    <span className="text-xs text-gray-500 capitalize">
+                                        {expense.payment_method?.replace('_', ' ') || 'Unknown'}
+                                    </span>
+                                    <div className="flex gap-1">
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={() => openEditDialog(expense)}
+                                            className="h-8 w-8 p-0"
+                                        >
+                                            <Pencil className="h-4 w-4" />
+                                        </Button>
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={() => handleDelete(expense.id)}
+                                            className="h-8 w-8 p-0 text-red-600 hover:text-red-700"
+                                        >
+                                            <Trash2 className="h-4 w-4" />
+                                        </Button>
+                                    </div>
+                                </div>
+                            </div>
+                        )
+                    })
+                )}
+            </div>
+
             {/* Pagination */}
             {totalPages > 1 && (
                 <div className="flex items-center justify-between">
@@ -539,7 +629,130 @@ export function ExpensesManager({
                     <DialogHeader>
                         <DialogTitle>Edit Expense</DialogTitle>
                     </DialogHeader>
-                    <ExpenseForm isEdit />
+                    <div className="grid gap-4 py-4">
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="edit-category">Category</Label>
+                                <Select
+                                    value={formData.category_id}
+                                    onValueChange={(value) => setFormData({ ...formData, category_id: value })}
+                                >
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Select category" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {categories.map((cat) => (
+                                            <SelectItem key={cat.id} value={cat.id}>
+                                                {cat.name}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="edit-amount">Amount (PKR) *</Label>
+                                <Input
+                                    id="edit-amount"
+                                    type="number"
+                                    placeholder="5000"
+                                    value={formData.amount}
+                                    onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
+                                    required
+                                />
+                            </div>
+                        </div>
+
+                        <div className="space-y-2">
+                            <Label htmlFor="edit-description">Description *</Label>
+                            <Input
+                                id="edit-description"
+                                placeholder="Enter expense description"
+                                value={formData.description}
+                                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                                required
+                            />
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="edit-expense_date">Date *</Label>
+                                <Input
+                                    id="edit-expense_date"
+                                    type="date"
+                                    value={formData.expense_date}
+                                    onChange={(e) => setFormData({ ...formData, expense_date: e.target.value })}
+                                    required
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="edit-vendor_name">Vendor Name</Label>
+                                <Input
+                                    id="edit-vendor_name"
+                                    placeholder="Enter vendor name"
+                                    value={formData.vendor_name}
+                                    onChange={(e) => setFormData({ ...formData, vendor_name: e.target.value })}
+                                />
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="edit-payment_method">Payment Method</Label>
+                                <Select
+                                    value={formData.payment_method}
+                                    onValueChange={(value) => setFormData({ ...formData, payment_method: value })}
+                                >
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Select method" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="cash">Cash</SelectItem>
+                                        <SelectItem value="bank_transfer">Bank Transfer</SelectItem>
+                                        <SelectItem value="online">Online</SelectItem>
+                                        <SelectItem value="cheque">Cheque</SelectItem>
+                                        <SelectItem value="other">Other</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            <div className="space-y-2 flex items-end gap-4">
+                                <div className="flex items-center space-x-2">
+                                    <Checkbox
+                                        id="edit-is_recurring"
+                                        checked={formData.is_recurring}
+                                        onCheckedChange={(checked) => setFormData({ ...formData, is_recurring: !!checked })}
+                                    />
+                                    <Label htmlFor="edit-is_recurring">Recurring</Label>
+                                </div>
+                                {formData.is_recurring && (
+                                    <Select
+                                        value={formData.recurrence_interval}
+                                        onValueChange={(value) => setFormData({ ...formData, recurrence_interval: value })}
+                                    >
+                                        <SelectTrigger className="w-[130px]">
+                                            <SelectValue placeholder="Interval" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="weekly">Weekly</SelectItem>
+                                            <SelectItem value="monthly">Monthly</SelectItem>
+                                            <SelectItem value="quarterly">Quarterly</SelectItem>
+                                            <SelectItem value="yearly">Yearly</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                )}
+                            </div>
+                        </div>
+
+                        <div className="space-y-2">
+                            <Label htmlFor="edit-notes">Notes</Label>
+                            <Textarea
+                                id="edit-notes"
+                                placeholder="Additional notes..."
+                                value={formData.notes}
+                                onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                                rows={2}
+                            />
+                        </div>
+                    </div>
                     <DialogFooter>
                         <Button variant="outline" onClick={() => setIsEditOpen(false)}>
                             Cancel

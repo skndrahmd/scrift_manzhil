@@ -258,22 +258,22 @@ export function AccountingTab() {
     return (
         <div className="space-y-6">
             {/* Header */}
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
-                    <h2 className="text-2xl font-medium tracking-tight text-manzhil-dark flex items-center gap-2">
-                        <Wallet className="h-6 w-6 text-manzhil-teal" />
+                    <h2 className="text-xl sm:text-2xl font-medium tracking-tight text-manzhil-dark flex items-center gap-2">
+                        <Wallet className="h-5 w-5 sm:h-6 sm:w-6 text-manzhil-teal" />
                         Accounting
                     </h2>
-                    <p className="text-muted-foreground">
+                    <p className="text-sm text-muted-foreground">
                         Track income, expenses, and financial health
                     </p>
                 </div>
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2 sm:gap-4">
                     <Select
                         value={selectedYear.toString()}
                         onValueChange={(value) => setSelectedYear(parseInt(value))}
                     >
-                        <SelectTrigger className="w-[120px]">
+                        <SelectTrigger className="w-[100px] sm:w-[120px]">
                             <SelectValue placeholder="Year" />
                         </SelectTrigger>
                         <SelectContent>
@@ -290,15 +290,15 @@ export function AccountingTab() {
                         disabled={refreshing}
                         className="border-manzhil-teal/30 text-manzhil-dark hover:bg-manzhil-teal/5 transition-colors"
                     >
-                        <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
-                        Refresh
+                        <RefreshCw className={`h-4 w-4 sm:mr-2 ${refreshing ? 'animate-spin' : ''}`} />
+                        <span className="hidden sm:inline">Refresh</span>
                     </Button>
                 </div>
             </div>
 
             {/* Sub-tabs */}
             <Tabs value={activeSubTab} onValueChange={setActiveSubTab}>
-                <TabsList className="grid w-full grid-cols-4 lg:w-[500px]">
+                <TabsList className="grid w-full grid-cols-4">
                     <TabsTrigger value="dashboard" className="flex items-center gap-2">
                         <BarChart3 className="h-4 w-4" />
                         <span className="hidden sm:inline">Dashboard</span>

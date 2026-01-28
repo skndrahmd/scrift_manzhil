@@ -3,7 +3,7 @@
  * Main message processing and routing logic
  */
 
-import type { Profile } from "./types"
+import type { Profile, MediaInfo } from "./types"
 import { getState, setState, clearState } from "./state"
 import { isBackCommand, isMainMenuCommand } from "./utils"
 import {
@@ -32,22 +32,20 @@ import {
   handleVisitorFlow,
 } from "./handlers"
 
-// Divider constant for consistent styling
-const DIVIDER = "───────────────────"
-
 /**
  * Process incoming message and route to appropriate handler
  */
 export async function processMessage(
   message: string,
   profile: Profile,
-  phoneNumber: string
+  phoneNumber: string,
+  mediaInfo?: MediaInfo
 ): Promise<string> {
   try {
     const trimmedMessage = message.trim()
     const userState = getState(phoneNumber)
 
-    console.log("[Webhook] Processing:", { message: trimmedMessage, step: userState.step, type: userState.type })
+    console.log("[Webhook] Processing:", { message: trimmedMessage, step: userState.step, type: userState.type, hasMedia: !!mediaInfo })
 
     // Handle back command
     if (isBackCommand(trimmedMessage)) {
@@ -82,20 +80,17 @@ export async function processMessage(
       case "cancel":
         return await handleCancelFlow(trimmedMessage, profile, phoneNumber, userState)
       case "visitor":
-        return await handleVisitorFlow(trimmedMessage, profile, phoneNumber, userState)
+        return await handleVisitorFlow(trimmedMessage, profile, phoneNumber, userState, mediaInfo)
       default:
         return getMainMenu(profile.name)
     }
   } catch (error) {
     console.error("[Webhook] Process message error:", error)
-    return `❌ *Unable to Process Request*
+    return `❌ *Unable to Process*
 
-${DIVIDER}
+Please try again.
 
-We encountered an issue processing your message. Please try again.
-
-${DIVIDER}
-Reply *0* for the main menu`
+Reply *0* for menu`
   }
 }
 
@@ -143,11 +138,7 @@ async function handleMainMenu(
     default:
       return `❓ *Invalid Selection*
 
-${DIVIDER}
-
-Please reply with a number from 1-10.
-
-${DIVIDER}
+Please reply 1-10.
 
 ${getMainMenu(profile.name)}`
   }
@@ -174,9 +165,7 @@ function handleBackCommand(
         if (userState.complaint?.category === "building") {
           return `🔙 *Going Back*
 
-${DIVIDER}
 🏢 *Building Complaint*
-${DIVIDER}
 
 1. 🛗 Lift/Elevator
 2. 💪 Gym
@@ -191,14 +180,11 @@ ${DIVIDER}
 11. 🪑 Seating Area
 12. 📋 Other
 
-${DIVIDER}
 Reply with number, or *B* to go back`
         }
         return `🔙 *Going Back*
 
-${DIVIDER}
 🏠 *Apartment Complaint*
-${DIVIDER}
 
 1. 🔧 Plumbing
 2. ⚡ Electric
@@ -206,7 +192,6 @@ ${DIVIDER}
 4. 🅿️ My Parking Complaint
 5. 🔧 Other
 
-${DIVIDER}
 Reply with number, or *B* to go back`
       },
     },
@@ -216,42 +201,31 @@ Reply with number, or *B* to go back`
       step: "staff_add_name",
       message: () => `🔙 *Going Back*
 
-${DIVIDER}
+Enter the staff member's full name:
 
-Please enter the staff member's full name:
-
-${DIVIDER}
-Reply *B* to go back, or *0* for main menu`,
+*B* to go back, *0* for menu`,
     },
     staff_add_cnic: {
       step: "staff_add_phone",
       message: () => `🔙 *Going Back*
 
-${DIVIDER}
+Enter the staff member's phone number:
 
-Please enter the staff member's phone number:
-
-${DIVIDER}
-Reply *B* to go back`,
+*B* to go back`,
     },
     staff_add_role_select: {
       step: "staff_add_cnic",
       message: () => `🔙 *Going Back*
 
-${DIVIDER}
+Enter the CNIC number:
 
-Please enter the CNIC number:
-
-${DIVIDER}
-Reply *B* to go back`,
+*B* to go back`,
     },
     staff_add_role_custom: {
       step: "staff_add_role_select",
       message: () => `🔙 *Going Back*
 
-${DIVIDER}
 👔 *Select Staff Role*
-${DIVIDER}
 
 1. 🚗 Driver
 2. 👨‍🍳 Cook
@@ -262,8 +236,7 @@ ${DIVIDER}
 7. 🔒 Security Guard
 8. 📋 Other (Specify)
 
-${DIVIDER}
-Reply with number (1-8), or *B* to go back`,
+Reply 1-8, or *B* to go back`,
     },
 
     // Booking flow
@@ -271,12 +244,9 @@ Reply with number (1-8), or *B* to go back`,
       step: "booking_date",
       message: () => `🔙 *Going Back*
 
-${DIVIDER}
+Enter the date you'd like to book:
 
-Please enter the date you'd like to book the hall:
-
-${DIVIDER}
-Reply *B* to go back, or *0* for main menu`,
+*B* to go back, *0* for menu`,
     },
 
     // Hall flow
@@ -284,28 +254,34 @@ Reply *B* to go back, or *0* for main menu`,
       step: "hall_menu",
       message: () => `🔙 *Going Back*
 
-${DIVIDER}
-🏛️ *Community Hall Management*
-${DIVIDER}
+🏛️ *Community Hall*
 
 1. 📅 New Booking
 2. ❌ Cancel Booking
 3. ✏️ Edit Booking
 4. 📋 View My Bookings
 
-${DIVIDER}
-Reply with your choice, or *0* for main menu`,
+Reply 1-4, or *0* for menu`,
     },
     hall_new_booking_policies: {
       step: "hall_new_booking_date",
       message: () => `🔙 *Going Back*
 
-${DIVIDER}
+Enter the date you'd like to book:
 
-Please enter the date you'd like to book:
+*B* to go back, *0* for menu`,
+    },
 
-${DIVIDER}
-Reply *B* to go back, or *0* for main menu`,
+    // Visitor flow
+    visitor_date: {
+      step: "visitor_cnic_image",
+      message: () => `🔙 *Going Back*
+
+🎫 *Visitor Entry Pass*
+
+Send a *photo of visitor's CNIC* 📸
+
+*B* to go back, *0* for menu`,
     },
   }
 

@@ -34,9 +34,9 @@ import {
     Bell,
     Eye,
     Ticket,
-    Filter,
     X,
     Loader2,
+    ImageIcon,
 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import type { VisitorPass } from "@/lib/supabase"
@@ -52,6 +52,8 @@ export function VisitorsTable() {
     const [isViewModalOpen, setIsViewModalOpen] = useState(false)
     const [isNotifyModalOpen, setIsNotifyModalOpen] = useState(false)
     const [isNotifying, setIsNotifying] = useState(false)
+    const [isImageModalOpen, setIsImageModalOpen] = useState(false)
+    const [selectedImageUrl, setSelectedImageUrl] = useState<string | null>(null)
 
     // Format date for display
     const formatDate = (dateStr: string) => {
@@ -79,14 +81,14 @@ export function VisitorsTable() {
     // Filter visitors
     const today = new Date().toISOString().split('T')[0]
     const filteredVisitors = visitors.filter(visitor => {
-        // Search filter
+        // Search filter - handle null values
         const searchLower = searchQuery.toLowerCase()
         const matchesSearch =
-            visitor.visitor_name.toLowerCase().includes(searchLower) ||
-            visitor.visitor_cnic.includes(searchQuery) ||
-            visitor.visitor_phone.includes(searchQuery) ||
-            visitor.profiles?.name?.toLowerCase().includes(searchLower) ||
-            visitor.profiles?.apartment_number?.toLowerCase().includes(searchLower)
+            (visitor.visitor_name?.toLowerCase().includes(searchLower) ?? false) ||
+            (visitor.visitor_cnic?.includes(searchQuery) ?? false) ||
+            (visitor.visitor_phone?.includes(searchQuery) ?? false) ||
+            (visitor.profiles?.name?.toLowerCase().includes(searchLower) ?? false) ||
+            (visitor.profiles?.apartment_number?.toLowerCase().includes(searchLower) ?? false)
 
         // Status filter
         const matchesStatus = statusFilter === "all" || visitor.status === statusFilter
@@ -114,6 +116,12 @@ export function VisitorsTable() {
     const openNotifyModal = (visitor: VisitorPass) => {
         setSelectedVisitor(visitor)
         setIsNotifyModalOpen(true)
+    }
+
+    // Open image modal
+    const openImageModal = (imageUrl: string) => {
+        setSelectedImageUrl(imageUrl)
+        setIsImageModalOpen(true)
     }
 
     // Handle notify arrival
@@ -249,9 +257,7 @@ export function VisitorsTable() {
                         <Table>
                             <TableHeader>
                                 <TableRow className="bg-manzhil-teal/5 hover:bg-manzhil-teal/5">
-                                    <TableHead>Visitor</TableHead>
-                                    <TableHead>CNIC</TableHead>
-                                    <TableHead>Phone</TableHead>
+                                    <TableHead>CNIC Image</TableHead>
                                     <TableHead>Visit Date</TableHead>
                                     <TableHead>Resident</TableHead>
                                     <TableHead>Status</TableHead>
@@ -261,9 +267,30 @@ export function VisitorsTable() {
                             <TableBody>
                                 {filteredVisitors.map((visitor) => (
                                     <TableRow key={visitor.id} className="hover:bg-manzhil-teal/5">
-                                        <TableCell className="font-medium">{visitor.visitor_name}</TableCell>
-                                        <TableCell className="text-gray-600 font-mono text-sm">{visitor.visitor_cnic}</TableCell>
-                                        <TableCell className="text-gray-600">{visitor.visitor_phone}</TableCell>
+                                        <TableCell>
+                                            {visitor.cnic_image_url ? (
+                                                <button
+                                                    onClick={() => openImageModal(visitor.cnic_image_url!)}
+                                                    className="relative group"
+                                                >
+                                                    <img
+                                                        src={visitor.cnic_image_url}
+                                                        alt="CNIC"
+                                                        className="w-16 h-10 object-cover rounded border border-gray-200 group-hover:border-manzhil-teal transition-colors"
+                                                    />
+                                                    <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 rounded flex items-center justify-center transition-opacity">
+                                                        <Eye className="h-4 w-4 text-white" />
+                                                    </div>
+                                                </button>
+                                            ) : visitor.visitor_cnic ? (
+                                                <span className="text-gray-600 font-mono text-sm">{visitor.visitor_cnic}</span>
+                                            ) : (
+                                                <span className="text-gray-400 flex items-center gap-1">
+                                                    <ImageIcon className="h-4 w-4" />
+                                                    No image
+                                                </span>
+                                            )}
+                                        </TableCell>
                                         <TableCell className="text-gray-600">{formatDate(visitor.visit_date)}</TableCell>
                                         <TableCell>
                                             <div className="flex flex-col">
@@ -319,26 +346,52 @@ export function VisitorsTable() {
                     </DialogHeader>
                     {selectedVisitor && (
                         <div className="space-y-6 py-4">
-                            {/* Visitor Info */}
+                            {/* CNIC Image */}
+                            {selectedVisitor.cnic_image_url && (
+                                <div className="space-y-3">
+                                    <h4 className="text-sm font-medium text-gray-500 uppercase tracking-wide">CNIC Image</h4>
+                                    <button
+                                        onClick={() => openImageModal(selectedVisitor.cnic_image_url!)}
+                                        className="relative group w-full"
+                                    >
+                                        <img
+                                            src={selectedVisitor.cnic_image_url}
+                                            alt="CNIC"
+                                            className="w-full max-h-48 object-contain rounded-lg border border-gray-200 group-hover:border-manzhil-teal transition-colors"
+                                        />
+                                        <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 rounded-lg flex items-center justify-center transition-opacity">
+                                            <span className="text-white text-sm font-medium">Click to enlarge</span>
+                                        </div>
+                                    </button>
+                                </div>
+                            )}
+
+                            {/* Visit Info */}
                             <div className="space-y-3">
-                                <h4 className="text-sm font-medium text-gray-500 uppercase tracking-wide">Visitor Information</h4>
+                                <h4 className="text-sm font-medium text-gray-500 uppercase tracking-wide">Visit Information</h4>
                                 <div className="grid grid-cols-2 gap-4">
                                     <div>
-                                        <p className="text-xs text-gray-500">Name</p>
-                                        <p className="font-medium text-manzhil-dark">{selectedVisitor.visitor_name}</p>
-                                    </div>
-                                    <div>
-                                        <p className="text-xs text-gray-500">CNIC</p>
-                                        <p className="font-mono text-sm">{selectedVisitor.visitor_cnic}</p>
-                                    </div>
-                                    <div>
-                                        <p className="text-xs text-gray-500">Phone</p>
-                                        <p className="text-manzhil-dark">{selectedVisitor.visitor_phone}</p>
-                                    </div>
-                                    <div>
                                         <p className="text-xs text-gray-500">Visit Date</p>
-                                        <p className="text-manzhil-dark">{formatDate(selectedVisitor.visit_date)}</p>
+                                        <p className="font-medium text-manzhil-dark">{formatDate(selectedVisitor.visit_date)}</p>
                                     </div>
+                                    {selectedVisitor.visitor_name && (
+                                        <div>
+                                            <p className="text-xs text-gray-500">Visitor Name</p>
+                                            <p className="font-medium">{selectedVisitor.visitor_name}</p>
+                                        </div>
+                                    )}
+                                    {selectedVisitor.visitor_cnic && (
+                                        <div>
+                                            <p className="text-xs text-gray-500">CNIC</p>
+                                            <p className="font-mono text-sm">{selectedVisitor.visitor_cnic}</p>
+                                        </div>
+                                    )}
+                                    {selectedVisitor.visitor_phone && (
+                                        <div>
+                                            <p className="text-xs text-gray-500">Phone</p>
+                                            <p className="text-manzhil-dark">{selectedVisitor.visitor_phone}</p>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
 
@@ -378,6 +431,22 @@ export function VisitorsTable() {
                 </DialogContent>
             </Dialog>
 
+            {/* Image Fullscreen Modal */}
+            <Dialog open={isImageModalOpen} onOpenChange={setIsImageModalOpen}>
+                <DialogContent className="sm:max-w-[90vw] sm:max-h-[90vh] p-2">
+                    <DialogHeader className="sr-only">
+                        <DialogTitle>CNIC Image</DialogTitle>
+                    </DialogHeader>
+                    {selectedImageUrl && (
+                        <img
+                            src={selectedImageUrl}
+                            alt="CNIC Full Size"
+                            className="w-full h-auto max-h-[85vh] object-contain rounded-lg"
+                        />
+                    )}
+                </DialogContent>
+            </Dialog>
+
             {/* Notify Arrival Modal */}
             <Dialog open={isNotifyModalOpen} onOpenChange={setIsNotifyModalOpen}>
                 <DialogContent className="sm:max-w-[400px]">
@@ -393,8 +462,15 @@ export function VisitorsTable() {
                     {selectedVisitor && (
                         <div className="py-4 space-y-4">
                             <div className="bg-manzhil-teal/5 rounded-lg p-4 space-y-2">
+                                {selectedVisitor.cnic_image_url && (
+                                    <img
+                                        src={selectedVisitor.cnic_image_url}
+                                        alt="CNIC"
+                                        className="w-full max-h-32 object-contain rounded mb-3"
+                                    />
+                                )}
                                 <p className="text-sm text-gray-600">
-                                    <span className="font-medium text-manzhil-dark">{selectedVisitor.visitor_name}</span> has arrived to visit
+                                    Visitor has arrived to visit
                                 </p>
                                 <p className="text-sm text-gray-600">
                                     Resident: <span className="font-medium text-manzhil-dark">{selectedVisitor.profiles?.name}</span>

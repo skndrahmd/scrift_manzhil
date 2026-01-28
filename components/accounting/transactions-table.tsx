@@ -117,11 +117,11 @@ export function TransactionsTable({
     return (
         <div className="space-y-4">
             {/* Filters */}
-            <div className="flex flex-wrap gap-4 items-center">
-                <div className="relative flex-1 min-w-[200px]">
+            <div className="flex flex-col sm:flex-row flex-wrap gap-3 sm:gap-4 items-stretch sm:items-center">
+                <div className="relative flex-1 min-w-0 sm:min-w-[200px]">
                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
-                        placeholder="Search by description or resident..."
+                        placeholder="Search transactions..."
                         value={filters.search}
                         onChange={(e) => handleFilterChange("search", e.target.value)}
                         className="pl-10"
@@ -132,35 +132,36 @@ export function TransactionsTable({
                     value={filters.type}
                     onValueChange={(value) => handleFilterChange("type", value)}
                 >
-                    <SelectTrigger className="w-[180px]">
+                    <SelectTrigger className="w-full sm:w-[160px]">
                         <Filter className="h-4 w-4 mr-2" />
                         <SelectValue placeholder="Type" />
                     </SelectTrigger>
                     <SelectContent>
                         <SelectItem value="all">All Types</SelectItem>
-                        <SelectItem value="booking_income">Booking Income</SelectItem>
-                        <SelectItem value="maintenance_income">Maintenance Income</SelectItem>
+                        <SelectItem value="booking_income">Booking</SelectItem>
+                        <SelectItem value="maintenance_income">Maintenance</SelectItem>
                         <SelectItem value="expense">Expense</SelectItem>
                         <SelectItem value="refund">Refund</SelectItem>
-                        <SelectItem value="other_income">Other Income</SelectItem>
+                        <SelectItem value="other_income">Other</SelectItem>
                     </SelectContent>
                 </Select>
 
-                <Input
-                    type="date"
-                    placeholder="Start Date"
-                    value={filters.startDate}
-                    onChange={(e) => handleFilterChange("startDate", e.target.value)}
-                    className="w-[150px]"
-                />
-
-                <Input
-                    type="date"
-                    placeholder="End Date"
-                    value={filters.endDate}
-                    onChange={(e) => handleFilterChange("endDate", e.target.value)}
-                    className="w-[150px]"
-                />
+                <div className="flex gap-2 flex-1 sm:flex-none">
+                    <Input
+                        type="date"
+                        placeholder="Start"
+                        value={filters.startDate}
+                        onChange={(e) => handleFilterChange("startDate", e.target.value)}
+                        className="flex-1 sm:w-[130px]"
+                    />
+                    <Input
+                        type="date"
+                        placeholder="End"
+                        value={filters.endDate}
+                        onChange={(e) => handleFilterChange("endDate", e.target.value)}
+                        className="flex-1 sm:w-[130px]"
+                    />
+                </div>
             </div>
 
             {/* Desktop Table View */}

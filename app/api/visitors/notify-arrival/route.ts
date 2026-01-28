@@ -67,9 +67,7 @@ export async function POST(request: Request) {
                 phone: visitorPass.profiles.phone_number,
                 residentName: visitorPass.profiles.name || "Resident",
                 apartmentNumber: visitorPass.profiles.apartment_number || "",
-                visitorName: visitorPass.visitor_name,
-                visitorCnic: visitorPass.visitor_cnic,
-                visitorPhone: visitorPass.visitor_phone,
+                cnicImageUrl: visitorPass.cnic_image_url,
                 visitDate: visitorPass.visit_date,
             })
 

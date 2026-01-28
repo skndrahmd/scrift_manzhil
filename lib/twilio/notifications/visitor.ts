@@ -12,9 +12,7 @@ export interface VisitorArrivalParams {
     phone: string
     residentName: string
     apartmentNumber: string
-    visitorName: string
-    visitorCnic: string
-    visitorPhone: string
+    cnicImageUrl: string | null
     visitDate: string
 }
 
@@ -29,9 +27,7 @@ export async function sendVisitorArrivalNotification(
         phone,
         residentName,
         apartmentNumber,
-        visitorName,
-        visitorCnic,
-        visitorPhone,
+        cnicImageUrl,
         visitDate
     } = params
 
@@ -40,18 +36,19 @@ export async function sendVisitorArrivalNotification(
     const templateSid = getTemplateSid("visitor_arrival")
     const templateVariables = {
         "1": residentName || "Resident",
-        "2": visitorName,
-        "3": visitorCnic,
-        "4": visitorPhone,
+        "2": apartmentNumber || "N/A",
+        "3": formattedDate,
     }
 
     const fallbackMessage = `🔔 *Visitor Arrived!*
 
-👤 ${visitorName}
-📞 ${visitorPhone}
 📅 ${formattedDate}
 
-Hi ${residentName || "Resident"} (${apartmentNumber}), your visitor is at the entrance. Please receive your guest.
+Hi ${residentName || "Resident"} (${apartmentNumber}), your visitor is at the entrance.
+
+${cnicImageUrl ? `🪪 CNIC: ${cnicImageUrl}` : ""}
+
+Please receive your guest.
 
 — Manzhil`
 

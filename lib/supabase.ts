@@ -138,9 +138,10 @@ export type Staff = {
 export type VisitorPass = {
   id: string
   resident_id: string
-  visitor_name: string
-  visitor_cnic: string
-  visitor_phone: string
+  visitor_name: string | null
+  visitor_cnic: string | null
+  visitor_phone: string | null
+  cnic_image_url: string | null
   visit_date: string
   status: "pending" | "arrived" | "cancelled"
   notified_at: string | null

@@ -54,6 +54,15 @@ export interface VisitorData {
   cnic?: string
   phone?: string
   date?: string
+  cnic_image_url?: string
+}
+
+/**
+ * Media info from WhatsApp/Twilio
+ */
+export interface MediaInfo {
+  url: string
+  contentType: string
 }
 
 /**

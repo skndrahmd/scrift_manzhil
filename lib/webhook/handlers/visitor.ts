@@ -1,27 +1,27 @@
 /**
  * Visitor Entry Pass Flow Handler
- * Handles visitor registration conversation flow
+ * Simplified 2-step flow: Upload CNIC image → Enter date → Auto-save
  */
 
-import { supabase } from "@/lib/supabase"
+import { supabaseAdmin } from "@/lib/supabase"
 import { isDateFormat, parseDate } from "@/lib/dateUtils"
-import type { Profile, UserState, VisitorData } from "../types"
+import type { Profile, UserState, VisitorData, MediaInfo } from "../types"
 import { setState, clearState } from "../state"
-import { formatDate, validateCNIC, validatePhoneNumber, validateName } from "../utils"
+import { formatDate } from "../utils"
 
 /**
  * Initialize visitor registration flow
  */
 export function initializeVisitorFlow(phoneNumber: string): string {
     setState(phoneNumber, {
-        step: "visitor_name",
+        step: "visitor_cnic_image",
         type: "visitor",
         visitor: {},
     })
 
     return `🎫 *Visitor Entry Pass*
 
-Enter your visitor's *full name*.
+Send a *photo of visitor's CNIC* 📸
 
 *B* to go back, *0* for menu`
 }
@@ -33,26 +33,18 @@ export async function handleVisitorFlow(
     message: string,
     profile: Profile,
     phoneNumber: string,
-    userState: UserState
+    userState: UserState,
+    mediaInfo?: MediaInfo
 ): Promise<string> {
     const step = userState.step
     const visitor = userState.visitor || {}
 
     switch (step) {
-        case "visitor_name":
-            return handleNameInput(message, phoneNumber, visitor)
-
-        case "visitor_cnic":
-            return handleCNICInput(message, phoneNumber, visitor)
-
-        case "visitor_phone":
-            return handlePhoneInput(message, phoneNumber, visitor)
+        case "visitor_cnic_image":
+            return await handleCNICImageUpload(message, phoneNumber, visitor, profile, mediaInfo)
 
         case "visitor_date":
-            return handleDateInput(message, phoneNumber, visitor)
-
-        case "visitor_confirm":
-            return await handleConfirmation(message, profile, phoneNumber, visitor)
+            return await handleDateInputAndSave(message, profile, phoneNumber, visitor)
 
         default:
             return initializeVisitorFlow(phoneNumber)
@@ -60,126 +52,113 @@ export async function handleVisitorFlow(
 }
 
 /**
- * Handle visitor name input
+ * Handle CNIC image upload
  */
-function handleNameInput(
+async function handleCNICImageUpload(
     message: string,
     phoneNumber: string,
-    visitor: VisitorData
-): string {
-    const validation = validateName(message)
+    visitor: VisitorData,
+    profile: Profile,
+    mediaInfo?: MediaInfo
+): Promise<string> {
+    // Check if we received an image
+    if (!mediaInfo || !mediaInfo.url) {
+        return `📸 *Please send an image*
 
-    if (!validation.valid) {
-        return `❌ *Invalid Name*
-
-${validation.error}
-
-Enter a valid full name (letters and spaces only).
+Send a photo of the visitor's CNIC.
 
 *B* to go back, *0* for menu`
     }
 
-    setState(phoneNumber, {
-        step: "visitor_cnic",
-        type: "visitor",
-        visitor: { ...visitor, name: validation.normalized },
-    })
+    try {
+        console.log("[Visitor] Downloading image from Twilio:", mediaInfo.url)
 
-    return `✅ *Name Recorded*
+        // Download image from Twilio (requires auth)
+        const twilioAccountSid = process.env.TWILIO_ACCOUNT_SID
+        const twilioAuthToken = process.env.TWILIO_AUTH_TOKEN
 
-👤 ${validation.normalized}
+        const response = await fetch(mediaInfo.url, {
+            headers: {
+                Authorization: `Basic ${Buffer.from(`${twilioAccountSid}:${twilioAuthToken}`).toString("base64")}`,
+            },
+        })
 
-Enter visitor's *CNIC* (13 digits).
-Example: 4210112345678
+        if (!response.ok) {
+            console.error("[Visitor] Failed to download image:", response.status)
+            return `❌ *Upload Failed*
 
-*B* to go back, *0* for menu`
-}
-
-/**
- * Handle visitor CNIC input
- */
-function handleCNICInput(
-    message: string,
-    phoneNumber: string,
-    visitor: VisitorData
-): string {
-    const validation = validateCNIC(message)
-
-    if (!validation.valid) {
-        return `❌ *Invalid CNIC*
-
-${validation.error}
-
-Enter 13-digit CNIC.
-Example: 4210112345678
+Please try sending the image again.
 
 *B* to go back, *0* for menu`
-    }
+        }
 
-    setState(phoneNumber, {
-        step: "visitor_phone",
-        type: "visitor",
-        visitor: { ...visitor, cnic: validation.normalized },
-    })
+        const imageBuffer = await response.arrayBuffer()
+        const buffer = Buffer.from(imageBuffer)
 
-    return `✅ *CNIC Recorded*
+        // Generate unique filename
+        const timestamp = Date.now()
+        const extension = mediaInfo.contentType.split("/")[1] || "jpg"
+        const fileName = `${profile.id}/${timestamp}.${extension}`
 
-👤 ${visitor.name}
-🪪 ${validation.normalized}
+        console.log("[Visitor] Uploading to Supabase:", fileName)
 
-Enter visitor's *phone number*.
-Format: 03XXXXXXXXX
+        // Upload to Supabase Storage
+        const { error: uploadError } = await supabaseAdmin.storage
+            .from("visitor-cnics")
+            .upload(fileName, buffer, {
+                contentType: mediaInfo.contentType,
+                upsert: false,
+            })
 
-*B* to go back, *0* for menu`
-}
+        if (uploadError) {
+            console.error("[Visitor] Storage error:", uploadError)
+            return `❌ *Upload Failed*
 
-/**
- * Handle visitor phone input
- */
-function handlePhoneInput(
-    message: string,
-    phoneNumber: string,
-    visitor: VisitorData
-): string {
-    const validation = validatePhoneNumber(message)
-
-    if (!validation.valid) {
-        return `❌ *Invalid Phone*
-
-${validation.error}
-
-Enter valid phone number.
-Example: 03001234567
+Please try sending the image again.
 
 *B* to go back, *0* for menu`
-    }
+        }
 
-    setState(phoneNumber, {
-        step: "visitor_date",
-        type: "visitor",
-        visitor: { ...visitor, phone: validation.normalized },
-    })
+        // Get public URL
+        const { data: urlData } = supabaseAdmin.storage
+            .from("visitor-cnics")
+            .getPublicUrl(fileName)
 
-    return `✅ *Phone Recorded*
+        const imageUrl = urlData.publicUrl
+        console.log("[Visitor] Image uploaded:", imageUrl)
 
-👤 ${visitor.name}
-🪪 ${visitor.cnic}
-📱 ${validation.normalized}
+        // Save URL to state and move to date step
+        setState(phoneNumber, {
+            step: "visitor_date",
+            type: "visitor",
+            visitor: { ...visitor, cnic_image_url: imageUrl },
+        })
+
+        return `✅ *CNIC Image Saved*
 
 Enter *date of visit*.
 Formats: DD-MM-YYYY, "tomorrow", "next Monday"
 
 *B* to go back, *0* for menu`
+    } catch (error) {
+        console.error("[Visitor] Image upload error:", error)
+        return `❌ *Upload Failed*
+
+Please try sending the image again.
+
+*B* to go back, *0* for menu`
+    }
 }
 
 /**
- * Handle visit date input
+ * Handle date input and auto-save
  */
-function handleDateInput(
+async function handleDateInputAndSave(
     message: string,
+    profile: Profile,
     phoneNumber: string,
     visitor: VisitorData
-): string {
+): Promise<string> {
     if (!isDateFormat(message)) {
         return `❌ *Invalid Date*
 
@@ -222,72 +201,19 @@ Visitor passes can only be registered up to 30 days in advance.
 *B* to go back, *0* for menu`
     }
 
-    const dateStr = parsedDateStr
-    const formattedDate = formatDate(dateStr)
-
-    setState(phoneNumber, {
-        step: "visitor_confirm",
-        type: "visitor",
-        visitor: { ...visitor, date: dateStr },
-    })
-
-    return `✅ *Date Recorded*
-
-📋 *Visitor Entry Pass*
-
-👤 ${visitor.name}
-🪪 ${visitor.cnic}
-📱 ${visitor.phone}
-📅 ${formattedDate}
-
-Confirm registration?
-
-*1.* ✅ Confirm
-*2.* ❌ Cancel
-
-*B* to go back, *0* for menu`
-}
-
-/**
- * Handle confirmation
- */
-async function handleConfirmation(
-    message: string,
-    profile: Profile,
-    phoneNumber: string,
-    visitor: VisitorData
-): Promise<string> {
-    const choice = message.trim()
-
-    if (choice === "2") {
-        clearState(phoneNumber)
-        return `❌ *Registration Cancelled*
-
-Visitor entry pass cancelled.
-
-Reply *0* for menu`
-    }
-
-    if (choice !== "1") {
-        return `❓ *Invalid Choice*
-
-*1.* ✅ Confirm
-*2.* ❌ Cancel
-
-*B* to go back, *0* for menu`
-    }
-
     try {
-        // Save to database
-        const { data, error } = await supabase
+        // Auto-save to database
+        const { data, error } = await supabaseAdmin
             .from("visitor_passes")
             .insert({
                 resident_id: profile.id,
-                visitor_name: visitor.name,
-                visitor_cnic: visitor.cnic,
-                visitor_phone: visitor.phone,
-                visit_date: visitor.date,
+                cnic_image_url: visitor.cnic_image_url,
+                visit_date: parsedDateStr,
                 status: "pending",
+                // These fields are now optional
+                visitor_name: null,
+                visitor_cnic: null,
+                visitor_phone: null,
             })
             .select()
             .single()
@@ -302,16 +228,14 @@ Reply *0* for menu`
         }
 
         clearState(phoneNumber)
-        const formattedDate = formatDate(visitor.date || "")
+        const formattedDate = formatDate(parsedDateStr)
 
-        return `✅ *Visitor Pass Registered!*
+        return `✅ *Visitor Pass Created!*
 
-👤 ${visitor.name}
-🪪 ${visitor.cnic}
-📱 ${visitor.phone}
-📅 ${formattedDate}
+📸 CNIC: Saved
+📅 Visit: ${formattedDate}
 
-Security will be notified. You'll get a message when your visitor arrives.
+Security has been notified. You'll receive a message when your visitor arrives.
 
 Reply *0* for menu`
     } catch (error) {
@@ -319,7 +243,7 @@ Reply *0* for menu`
         clearState(phoneNumber)
         return `❌ *Registration Failed*
 
-An unexpected error occurred. Try again later.
+An unexpected error occurred.
 
 Reply *0* for menu`
     }

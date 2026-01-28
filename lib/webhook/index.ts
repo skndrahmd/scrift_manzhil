@@ -94,6 +94,8 @@ export type {
   ComplaintData,
   BookingData,
   StaffData,
+  VisitorData,
+  MediaInfo,
   UserState,
   TimeSlot,
   Profile,
