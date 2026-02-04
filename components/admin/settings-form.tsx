@@ -8,8 +8,10 @@ import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
-import { Settings, Save } from "lucide-react"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Settings, Save, Users, Calendar } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
+import { StaffManagement } from "./staff-management"
 
 const WEEKDAYS = [
     { label: "Sunday", value: 0 },
@@ -22,7 +24,7 @@ const WEEKDAYS = [
 ]
 
 export function SettingsForm() {
-    const { settings, fetchSettings } = useAdmin()
+    const { settings, fetchSettings, userRole } = useAdmin()
     const { toast } = useToast()
 
     const [workingDays, setWorkingDays] = useState<number[]>(settings?.working_days || [1, 2, 3, 4, 5])
@@ -59,17 +61,81 @@ export function SettingsForm() {
         setSaving(false)
     }
 
+    // Check if user is super admin - only super admins can see staff management
+    const isSuperAdmin = userRole === "super_admin"
+
     return (
-        <div className="space-y-6 max-w-2xl">
+        <div className="space-y-6">
             {/* Header */}
             <div>
                 <h1 className="text-2xl font-medium text-manzhil-dark flex items-center gap-2">
                     <Settings className="h-6 w-6 text-manzhil-teal" />
-                    Booking Settings
+                    Settings
                 </h1>
-                <p className="text-gray-500 text-sm mt-1">Configure community hall booking options</p>
+                <p className="text-gray-500 text-sm mt-1">Configure system settings and manage staff</p>
             </div>
 
+            {isSuperAdmin ? (
+                <Tabs defaultValue="booking" className="w-full">
+                    <TabsList className="grid w-full max-w-md grid-cols-2">
+                        <TabsTrigger value="booking" className="flex items-center gap-2">
+                            <Calendar className="h-4 w-4" />
+                            Booking Settings
+                        </TabsTrigger>
+                        <TabsTrigger value="staff" className="flex items-center gap-2">
+                            <Users className="h-4 w-4" />
+                            Staff Management
+                        </TabsTrigger>
+                    </TabsList>
+
+                    <TabsContent value="booking" className="mt-6">
+                        <BookingSettingsContent
+                            workingDays={workingDays}
+                            toggleDay={toggleDay}
+                            bookingCharges={bookingCharges}
+                            setBookingCharges={setBookingCharges}
+                            saveSettings={saveSettings}
+                            saving={saving}
+                        />
+                    </TabsContent>
+
+                    <TabsContent value="staff" className="mt-6">
+                        <StaffManagement />
+                    </TabsContent>
+                </Tabs>
+            ) : (
+                // Non-super admin users only see booking settings (if they have settings access at all)
+                <BookingSettingsContent
+                    workingDays={workingDays}
+                    toggleDay={toggleDay}
+                    bookingCharges={bookingCharges}
+                    setBookingCharges={setBookingCharges}
+                    saveSettings={saveSettings}
+                    saving={saving}
+                />
+            )}
+        </div>
+    )
+}
+
+// Extracted booking settings content to avoid duplication
+function BookingSettingsContent({
+    workingDays,
+    toggleDay,
+    bookingCharges,
+    setBookingCharges,
+    saveSettings,
+    saving,
+}: {
+    workingDays: number[]
+    toggleDay: (day: number) => void
+    bookingCharges: number
+    setBookingCharges: (value: number) => void
+    saveSettings: () => void
+    saving: boolean
+}) {
+    return (
+        <div className="space-y-6 max-w-2xl">
             <Card className="border-0 shadow-lg shadow-manzhil-teal/5">
                 <CardHeader>
                     <CardTitle className="text-lg">Working Days</CardTitle>

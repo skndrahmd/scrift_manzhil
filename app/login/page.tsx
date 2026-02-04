@@ -39,6 +39,82 @@ export default function LoginPage() {
       }
 
       if (data.user) {
+        // Check if RBAC is enabled by seeing if admin_users table has any records
+        // This allows backward compatibility - if no admins exist yet, anyone can access
+        const { count, error: countError } = await supabase
+          .from("admin_users")
+          .select("*", { count: "exact", head: true })
+
+        const rbacEnabled = !countError && count !== null && count > 0
+
+        if (rbacEnabled) {
+          // RBAC is enabled - verify user exists in admin_users table
+          const { data: adminUser, error: adminError } = await supabase
+            .from("admin_users")
+            .select("id, is_active, role")
+            .eq("auth_user_id", data.user.id)
+            .single()
+
+          if (adminError || !adminUser) {
+            // User not found in admin_users
+            await supabase.auth.signOut()
+            setError("You are not authorized to access the admin panel.")
+            return
+          }
+
+          if (!adminUser.is_active) {
+            // Admin account is deactivated
+            await supabase.auth.signOut()
+            setError("Your admin account has been deactivated. Contact a super admin.")
+            return
+          }
+
+          toast({
+            title: "Success",
+            description: "Logged in successfully",
+          })
+
+          // Super admins go to dashboard
+          if (adminUser.role === "super_admin") {
+            router.push("/admin/dashboard")
+            return
+          }
+
+          // Staff: find first permitted page
+          const { data: permissions } = await supabase
+            .from("admin_permissions")
+            .select("page_key")
+            .eq("admin_user_id", adminUser.id)
+            .eq("can_access", true)
+
+          // Page order for determining first permitted page
+          const PAGE_ORDER = ["dashboard", "residents", "bookings", "complaints", "visitors", "parcels", "analytics", "feedback", "accounting"]
+          const PAGE_KEY_TO_ROUTE: Record<string, string> = {
+            dashboard: "/admin/dashboard",
+            residents: "/admin",
+            bookings: "/admin/bookings",
+            complaints: "/admin/complaints",
+            visitors: "/admin/visitors",
+            parcels: "/admin/parcels",
+            analytics: "/admin/analytics",
+            feedback: "/admin/feedback",
+            accounting: "/admin/accounting",
+          }
+
+          const permittedKeys = new Set(permissions?.map(p => p.page_key) || [])
+          const firstPermittedPage = PAGE_ORDER.find(key => permittedKeys.has(key))
+
+          if (firstPermittedPage) {
+            router.push(PAGE_KEY_TO_ROUTE[firstPermittedPage])
+          } else {
+            // No permissions at all
+            await supabase.auth.signOut()
+            setError("You don't have access to any pages. Contact a super admin.")
+          }
+          return
+        }
+        // If RBAC not enabled (no admin users exist), allow access for setup
+
         toast({
           title: "Success",
           description: "Logged in successfully",

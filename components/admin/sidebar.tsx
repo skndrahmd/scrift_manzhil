@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import Link from "next/link"
 import Image from "next/image"
 import { usePathname } from "next/navigation"
@@ -23,6 +23,7 @@ import {
 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import type { PageKey } from "@/lib/supabase"
 
 interface SidebarProps {
     newBookingsCount?: number
@@ -30,6 +31,8 @@ interface SidebarProps {
     newFeedbackCount?: number
     newVisitorsCount?: number
     newParcelsCount?: number
+    userRole?: "super_admin" | "staff" | null
+    permissions?: Map<PageKey, boolean>
 }
 
 const navItems = [
@@ -37,56 +40,66 @@ const navItems = [
         title: "Dashboard",
         href: "/admin/dashboard",
         icon: LayoutDashboard,
+        pageKey: "dashboard" as PageKey,
     },
     {
         title: "Residents",
         href: "/admin",
         icon: Users,
+        pageKey: "residents" as PageKey,
     },
     {
         title: "Bookings",
         href: "/admin/bookings",
         icon: Calendar,
         badgeKey: "bookings" as const,
+        pageKey: "bookings" as PageKey,
     },
     {
         title: "Complaints",
         href: "/admin/complaints",
         icon: AlertTriangle,
         badgeKey: "complaints" as const,
+        pageKey: "complaints" as PageKey,
     },
     {
         title: "Visitors",
         href: "/admin/visitors",
         icon: Ticket,
         badgeKey: "visitors" as const,
+        pageKey: "visitors" as PageKey,
     },
     {
         title: "Parcels",
         href: "/admin/parcels",
         icon: Package,
         badgeKey: "parcels" as const,
+        pageKey: "parcels" as PageKey,
     },
     {
         title: "Analytics",
         href: "/admin/analytics",
         icon: BarChart3,
+        pageKey: "analytics" as PageKey,
     },
     {
         title: "Feedback",
         href: "/admin/feedback",
         icon: MessageSquare,
         badgeKey: "feedback" as const,
+        pageKey: "feedback" as PageKey,
     },
     {
         title: "Accounting",
         href: "/admin/accounting",
         icon: Wallet,
+        pageKey: "accounting" as PageKey,
     },
     {
         title: "Settings",
         href: "/admin/settings",
         icon: Settings,
+        pageKey: "settings" as PageKey,
     },
 ]
 
@@ -96,6 +109,8 @@ export function AdminSidebar({
     newFeedbackCount = 0,
     newVisitorsCount = 0,
     newParcelsCount = 0,
+    userRole = null,
+    permissions = new Map(),
 }: SidebarProps) {
     const pathname = usePathname()
     const [collapsed, setCollapsed] = useState(false)
@@ -139,6 +154,29 @@ export function AdminSidebar({
         return pathname.startsWith(href)
     }
 
+    // Filter nav items based on permissions
+    const filteredNavItems = useMemo(() => {
+        // If no role is set (migration not run yet), show all items
+        if (!userRole) {
+            return navItems
+        }
+
+        // Super admins see all items
+        if (userRole === "super_admin") {
+            return navItems
+        }
+
+        // Staff only see items they have permission for
+        return navItems.filter(item => {
+            // Settings is super_admin only
+            if (item.pageKey === "settings") {
+                return false
+            }
+            // Check if user has permission for this page
+            return permissions.get(item.pageKey) === true
+        })
+    }, [userRole, permissions])
+
     const SidebarContent = ({ isCollapsed = false }: { isCollapsed?: boolean }) => (
         <div className="flex flex-col h-full">
             {/* Logo Header with gradient border */}
@@ -165,7 +203,7 @@ export function AdminSidebar({
 
             {/* Navigation */}
             <nav className="flex-1 px-3 py-4 space-y-1.5 overflow-y-auto">
-                {navItems.map((item, index) => {
+                {filteredNavItems.map((item) => {
                     const badgeCount = getBadgeCount(item.badgeKey)
                     const active = isActive(item.href)
 

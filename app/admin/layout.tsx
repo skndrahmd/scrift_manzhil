@@ -25,7 +25,10 @@ import {
     type BookingSettings,
     type VisitorPass,
     type Parcel,
+    type AdminUser,
+    type PageKey,
 } from "@/lib/supabase"
+import { AuthProvider, useAuth } from "@/lib/auth-context"
 
 // Admin context for shared state across all admin pages
 interface AdminContextType {
@@ -48,6 +51,12 @@ interface AdminContextType {
     newFeedbackCount: number
     newVisitorsCount: number
     newParcelsCount: number
+
+    // Auth data
+    adminUser: AdminUser | null
+    userRole: "super_admin" | "staff" | null
+    permissions: Map<PageKey, boolean>
+    hasPermission: (pageKey: PageKey) => boolean
 
     // Actions
     refreshData: () => Promise<void>
@@ -94,6 +103,7 @@ function AdminLayoutContent({
     const [lastViewedFeedback, setLastViewedFeedback] = useState<number>(Date.now())
 
     const { toast } = useToast()
+    const { adminUser, role, permissions, hasPermission, isLoading: authLoading } = useAuth()
 
     // Helper function to check if item is new (created within last 5 minutes)
     const isNewItem = (createdAt: string) => {
@@ -270,6 +280,10 @@ function AdminLayoutContent({
         newFeedbackCount,
         newVisitorsCount,
         newParcelsCount,
+        adminUser,
+        userRole: role,
+        permissions,
+        hasPermission,
         refreshData,
         fetchBookings,
         fetchComplaints,
@@ -294,6 +308,8 @@ function AdminLayoutContent({
                     newFeedbackCount={newFeedbackCount}
                     newVisitorsCount={newVisitorsCount}
                     newParcelsCount={newParcelsCount}
+                    userRole={role}
+                    permissions={permissions}
                 />
 
                 {/* Main Content */}
@@ -406,7 +422,7 @@ function AdminLayoutContent({
 
                     {/* Page Content */}
                     <main className="flex-1 overflow-auto p-4 lg:p-6">
-                        {loading ? (
+                        {(loading || authLoading) ? (
                             <div className="flex items-center justify-center h-full min-h-[50vh]">
                                 <Loader />
                             </div>
@@ -431,7 +447,9 @@ export default function AdminLayout({
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-manzhil-teal"></div>
             </div>
         }>
-            <AdminLayoutContent>{children}</AdminLayoutContent>
+            <AuthProvider>
+                <AdminLayoutContent>{children}</AdminLayoutContent>
+            </AuthProvider>
         </Suspense>
     )
 }

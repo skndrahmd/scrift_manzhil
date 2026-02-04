@@ -1,16 +1,18 @@
 import type { NextRequest } from "next/server"
 import { supabase } from "@/lib/supabase"
 import { sendTemplate, sendMessage, formatSubcategory } from "@/lib/twilio"
+import { getReminderRecipients } from "@/lib/admin/notifications"
 
 const APP_BASE_URL = (process.env.NEXT_PUBLIC_APP_URL || "https://com3-bms.vercel.app").replace(/\/$/, "")
 const PENDING_COMPLAINT_TEMPLATE_SID = process.env.TWILIO_PENDING_COMPLAINT_TEMPLATE_SID
 
-// Reminder recipients (maintenance team)
-const REMINDER_RECIPIENTS = ["+923071288183", "+923000777454", "+923232244009", "+923422546249", "+923242927342"]
-
 export async function POST(request: NextRequest) {
   try {
     console.log("[PENDING COMPLAINTS] Starting reminder check...")
+
+    // Get dynamic reminder recipients
+    const REMINDER_RECIPIENTS = await getReminderRecipients()
+    console.log(`[PENDING COMPLAINTS] Sending to ${REMINDER_RECIPIENTS.length} recipients`)
 
     // Calculate 24 hours ago
     const twentyFourHoursAgo = new Date()

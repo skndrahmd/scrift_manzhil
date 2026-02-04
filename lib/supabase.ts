@@ -249,3 +249,54 @@ export type Parcel = {
   updated_at: string
   profiles?: Profile
 }
+
+// ============================================
+// Admin RBAC Types
+// ============================================
+
+export type AdminUser = {
+  id: string
+  auth_user_id: string
+  email: string
+  name: string
+  phone_number: string | null
+  role: "super_admin" | "staff"
+  is_active: boolean
+  receive_complaint_notifications: boolean
+  receive_reminder_notifications: boolean
+  created_at: string
+  updated_at: string
+}
+
+export type AdminPermission = {
+  id: string
+  admin_user_id: string
+  page_key: string
+  can_access: boolean
+  created_at: string
+}
+
+export type PageKey =
+  | "dashboard"
+  | "residents"
+  | "bookings"
+  | "complaints"
+  | "visitors"
+  | "parcels"
+  | "analytics"
+  | "feedback"
+  | "accounting"
+  | "settings"
+
+export const PAGE_KEYS: { key: PageKey; label: string; route: string }[] = [
+  { key: "dashboard", label: "Dashboard", route: "/admin/dashboard" },
+  { key: "residents", label: "Residents", route: "/admin" },
+  { key: "bookings", label: "Bookings", route: "/admin/bookings" },
+  { key: "complaints", label: "Complaints", route: "/admin/complaints" },
+  { key: "visitors", label: "Visitors", route: "/admin/visitors" },
+  { key: "parcels", label: "Parcels", route: "/admin/parcels" },
+  { key: "analytics", label: "Analytics", route: "/admin/analytics" },
+  { key: "feedback", label: "Feedback", route: "/admin/feedback" },
+  { key: "accounting", label: "Accounting", route: "/admin/accounting" },
+  { key: "settings", label: "Settings", route: "/admin/settings" },
+]
