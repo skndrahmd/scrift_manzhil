@@ -21,6 +21,7 @@ import {
     Trash2,
     Eye,
     Send,
+    Upload,
 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -35,6 +36,7 @@ import {
     PaginationPrevious,
 } from "@/components/ui/pagination"
 import { exportToPdf, filterByPeriod, periodLabel, type Period } from "@/lib/pdf"
+import { BulkImportModal } from "./bulk-import-modal"
 
 export function ResidentsTable() {
     const { profiles, fetchProfiles } = useAdmin()
@@ -58,6 +60,7 @@ export function ResidentsTable() {
         apartment_number: "",
         maintenance_charges: 5000,
     })
+    const [isBulkImportOpen, setIsBulkImportOpen] = useState(false)
 
     const itemsPerPage = 10
 
@@ -379,6 +382,17 @@ export function ResidentsTable() {
                         >
                             <Eye className="h-4 w-4 mr-2" />
                             Export PDF
+                        </Button>
+
+                        {/* Bulk Import */}
+                        <Button
+                            size="sm"
+                            variant="outline"
+                            className="border-manzhil-teal/30 text-manzhil-dark hover:bg-manzhil-teal/5"
+                            onClick={() => setIsBulkImportOpen(true)}
+                        >
+                            <Upload className="h-4 w-4 mr-2" />
+                            Bulk Import
                         </Button>
 
                         {/* Add Resident */}
@@ -729,6 +743,13 @@ export function ResidentsTable() {
                     </div>
                 </DialogContent>
             </Dialog>
+
+            {/* Bulk Import Modal */}
+            <BulkImportModal
+                open={isBulkImportOpen}
+                onOpenChange={setIsBulkImportOpen}
+                onImportComplete={fetchProfiles}
+            />
         </Card>
     )
 }
