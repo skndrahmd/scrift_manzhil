@@ -80,6 +80,7 @@ export async function POST(request: NextRequest) {
       role,
       receive_complaint_notifications,
       receive_reminder_notifications,
+      receive_daily_reports,
       permissions,
     } = body
 
@@ -130,6 +131,7 @@ export async function POST(request: NextRequest) {
         role: role || "staff",
         receive_complaint_notifications: receive_complaint_notifications || false,
         receive_reminder_notifications: receive_reminder_notifications || false,
+        receive_daily_reports: receive_daily_reports || false,
       })
       .select()
       .single()

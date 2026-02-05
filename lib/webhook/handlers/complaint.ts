@@ -7,7 +7,7 @@ import { supabase } from "@/lib/supabase"
 import { sendWhatsAppMessage, sendWhatsAppTemplate } from "@/lib/twilio"
 import type { Profile, UserState } from "../types"
 import { getState, setState, clearState } from "../state"
-import { COMPLAINT_NOTIFICATION_NUMBERS, TEMPLATE_SIDS } from "../config"
+import { getComplaintRecipients, TEMPLATE_SIDS } from "../config"
 import { formatSubcategory } from "../utils"
 import { getComplaintCategoryMenu } from "../menu"
 
@@ -286,6 +286,15 @@ async function sendNewComplaintNotification(
   try {
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://com3-bms.vercel.app"
 
+    // Get dynamic complaint notification recipients from database
+    const complaintRecipients = await getComplaintRecipients()
+    console.log(`[NEW COMPLAINT NOTIFICATION] Found ${complaintRecipients.length} recipients`)
+
+    if (complaintRecipients.length === 0) {
+      console.warn("[NEW COMPLAINT NOTIFICATION] No recipients configured for complaint notifications")
+      return
+    }
+
     // Format category and subcategory
     const categoryText =
       complaint.category === "apartment" ? "Apartment Complaint" : "Building Complaint"
@@ -326,8 +335,10 @@ async function sendNewComplaintNotification(
       "9": `${baseUrl}/admin`,
     }
 
+    console.log(`[NEW COMPLAINT NOTIFICATION] Template SID configured: ${TEMPLATE_SIDS.newComplaint ? 'Yes' : 'No'}`)
+
     // Send to all notification recipients
-    for (const recipient of COMPLAINT_NOTIFICATION_NUMBERS) {
+    for (const recipient of complaintRecipients) {
       let templateSent = false
 
       // Try template if configured

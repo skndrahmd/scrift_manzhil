@@ -6,18 +6,8 @@
 import { getComplaintNotificationRecipients } from "@/lib/admin/notifications"
 
 /**
- * Phone numbers that receive complaint notifications
- * @deprecated Use getComplaintNotificationRecipients() instead for dynamic recipients
- */
-export const COMPLAINT_NOTIFICATION_NUMBERS = [
-  "+923071288183",
-  "+923422546249",
-  "+923242927342",
-]
-
-/**
- * Get dynamic complaint notification recipients
- * Falls back to hardcoded numbers if database query fails
+ * Get dynamic complaint notification recipients from the admin panel
+ * Returns empty array if no recipients are configured
  */
 export async function getComplaintRecipients(): Promise<string[]> {
   return getComplaintNotificationRecipients()

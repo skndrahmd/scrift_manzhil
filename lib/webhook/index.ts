@@ -76,7 +76,6 @@ export {
 
 // Configuration
 export {
-  COMPLAINT_NOTIFICATION_NUMBERS,
   TEMPLATE_SIDS,
   SETTINGS_CACHE_DURATION,
   COMPLAINT_CATEGORIES,
@@ -86,6 +85,7 @@ export {
   HALL_MENU_OPTIONS,
   STAFF_MENU_OPTIONS,
   EMERGENCY_CONTACTS,
+  getComplaintRecipients,
 } from "./config"
 
 // Types

@@ -1,26 +1,8 @@
 import { supabaseAdmin } from "@/lib/supabase"
 
 /**
- * Fallback notification recipients (legacy hardcoded numbers)
- * Used when no recipients are configured in admin_users table
- */
-const FALLBACK_COMPLAINT_RECIPIENTS = [
-  "+923071288183",
-  "+923422546249",
-  "+923242927342",
-]
-
-const FALLBACK_REMINDER_RECIPIENTS = [
-  "+923071288183",
-  "+923000777454",
-  "+923232244009",
-  "+923422546249",
-  "+923242927342",
-]
-
-/**
  * Get phone numbers of admins who should receive complaint notifications
- * Falls back to hardcoded numbers if no recipients are configured
+ * Returns empty array if no recipients are configured - admins control this via toggles
  */
 export async function getComplaintNotificationRecipients(): Promise<string[]> {
   try {
@@ -33,30 +15,30 @@ export async function getComplaintNotificationRecipients(): Promise<string[]> {
 
     if (error) {
       console.error("[NOTIFICATIONS] Error fetching complaint recipients:", error)
-      return FALLBACK_COMPLAINT_RECIPIENTS
+      return []
     }
 
     const recipients = data
       ?.map(row => row.phone_number)
       .filter((num): num is string => num !== null && num.length > 0)
 
-    // If no recipients configured, use fallback
     if (!recipients || recipients.length === 0) {
-      console.log("[NOTIFICATIONS] No complaint recipients configured, using fallback")
-      return FALLBACK_COMPLAINT_RECIPIENTS
+      console.warn("[NOTIFICATIONS] No complaint notification recipients configured in admin panel")
+      return []
     }
 
+    console.log(`[NOTIFICATIONS] Found ${recipients.length} complaint notification recipients`)
     return recipients
   } catch (error) {
     console.error("[NOTIFICATIONS] Exception fetching complaint recipients:", error)
-    return FALLBACK_COMPLAINT_RECIPIENTS
+    return []
   }
 }
 
 /**
  * Get phone numbers of admins who should receive reminder notifications
  * (e.g., pending complaint reminders)
- * Falls back to hardcoded numbers if no recipients are configured
+ * Returns empty array if no recipients are configured - admins control this via toggles
  */
 export async function getReminderRecipients(): Promise<string[]> {
   try {
@@ -69,28 +51,29 @@ export async function getReminderRecipients(): Promise<string[]> {
 
     if (error) {
       console.error("[NOTIFICATIONS] Error fetching reminder recipients:", error)
-      return FALLBACK_REMINDER_RECIPIENTS
+      return []
     }
 
     const recipients = data
       ?.map(row => row.phone_number)
       .filter((num): num is string => num !== null && num.length > 0)
 
-    // If no recipients configured, use fallback
     if (!recipients || recipients.length === 0) {
-      console.log("[NOTIFICATIONS] No reminder recipients configured, using fallback")
-      return FALLBACK_REMINDER_RECIPIENTS
+      console.warn("[NOTIFICATIONS] No reminder notification recipients configured in admin panel")
+      return []
     }
 
+    console.log(`[NOTIFICATIONS] Found ${recipients.length} reminder notification recipients`)
     return recipients
   } catch (error) {
     console.error("[NOTIFICATIONS] Exception fetching reminder recipients:", error)
-    return FALLBACK_REMINDER_RECIPIENTS
+    return []
   }
 }
 
 /**
  * Get all notification recipients (union of complaint and reminder recipients)
+ * Returns empty array if no recipients are configured - admins control this via toggles
  */
 export async function getAllNotificationRecipients(): Promise<string[]> {
   try {
@@ -103,8 +86,7 @@ export async function getAllNotificationRecipients(): Promise<string[]> {
 
     if (error) {
       console.error("[NOTIFICATIONS] Error fetching all recipients:", error)
-      // Return union of fallbacks
-      return [...new Set([...FALLBACK_COMPLAINT_RECIPIENTS, ...FALLBACK_REMINDER_RECIPIENTS])]
+      return []
     }
 
     const recipients = data
@@ -112,12 +94,14 @@ export async function getAllNotificationRecipients(): Promise<string[]> {
       .filter((num): num is string => num !== null && num.length > 0)
 
     if (!recipients || recipients.length === 0) {
-      return [...new Set([...FALLBACK_COMPLAINT_RECIPIENTS, ...FALLBACK_REMINDER_RECIPIENTS])]
+      console.warn("[NOTIFICATIONS] No notification recipients configured in admin panel")
+      return []
     }
 
+    console.log(`[NOTIFICATIONS] Found ${recipients.length} total notification recipients`)
     return [...new Set(recipients)]
   } catch (error) {
     console.error("[NOTIFICATIONS] Exception fetching all recipients:", error)
-    return [...new Set([...FALLBACK_COMPLAINT_RECIPIENTS, ...FALLBACK_REMINDER_RECIPIENTS])]
+    return []
   }
 }

@@ -7,16 +7,27 @@ import { sendTemplate, sendMessage } from "@/lib/twilio"
 const APP_BASE_URL = (process.env.NEXT_PUBLIC_APP_URL || "https://greensthree-bms.vercel.app").replace(/\/$/, "")
 const DAILY_REPORT_TEMPLATE_SID = process.env.TWILIO_DAILY_REPORT_TEMPLATE_SID || "HXe150ee7863ea59b5077930c67d61b68c"
 
-// WhatsApp numbers to send reports to (admin numbers)
-const REPORT_RECIPIENTS = [
-  "+923000777454",
-  "+923232244009",
-  "+923071288183"
-]
-
 export async function POST(request: NextRequest) {
   try {
     console.log("[DAILY REPORTS] Starting daily report generation...")
+
+    // Fetch recipients from admin_users who have daily reports enabled
+    const { data: reportRecipients, error: recipientsError } = await supabaseAdmin
+      .from("admin_users")
+      .select("phone_number")
+      .eq("receive_daily_reports", true)
+      .eq("is_active", true)
+      .not("phone_number", "is", null)
+
+    if (recipientsError) {
+      console.error("[DAILY REPORTS] Error fetching recipients:", recipientsError)
+    }
+
+    const REPORT_RECIPIENTS = reportRecipients?.map(r => r.phone_number).filter(Boolean) as string[] || []
+
+    if (REPORT_RECIPIENTS.length === 0) {
+      console.warn("[DAILY REPORTS] No recipients configured for daily reports")
+    }
 
     // Calculate 24-hour time range
     const now = new Date()
