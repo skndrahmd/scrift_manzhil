@@ -81,12 +81,15 @@ export async function middleware(request: NextRequest) {
     }
   )
 
+  // Use getUser() instead of getSession() for security
+  // getUser() verifies the session with Supabase Auth server
   const {
-    data: { session },
-  } = await supabase.auth.getSession()
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser()
 
-  // Redirect to login if no session
-  if (!session) {
+  // Redirect to login if no authenticated user
+  if (userError || !user) {
     const loginUrl = new URL("/login", request.url)
     return NextResponse.redirect(loginUrl)
   }
@@ -126,7 +129,7 @@ export async function middleware(request: NextRequest) {
   const { data: adminUser, error: adminError } = await supabaseAdmin
     .from("admin_users")
     .select("id, role, is_active")
-    .eq("auth_user_id", session.user.id)
+    .eq("auth_user_id", user.id)
     .single()
 
   // If no admin user found for this auth user, redirect to unauthorized
