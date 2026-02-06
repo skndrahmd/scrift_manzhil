@@ -16,6 +16,7 @@ import type {
 /**
  * Send welcome message to new resident
  * Sent when a new resident profile is created
+ * Template has no variables - static welcome message
  */
 export async function sendWelcomeMessage(
   params: WelcomeMessageParams
@@ -23,23 +24,14 @@ export async function sendWelcomeMessage(
   const { phone, name, apartmentNumber } = params
 
   const templateSid = getTemplateSid("welcome_message")
-  const templateVariables = {
-    "1": name || "Resident",
-    "2": apartmentNumber,
-  }
+  // This template has no dynamic variables - it's a static welcome message
+  const templateVariables = {}
 
-  const fallbackMessage = `👋 *Welcome to Manzhil!*
+  const fallbackMessage = `Hello, welcome to Manzhil by Scrift.
 
-🏠 ${name || "Resident"} | Apt ${apartmentNumber}
+Manzhil is a smart Whatsapp Powered Building Management system.
 
-You'll receive notifications for:
-• 💰 Maintenance invoices
-• 🏛️ Hall bookings
-• 📋 Complaint updates
-
-Questions? Contact management.
-
-— Manzhil`
+Enter 0 (Zero) to begin.`
 
   return sendWithFallback(phone, templateSid, templateVariables, fallbackMessage)
 }

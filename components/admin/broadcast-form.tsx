@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect, useCallback } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -30,11 +30,17 @@ import {
     TableHeader,
     TableRow,
 } from "@/components/ui/table"
+import {
+    Alert,
+    AlertDescription,
+    AlertTitle,
+} from "@/components/ui/alert"
 import { Progress } from "@/components/ui/progress"
 import { Badge } from "@/components/ui/badge"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { useToast } from "@/hooks/use-toast"
 import { useAdmin } from "@/app/admin/layout"
+import { BROADCAST_LIMITS } from "@/lib/supabase"
 import {
     Send,
     Users,
@@ -45,6 +51,10 @@ import {
     Loader2,
     AlertCircle,
     Download,
+    Clock,
+    AlertTriangle,
+    Info,
+    Timer,
 } from "lucide-react"
 import type { Profile } from "@/lib/supabase"
 
@@ -69,6 +79,17 @@ interface SendingState {
     isComplete: boolean
 }
 
+interface UsageStats {
+    messagesToday: number
+    dailyLimit: number
+    remaining: number
+    percentUsed: number
+    lastBroadcastAt: string | null
+    cooldownEndsAt: string | null
+    canSend: boolean
+    cooldownRemaining: number
+}
+
 export function BroadcastForm() {
     const { profiles } = useAdmin()
     const { toast } = useToast()
@@ -87,6 +108,11 @@ export function BroadcastForm() {
     // Selection
     const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
 
+    // Usage stats
+    const [usage, setUsage] = useState<UsageStats | null>(null)
+    const [usageLoading, setUsageLoading] = useState(true)
+    const [cooldownSeconds, setCooldownSeconds] = useState(0)
+
     // Sending state
     const [sendingState, setSendingState] = useState<SendingState>({
         isOpen: false,
@@ -102,6 +128,43 @@ export function BroadcastForm() {
 
     // Confirmation dialog
     const [showConfirmation, setShowConfirmation] = useState(false)
+
+    // Fetch usage stats
+    const fetchUsage = useCallback(async () => {
+        try {
+            const response = await fetch("/api/broadcast/usage")
+            if (response.ok) {
+                const data = await response.json()
+                setUsage(data)
+                setCooldownSeconds(data.cooldownRemaining || 0)
+            }
+        } catch (error) {
+            console.error("Failed to fetch usage:", error)
+        } finally {
+            setUsageLoading(false)
+        }
+    }, [])
+
+    useEffect(() => {
+        fetchUsage()
+    }, [fetchUsage])
+
+    // Cooldown countdown timer
+    useEffect(() => {
+        if (cooldownSeconds <= 0) return
+
+        const timer = setInterval(() => {
+            setCooldownSeconds(prev => {
+                if (prev <= 1) {
+                    fetchUsage() // Refresh usage when cooldown ends
+                    return 0
+                }
+                return prev - 1
+            })
+        }, 1000)
+
+        return () => clearInterval(timer)
+    }, [cooldownSeconds, fetchUsage])
 
     // Get unique blocks from profiles
     const blocks = useMemo(() => {
@@ -147,6 +210,54 @@ export function BroadcastForm() {
         })
     }, [profiles, blockFilter, maintenanceFilter, searchQuery])
 
+    // Calculate estimated send time
+    const estimatedSendTime = useMemo(() => {
+        const count = selectedIds.size
+        if (count === 0) return null
+
+        // Calculate time based on rate limiting
+        const batchCount = Math.ceil(count / BROADCAST_LIMITS.BATCH_SIZE)
+        const messageDelayTotal = (count - 1) * (BROADCAST_LIMITS.MESSAGE_DELAY_MS / 1000)
+        const batchDelayTotal = Math.max(0, batchCount - 1) * (BROADCAST_LIMITS.BATCH_DELAY_MS / 1000)
+        const totalSeconds = messageDelayTotal + batchDelayTotal
+
+        if (totalSeconds < 60) {
+            return `~${Math.ceil(totalSeconds)} seconds`
+        } else {
+            const minutes = Math.ceil(totalSeconds / 60)
+            return `~${minutes} minute${minutes > 1 ? 's' : ''}`
+        }
+    }, [selectedIds.size])
+
+    // Check warnings
+    const recipientWarning = useMemo(() => {
+        const count = selectedIds.size
+        if (count === 0) return null
+
+        if (usage && count > usage.remaining) {
+            return {
+                type: "error" as const,
+                message: `Exceeds daily limit. Only ${usage.remaining} messages remaining today.`
+            }
+        }
+
+        if (count > BROADCAST_LIMITS.HARD_RECIPIENT_LIMIT) {
+            return {
+                type: "warning" as const,
+                message: `Large broadcast (${count} recipients). Messages will be sent in batches over ${estimatedSendTime}.`
+            }
+        }
+
+        if (count > BROADCAST_LIMITS.SOFT_RECIPIENT_LIMIT) {
+            return {
+                type: "info" as const,
+                message: `${count} recipients selected. Estimated send time: ${estimatedSendTime}.`
+            }
+        }
+
+        return null
+    }, [selectedIds.size, usage, estimatedSendTime])
+
     // Selection handlers
     const toggleSelect = (id: string) => {
         const newSelected = new Set(selectedIds)
@@ -169,6 +280,15 @@ export function BroadcastForm() {
 
     // Check if message is valid
     const isMessageValid = variables["1"].trim() !== "" || variables["2"].trim() !== ""
+
+    // Check if can send
+    const canSend = useMemo(() => {
+        if (selectedIds.size === 0) return false
+        if (!isMessageValid) return false
+        if (cooldownSeconds > 0) return false
+        if (usage && selectedIds.size > usage.remaining) return false
+        return true
+    }, [selectedIds.size, isMessageValid, cooldownSeconds, usage])
 
     // Handle send broadcast
     const handleSend = async () => {
@@ -219,6 +339,9 @@ export function BroadcastForm() {
                 title: "Broadcast Complete",
                 description: `Sent ${data.summary.success} messages successfully`,
             })
+
+            // Refresh usage stats after successful broadcast
+            fetchUsage()
         } catch (error) {
             console.error("Broadcast error:", error)
             setSendingState(prev => ({
@@ -273,8 +396,83 @@ export function BroadcastForm() {
         }
     }
 
+    // Format cooldown time
+    const formatCooldown = (seconds: number) => {
+        const mins = Math.floor(seconds / 60)
+        const secs = seconds % 60
+        return `${mins}:${secs.toString().padStart(2, '0')}`
+    }
+
     return (
         <div className="space-y-6">
+            {/* Usage Stats Card */}
+            <Card className="border-0 shadow-lg shadow-manzhil-teal/10">
+                <CardHeader className="pb-3">
+                    <CardTitle className="flex items-center gap-2 text-manzhil-dark text-base">
+                        <Clock className="h-4 w-4 text-manzhil-teal" />
+                        Daily Usage
+                    </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                    {usageLoading ? (
+                        <div className="flex items-center justify-center py-4">
+                            <Loader2 className="h-5 w-5 animate-spin text-manzhil-teal" />
+                        </div>
+                    ) : usage ? (
+                        <>
+                            <div className="space-y-2">
+                                <div className="flex justify-between text-sm">
+                                    <span className="text-gray-600">Messages sent today</span>
+                                    <span className="font-medium">{usage.messagesToday} of {usage.dailyLimit}</span>
+                                </div>
+                                <Progress value={usage.percentUsed} className="h-2" />
+                                <p className="text-xs text-gray-500">
+                                    {usage.remaining} messages remaining
+                                </p>
+                            </div>
+
+                            {cooldownSeconds > 0 && (
+                                <Alert variant="destructive" className="py-2">
+                                    <Timer className="h-4 w-4" />
+                                    <AlertTitle className="text-sm">Cooldown Active</AlertTitle>
+                                    <AlertDescription className="text-xs">
+                                        Please wait {formatCooldown(cooldownSeconds)} before sending another broadcast.
+                                    </AlertDescription>
+                                </Alert>
+                            )}
+
+                            {selectedIds.size > 0 && (
+                                <div className="bg-gray-50 rounded-lg p-3 text-sm space-y-1">
+                                    <div className="flex items-center gap-2 text-gray-600">
+                                        <Users className="h-4 w-4" />
+                                        <span>Selected: {selectedIds.size} recipients</span>
+                                    </div>
+                                    {estimatedSendTime && (
+                                        <div className="flex items-center gap-2 text-gray-600">
+                                            <Timer className="h-4 w-4" />
+                                            <span>Estimated time: {estimatedSendTime}</span>
+                                        </div>
+                                    )}
+                                    {usage.remaining >= selectedIds.size ? (
+                                        <div className="flex items-center gap-2 text-green-600">
+                                            <CheckCircle2 className="h-4 w-4" />
+                                            <span>Within daily limit</span>
+                                        </div>
+                                    ) : (
+                                        <div className="flex items-center gap-2 text-red-600">
+                                            <XCircle className="h-4 w-4" />
+                                            <span>Exceeds daily limit</span>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                        </>
+                    ) : (
+                        <p className="text-sm text-gray-500">Unable to load usage stats</p>
+                    )}
+                </CardContent>
+            </Card>
+
             {/* Message Section */}
             <Card className="border-0 shadow-lg shadow-manzhil-teal/10">
                 <CardHeader>
@@ -384,6 +582,25 @@ export function BroadcastForm() {
                         </Badge>
                     </div>
 
+                    {/* Recipient Warning */}
+                    {recipientWarning && (
+                        <Alert
+                            variant={recipientWarning.type === "error" ? "destructive" : "default"}
+                            className={
+                                recipientWarning.type === "warning"
+                                    ? "border-amber-500 bg-amber-50 text-amber-900"
+                                    : recipientWarning.type === "info"
+                                        ? "border-blue-500 bg-blue-50 text-blue-900"
+                                        : ""
+                            }
+                        >
+                            {recipientWarning.type === "error" && <XCircle className="h-4 w-4" />}
+                            {recipientWarning.type === "warning" && <AlertTriangle className="h-4 w-4" />}
+                            {recipientWarning.type === "info" && <Info className="h-4 w-4" />}
+                            <AlertDescription>{recipientWarning.message}</AlertDescription>
+                        </Alert>
+                    )}
+
                     {/* Recipients Table */}
                     <ScrollArea className="h-[300px] border rounded-lg">
                         <Table>
@@ -456,13 +673,22 @@ export function BroadcastForm() {
                     <Button
                         className="w-full bg-gradient-to-r from-manzhil-dark to-manzhil-teal hover:opacity-90 text-white shadow-md"
                         size="lg"
-                        disabled={selectedIds.size === 0 || !isMessageValid}
+                        disabled={!canSend}
                         onClick={() => setShowConfirmation(true)}
                     >
-                        <Send className="h-5 w-5 mr-2" />
-                        Send Broadcast ({selectedIds.size})
+                        {cooldownSeconds > 0 ? (
+                            <>
+                                <Timer className="h-5 w-5 mr-2" />
+                                Wait {formatCooldown(cooldownSeconds)}
+                            </>
+                        ) : (
+                            <>
+                                <Send className="h-5 w-5 mr-2" />
+                                Send Broadcast ({selectedIds.size})
+                            </>
+                        )}
                     </Button>
-                    {!isMessageValid && (
+                    {!isMessageValid && selectedIds.size > 0 && (
                         <p className="text-center text-sm text-amber-600 mt-2 flex items-center justify-center gap-1">
                             <AlertCircle className="h-4 w-4" />
                             Please fill in at least one placeholder value
@@ -484,11 +710,22 @@ export function BroadcastForm() {
                             This action cannot be undone.
                         </DialogDescription>
                     </DialogHeader>
-                    <div className="py-4">
+                    <div className="py-4 space-y-4">
                         <div className="bg-gray-50 rounded-lg p-4 text-sm space-y-2">
                             <p><strong>Title:</strong> {variables["1"] || "(empty)"}</p>
                             <p><strong>Body:</strong> {variables["2"] || "(empty)"}</p>
                         </div>
+
+                        {selectedIds.size > BROADCAST_LIMITS.HARD_RECIPIENT_LIMIT && (
+                            <Alert variant="default" className="border-amber-500 bg-amber-50 text-amber-900">
+                                <AlertTriangle className="h-4 w-4" />
+                                <AlertTitle>Large Broadcast</AlertTitle>
+                                <AlertDescription>
+                                    Sending to {selectedIds.size} recipients will take approximately {estimatedSendTime}.
+                                    Messages are rate-limited to protect your WhatsApp account.
+                                </AlertDescription>
+                            </Alert>
+                        )}
                     </div>
                     <DialogFooter>
                         <Button variant="outline" onClick={() => setShowConfirmation(false)}>
@@ -529,6 +766,10 @@ export function BroadcastForm() {
                                 <Progress value={sendingState.progress} className="h-2" />
                                 <p className="text-center text-sm text-gray-500">
                                     Please wait while messages are being sent...
+                                    <br />
+                                    <span className="text-xs">
+                                        (Rate limited to protect your WhatsApp account)
+                                    </span>
                                 </p>
                             </>
                         )}

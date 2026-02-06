@@ -303,3 +303,29 @@ export const PAGE_KEYS: { key: PageKey; label: string; route: string }[] = [
   { key: "broadcast", label: "Broadcast", route: "/admin/broadcast" },
   { key: "settings", label: "Settings", route: "/admin/settings" },
 ]
+
+// ============================================
+// Broadcast Rate Limiting Types
+// ============================================
+
+export type BroadcastLog = {
+  id: string
+  sent_at: string
+  recipient_count: number
+  success_count: number
+  failed_count: number
+  message_title: string | null
+  message_body: string | null
+  created_by: string | null
+}
+
+// Rate limiting constants
+export const BROADCAST_LIMITS = {
+  DAILY_MESSAGE_LIMIT: 250,       // Max messages per 24 hours
+  MESSAGE_DELAY_MS: 3000,         // 3 seconds between messages
+  BATCH_SIZE: 20,                 // Messages per batch
+  BATCH_DELAY_MS: 30000,          // 30 seconds between batches
+  MIN_BROADCAST_INTERVAL_MS: 900000, // 15 minutes between broadcasts
+  SOFT_RECIPIENT_LIMIT: 50,       // Show warning above this
+  HARD_RECIPIENT_LIMIT: 100,      // Require confirmation above this
+}
