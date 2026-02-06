@@ -20,6 +20,7 @@ import {
     X,
     Ticket,
     Package,
+    Megaphone,
 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -94,6 +95,12 @@ const navItems = [
         href: "/admin/accounting",
         icon: Wallet,
         pageKey: "accounting" as PageKey,
+    },
+    {
+        title: "Broadcast",
+        href: "/admin/broadcast",
+        icon: Megaphone,
+        pageKey: "broadcast" as PageKey,
     },
     {
         title: "Settings",

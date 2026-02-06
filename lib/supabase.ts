@@ -287,6 +287,7 @@ export type PageKey =
   | "analytics"
   | "feedback"
   | "accounting"
+  | "broadcast"
   | "settings"
 
 export const PAGE_KEYS: { key: PageKey; label: string; route: string }[] = [
@@ -299,5 +300,6 @@ export const PAGE_KEYS: { key: PageKey; label: string; route: string }[] = [
   { key: "analytics", label: "Analytics", route: "/admin/analytics" },
   { key: "feedback", label: "Feedback", route: "/admin/feedback" },
   { key: "accounting", label: "Accounting", route: "/admin/accounting" },
+  { key: "broadcast", label: "Broadcast", route: "/admin/broadcast" },
   { key: "settings", label: "Settings", route: "/admin/settings" },
 ]

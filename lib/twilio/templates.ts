@@ -30,6 +30,9 @@ export const TEMPLATE_SIDS: Record<TemplateType, string | undefined> = {
   welcome_message: process.env.TWILIO_WELCOME_TEMPLATE_SID,
   account_blocked_maintenance: process.env.TWILIO_ACCOUNT_BLOCKED_TEMPLATE_SID,
   account_reactivated: process.env.TWILIO_ACCOUNT_REACTIVATED_TEMPLATE_SID,
+
+  // Broadcast templates
+  broadcast_announcement: process.env.TWILIO_BROADCAST_ANNOUNCEMENT_TEMPLATE_SID,
 }
 
 /**
