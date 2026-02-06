@@ -16,10 +16,14 @@ export async function sendBroadcastAnnouncement(
 ): Promise<TwilioResult> {
   const { phone, name, variable1, variable2 } = params
 
+  // Sanitize variables for Twilio template (replace newlines with spaces)
+  const sanitizedVar1 = (variable1 || "Announcement").replace(/[\r\n]+/g, " ").trim()
+  const sanitizedVar2 = (variable2 || "").replace(/[\r\n]+/g, " ").trim()
+
   const templateSid = getTemplateSid("broadcast_announcement")
   const templateVariables: Record<string, string> = {
-    "1": variable1 || "Announcement",
-    "2": variable2 || "",
+    "1": sanitizedVar1,
+    "2": sanitizedVar2,
   }
 
   // Fallback message (used if template not configured)

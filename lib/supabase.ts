@@ -325,7 +325,7 @@ export const BROADCAST_LIMITS = {
   MESSAGE_DELAY_MS: 3000,         // 3 seconds between messages
   BATCH_SIZE: 20,                 // Messages per batch
   BATCH_DELAY_MS: 30000,          // 30 seconds between batches
-  MIN_BROADCAST_INTERVAL_MS: 900000, // 15 minutes between broadcasts
+  MIN_BROADCAST_INTERVAL_MS: 0, // Disabled (was 15 minutes between broadcasts)
   SOFT_RECIPIENT_LIMIT: 50,       // Show warning above this
   HARD_RECIPIENT_LIMIT: 100,      // Require confirmation above this
 }
