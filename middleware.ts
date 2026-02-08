@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { createServerClient } from "@supabase/ssr"
 import { createClient } from "@supabase/supabase-js"
+import { encodeAdminCache, decodeAdminCache, ADMIN_CACHE_COOKIE } from "@/lib/middleware-cache"
 
 // Page key mapping for route -> permission check
 const ROUTE_TO_PAGE_KEY: Record<string, string> = {
@@ -81,8 +82,7 @@ export async function middleware(request: NextRequest) {
     }
   )
 
-  // Use getUser() instead of getSession() for security
-  // getUser() verifies the session with Supabase Auth server
+  // Use getUser() to securely verify the session with Supabase Auth server
   const {
     data: { user },
     error: userError,
@@ -97,55 +97,89 @@ export async function middleware(request: NextRequest) {
   // Use service role client to check admin status (bypasses RLS)
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
   if (!serviceRoleKey) {
-    // If no service key, allow access (backward compatibility)
     console.warn("[MIDDLEWARE] No service role key, skipping RBAC check")
     return response
   }
 
-  const supabaseAdmin = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    serviceRoleKey,
-    {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false,
-      },
+  // Try to read admin cache cookie
+  const cachedValue = request.cookies.get(ADMIN_CACHE_COOKIE)?.value
+  const cached = await decodeAdminCache(cachedValue, user.id, serviceRoleKey)
+
+  let adminRole: string
+  let adminId: string
+  let isActive: boolean
+  let permissionKeys: string[]
+
+  if (cached) {
+    // Cache hit — skip DB queries
+    adminRole = cached.role
+    adminId = cached.adminId
+    isActive = cached.isActive
+    permissionKeys = cached.permissionKeys
+  } else {
+    // Cache miss — query DB
+    const supabaseAdmin = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      serviceRoleKey,
+      {
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false,
+        },
+      }
+    )
+
+    // Check if user exists in admin_users and is active
+    const { data: adminUser, error: adminError } = await supabaseAdmin
+      .from("admin_users")
+      .select("id, role, is_active")
+      .eq("auth_user_id", user.id)
+      .single()
+
+    // If no admin user found for this auth user, redirect to unauthorized
+    if (adminError || !adminUser) {
+      const unauthorizedUrl = new URL("/admin/unauthorized", request.url)
+      return NextResponse.redirect(unauthorizedUrl)
     }
-  )
 
-  // Check if RBAC is enabled by counting admin_users
-  // If no admin users exist, allow access for initial setup
-  const { count, error: countError } = await supabaseAdmin
-    .from("admin_users")
-    .select("*", { count: "exact", head: true })
+    adminRole = adminUser.role
+    adminId = adminUser.id
+    isActive = adminUser.is_active
 
-  // If table doesn't exist or is empty, allow access (backward compatibility / initial setup)
-  if (countError || count === null || count === 0) {
-    console.log("[MIDDLEWARE] RBAC not enabled (no admin users), allowing access")
-    return response
-  }
+    // Fetch all permissions for staff (fetch once, cache all)
+    if (adminRole !== "super_admin") {
+      const { data: allPerms } = await supabaseAdmin
+        .from("admin_permissions")
+        .select("page_key")
+        .eq("admin_user_id", adminId)
+        .eq("can_access", true)
 
-  // RBAC is enabled - check if user exists in admin_users and is active
-  const { data: adminUser, error: adminError } = await supabaseAdmin
-    .from("admin_users")
-    .select("id, role, is_active")
-    .eq("auth_user_id", user.id)
-    .single()
+      permissionKeys = allPerms?.map(p => p.page_key) ?? []
+    } else {
+      permissionKeys = []
+    }
 
-  // If no admin user found for this auth user, redirect to unauthorized
-  if (adminError || !adminUser) {
-    const unauthorizedUrl = new URL("/admin/unauthorized", request.url)
-    return NextResponse.redirect(unauthorizedUrl)
+    // Set cache cookie on the response
+    const cookieValue = await encodeAdminCache(
+      user.id, adminRole, isActive, adminId, permissionKeys, serviceRoleKey
+    )
+    response.cookies.set(ADMIN_CACHE_COOKIE, cookieValue, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      path: "/",
+      maxAge: 300,
+    })
   }
 
   // If admin is inactive, redirect to unauthorized
-  if (!adminUser.is_active) {
+  if (!isActive) {
     const unauthorizedUrl = new URL("/admin/unauthorized", request.url)
     return NextResponse.redirect(unauthorizedUrl)
   }
 
   // Super admins bypass all permission checks
-  if (adminUser.role === "super_admin") {
+  if (adminRole === "super_admin") {
     return response
   }
 
@@ -157,45 +191,30 @@ export async function middleware(request: NextRequest) {
     return response
   }
 
-  // Check permission for staff
-  const { data: permission, error: permError } = await supabaseAdmin
-    .from("admin_permissions")
-    .select("can_access")
-    .eq("admin_user_id", adminUser.id)
-    .eq("page_key", pageKey)
-    .single()
+  // Check permission for staff using cached permission keys
+  const permittedKeySet = new Set(permissionKeys)
 
   // Settings is super_admin only, or staff lacks permission for current page
-  if (pageKey === "settings" || permError || !permission?.can_access) {
-    // Fetch all permissions for this user to find first permitted page
-    const { data: allPerms } = await supabaseAdmin
-      .from("admin_permissions")
-      .select("page_key")
-      .eq("admin_user_id", adminUser.id)
-      .eq("can_access", true)
+  if (pageKey === "settings" || !permittedKeySet.has(pageKey)) {
+    // Find first permitted page to redirect to
+    const PAGE_ORDER = ["dashboard", "residents", "bookings", "complaints", "visitors", "parcels", "analytics", "feedback", "accounting"]
+    const PAGE_KEY_TO_ROUTE: Record<string, string> = {
+      dashboard: "/admin/dashboard",
+      residents: "/admin",
+      bookings: "/admin/bookings",
+      complaints: "/admin/complaints",
+      visitors: "/admin/visitors",
+      parcels: "/admin/parcels",
+      analytics: "/admin/analytics",
+      feedback: "/admin/feedback",
+      accounting: "/admin/accounting",
+    }
 
-    if (allPerms && allPerms.length > 0) {
-      // Page order for determining first permitted page
-      const PAGE_ORDER = ["dashboard", "residents", "bookings", "complaints", "visitors", "parcels", "analytics", "feedback", "accounting"]
-      const PAGE_KEY_TO_ROUTE: Record<string, string> = {
-        dashboard: "/admin/dashboard",
-        residents: "/admin",
-        bookings: "/admin/bookings",
-        complaints: "/admin/complaints",
-        visitors: "/admin/visitors",
-        parcels: "/admin/parcels",
-        analytics: "/admin/analytics",
-        feedback: "/admin/feedback",
-        accounting: "/admin/accounting",
-      }
+    const firstPermittedKey = PAGE_ORDER.find(key => permittedKeySet.has(key))
 
-      const permittedKeys = new Set(allPerms.map(p => p.page_key))
-      const firstPermittedKey = PAGE_ORDER.find(key => permittedKeys.has(key))
-
-      if (firstPermittedKey) {
-        const redirectUrl = new URL(PAGE_KEY_TO_ROUTE[firstPermittedKey], request.url)
-        return NextResponse.redirect(redirectUrl)
-      }
+    if (firstPermittedKey) {
+      const redirectUrl = new URL(PAGE_KEY_TO_ROUTE[firstPermittedKey], request.url)
+      return NextResponse.redirect(redirectUrl)
     }
 
     // No permissions at all - show unauthorized

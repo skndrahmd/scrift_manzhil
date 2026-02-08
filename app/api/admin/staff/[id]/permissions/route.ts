@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@supabase/supabase-js"
 import { verifyAdminAccess, isSuperAdmin } from "@/lib/api-auth"
 import { PAGE_KEYS } from "@/lib/supabase"
+import { ADMIN_CACHE_COOKIE } from "@/lib/middleware-cache"
 
 // PUT - Update staff member permissions
 export async function PUT(
@@ -79,7 +80,9 @@ export async function PUT(
       return NextResponse.json({ error: "Failed to update permissions" }, { status: 500 })
     }
 
-    return NextResponse.json({ success: true, permissions: newPermissions })
+    const res = NextResponse.json({ success: true, permissions: newPermissions })
+    res.cookies.set(ADMIN_CACHE_COOKIE, "", { maxAge: 0, path: "/" })
+    return res
   } catch (error) {
     console.error("PUT /api/admin/staff/[id]/permissions error:", error)
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })

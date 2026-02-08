@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@supabase/supabase-js"
 import { verifyAdminAccess, isSuperAdmin } from "@/lib/api-auth"
 import { PAGE_KEYS } from "@/lib/supabase"
+import { ADMIN_CACHE_COOKIE } from "@/lib/middleware-cache"
 
 // GET - Get single staff member
 export async function GET(
@@ -173,7 +174,9 @@ export async function PUT(
       }
     }
 
-    return NextResponse.json({ success: true, staff: user })
+    const res = NextResponse.json({ success: true, staff: user })
+    res.cookies.set(ADMIN_CACHE_COOKIE, "", { maxAge: 0, path: "/" })
+    return res
   } catch (error) {
     console.error("PUT /api/admin/staff/[id] error:", error)
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
@@ -252,7 +255,9 @@ export async function DELETE(
       // Non-fatal, admin record is already deleted
     }
 
-    return NextResponse.json({ success: true })
+    const res = NextResponse.json({ success: true })
+    res.cookies.set(ADMIN_CACHE_COOKIE, "", { maxAge: 0, path: "/" })
+    return res
   } catch (error) {
     console.error("DELETE /api/admin/staff/[id] error:", error)
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })

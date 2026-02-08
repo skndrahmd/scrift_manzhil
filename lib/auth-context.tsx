@@ -55,18 +55,6 @@ export function AuthProvider({
         return
       }
 
-      // Check if RBAC is enabled (any admin users exist)
-      const { count, error: countError } = await supabase
-        .from("admin_users")
-        .select("*", { count: "exact", head: true })
-
-      // If RBAC not enabled, don't set admin user (will show all tabs)
-      if (countError || count === null || count === 0) {
-        setAdminUser(null)
-        setPermissions(new Map())
-        return
-      }
-
       // Fetch admin user record
       const { data: adminData, error: adminError } = await supabase
         .from("admin_users")
