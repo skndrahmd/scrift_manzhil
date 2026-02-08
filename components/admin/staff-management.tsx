@@ -47,7 +47,6 @@ import {
     Bell,
     BellRing,
     Phone,
-    Mail,
     UserCog,
     Loader2,
     FileText,
@@ -67,8 +66,6 @@ export function StaffManagement() {
 
     // Form state
     const [formData, setFormData] = useState({
-        email: "",
-        password: "",
         name: "",
         phone_number: "",
         role: "staff" as "super_admin" | "staff",
@@ -127,8 +124,6 @@ export function StaffManagement() {
     // Reset form
     const resetForm = () => {
         setFormData({
-            email: "",
-            password: "",
             name: "",
             phone_number: "",
             role: "staff",
@@ -148,8 +143,6 @@ export function StaffManagement() {
             permObj[p.page_key] = p.can_access
         })
         setFormData({
-            email: staffMember.email,
-            password: "", // Don't show password
             name: staffMember.name,
             phone_number: staffMember.phone_number || "",
             role: staffMember.role,
@@ -178,7 +171,7 @@ export function StaffManagement() {
                     .from("admin_users")
                     .update({
                         name: formData.name,
-                        phone_number: formData.phone_number || null,
+                        phone_number: formData.phone_number,
                         role: formData.role,
                         receive_complaint_notifications: formData.receive_complaint_notifications,
                         receive_reminder_notifications: formData.receive_reminder_notifications,
@@ -224,10 +217,8 @@ export function StaffManagement() {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({
-                        email: formData.email,
-                        password: formData.password,
                         name: formData.name,
-                        phone_number: formData.phone_number || null,
+                        phone_number: formData.phone_number,
                         role: formData.role,
                         receive_complaint_notifications: formData.receive_complaint_notifications,
                         receive_reminder_notifications: formData.receive_reminder_notifications,
@@ -360,7 +351,7 @@ export function StaffManagement() {
                                         />
                                     </div>
                                     <div className="space-y-2">
-                                        <Label htmlFor="phone">Phone (for WhatsApp)</Label>
+                                        <Label htmlFor="phone">Phone Number *</Label>
                                         <div className="relative">
                                             <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                                             <Input
@@ -369,39 +360,12 @@ export function StaffManagement() {
                                                 onChange={(e) => setFormData(f => ({ ...f, phone_number: e.target.value }))}
                                                 placeholder="+923001234567"
                                                 className="pl-10"
+                                                required
                                             />
                                         </div>
+                                        <p className="text-xs text-muted-foreground">Used for WhatsApp login & notifications</p>
                                     </div>
                                 </div>
-
-                                <div className="space-y-2">
-                                    <Label htmlFor="email">Email</Label>
-                                    <div className="relative">
-                                        <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                                        <Input
-                                            id="email"
-                                            type="email"
-                                            value={formData.email}
-                                            onChange={(e) => setFormData(f => ({ ...f, email: e.target.value }))}
-                                            placeholder="admin@example.com"
-                                            className="pl-10"
-                                            disabled={!!editingStaff}
-                                        />
-                                    </div>
-                                </div>
-
-                                {!editingStaff && (
-                                    <div className="space-y-2">
-                                        <Label htmlFor="password">Password</Label>
-                                        <Input
-                                            id="password"
-                                            type="password"
-                                            value={formData.password}
-                                            onChange={(e) => setFormData(f => ({ ...f, password: e.target.value }))}
-                                            placeholder="Minimum 6 characters"
-                                        />
-                                    </div>
-                                )}
                             </div>
 
                             {/* Role Selection */}
@@ -533,7 +497,7 @@ export function StaffManagement() {
                             </Button>
                             <Button
                                 onClick={handleSave}
-                                disabled={saving || !formData.name || !formData.email || (!editingStaff && !formData.password)}
+                                disabled={saving || !formData.name || !formData.phone_number}
                                 className="bg-gradient-to-r from-manzhil-dark to-manzhil-teal"
                             >
                                 {saving ? (
@@ -583,15 +547,9 @@ export function StaffManagement() {
                                         <TableCell>
                                             <div className="text-sm">
                                                 <div className="flex items-center gap-1 text-gray-600">
-                                                    <Mail className="h-3 w-3" />
-                                                    {member.email}
+                                                    <Phone className="h-3 w-3" />
+                                                    {member.phone_number || "—"}
                                                 </div>
-                                                {member.phone_number && (
-                                                    <div className="flex items-center gap-1 text-gray-500 text-xs">
-                                                        <Phone className="h-3 w-3" />
-                                                        {member.phone_number}
-                                                    </div>
-                                                )}
                                             </div>
                                         </TableCell>
                                         <TableCell>

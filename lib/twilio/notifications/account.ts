@@ -11,6 +11,8 @@ import type {
   WelcomeMessageParams,
   AccountBlockedParams,
   AccountReactivatedParams,
+  OtpMessageParams,
+  StaffInvitationParams,
 } from "../types"
 
 /**
@@ -92,6 +94,48 @@ export async function sendAccountReactivated(
 Hi ${name || "Resident"}, your account is reactivated. You now have full access to all services.
 
 — Manzhil`
+
+  return sendWithFallback(phone, templateSid, templateVariables, fallbackMessage)
+}
+
+/**
+ * Send OTP message for admin login
+ */
+export async function sendOtpMessage(
+  params: OtpMessageParams
+): Promise<TwilioResult> {
+  const { phone, otp } = params
+
+  const templateSid = getTemplateSid("otp_message")
+  const templateVariables = {
+    "1": otp,
+  }
+
+  const fallbackMessage = `Hello, this is Manzhil by Scrift.
+
+Your Manzhil login code is: ${otp}. Expires in 5 minutes. Do not share this code with anyone.`
+
+  return sendWithFallback(phone, templateSid, templateVariables, fallbackMessage)
+}
+
+/**
+ * Send staff invitation message
+ * Sent when a new admin/staff member is created
+ */
+export async function sendStaffInvitation(
+  params: StaffInvitationParams
+): Promise<TwilioResult> {
+  const { phone, name, loginUrl } = params
+
+  const templateSid = getTemplateSid("staff_invitation")
+  const templateVariables = {
+    "1": name,
+    "2": loginUrl,
+  }
+
+  const fallbackMessage = `Hello, this is Manzhil by Scrift.
+
+Hi ${name}! You've been added as an admin on Manzhil. Login at ${loginUrl} with your phone number to get started.`
 
   return sendWithFallback(phone, templateSid, templateVariables, fallbackMessage)
 }

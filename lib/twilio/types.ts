@@ -26,6 +26,8 @@ export type TemplateType =
   | "account_blocked_maintenance"
   | "account_reactivated"
   | "broadcast_announcement"
+  | "otp_message"
+  | "staff_invitation"
 
 // Base notification params (common to all)
 export interface BaseNotificationParams {
@@ -111,4 +113,17 @@ export interface AccountReactivatedParams extends BaseNotificationParams {
 export interface BroadcastAnnouncementParams extends BaseNotificationParams {
   variable1?: string  // Title
   variable2?: string  // Body
+}
+
+// OTP notification params
+export interface OtpMessageParams {
+  phone: string
+  otp: string
+}
+
+// Staff invitation notification params
+export interface StaffInvitationParams {
+  phone: string
+  name: string
+  loginUrl: string
 }

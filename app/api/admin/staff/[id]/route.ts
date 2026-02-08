@@ -105,7 +105,12 @@ export async function PUT(
     }
 
     if (name !== undefined) updateData.name = name
-    if (phone_number !== undefined) updateData.phone_number = phone_number
+    if (phone_number !== undefined) {
+      updateData.phone_number = phone_number
+      // Regenerate internal email when phone changes
+      const phoneDigits = phone_number.replace(/\D/g, "")
+      updateData.email = `p${phoneDigits}@manzhil.auth`
+    }
     if (role !== undefined) updateData.role = role
     if (is_active !== undefined) updateData.is_active = is_active
     if (receive_complaint_notifications !== undefined) {
@@ -121,6 +126,19 @@ export async function PUT(
       .eq("id", id)
       .select()
       .single()
+
+    // If phone number changed, update the auth user's email too
+    if (!updateError && phone_number !== undefined && user) {
+      const phoneDigits = phone_number.replace(/\D/g, "")
+      const newEmail = `p${phoneDigits}@manzhil.auth`
+      const { error: authUpdateError } = await supabaseAdmin.auth.admin.updateUserById(
+        user.auth_user_id,
+        { email: newEmail }
+      )
+      if (authUpdateError) {
+        console.error("Error updating auth user email:", authUpdateError)
+      }
+    }
 
     if (updateError) {
       console.error("Error updating staff:", updateError)

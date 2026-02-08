@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server"
+import crypto from "crypto"
 import { createClient } from "@supabase/supabase-js"
 import { verifyAdminAccess, isSuperAdmin } from "@/lib/api-auth"
 import { PAGE_KEYS } from "@/lib/supabase"
+import { sendStaffInvitation } from "@/lib/twilio/notifications"
 
 // GET - List all staff members
 export async function GET() {
@@ -73,8 +75,6 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json()
     const {
-      email,
-      password,
       name,
       phone_number,
       role,
@@ -85,12 +85,8 @@ export async function POST(request: NextRequest) {
     } = body
 
     // Validate required fields
-    if (!email || !password || !name) {
-      return NextResponse.json({ error: "Email, password, and name are required" }, { status: 400 })
-    }
-
-    if (password.length < 6) {
-      return NextResponse.json({ error: "Password must be at least 6 characters" }, { status: 400 })
+    if (!name || !phone_number) {
+      return NextResponse.json({ error: "Name and phone number are required" }, { status: 400 })
     }
 
     const supabaseAdmin = createClient(
@@ -104,10 +100,15 @@ export async function POST(request: NextRequest) {
       }
     )
 
+    // Generate internal email and random password
+    const phoneDigits = phone_number.replace(/\D/g, "")
+    const internalEmail = `p${phoneDigits}@manzhil.auth`
+    const randomPassword = crypto.randomUUID()
+
     // Create auth user
     const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
-      email,
-      password,
+      email: internalEmail,
+      password: randomPassword,
       email_confirm: true,
     })
 
@@ -125,9 +126,9 @@ export async function POST(request: NextRequest) {
       .from("admin_users")
       .insert({
         auth_user_id: authData.user.id,
-        email,
+        email: internalEmail,
         name,
-        phone_number: phone_number || null,
+        phone_number,
         role: role || "staff",
         receive_complaint_notifications: receive_complaint_notifications || false,
         receive_reminder_notifications: receive_reminder_notifications || false,
@@ -162,6 +163,12 @@ export async function POST(request: NextRequest) {
         // Non-fatal, continue anyway
       }
     }
+
+    // Send WhatsApp invitation to the new staff member
+    const loginUrl = `${process.env.NEXT_PUBLIC_APP_URL || "https://manzhil.scrift.com"}/login`
+    sendStaffInvitation({ phone: phone_number, name, loginUrl }).catch(err => {
+      console.error("Failed to send staff invitation:", err)
+    })
 
     return NextResponse.json({ success: true, adminUser })
   } catch (error) {

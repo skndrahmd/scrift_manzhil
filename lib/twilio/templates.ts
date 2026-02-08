@@ -33,6 +33,10 @@ export const TEMPLATE_SIDS: Record<TemplateType, string | undefined> = {
 
   // Broadcast templates
   broadcast_announcement: process.env.TWILIO_BROADCAST_ANNOUNCEMENT_TEMPLATE_SID,
+
+  // Auth templates
+  otp_message: process.env.TWILIO_OTP_TEMPLATE_SID,
+  staff_invitation: process.env.TWILIO_STAFF_INVITATION_TEMPLATE_SID,
 }
 
 /**
