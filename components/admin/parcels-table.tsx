@@ -358,101 +358,186 @@ export function ParcelsTable() {
                             )}
                         </div>
                     ) : (
-                        <div className="rounded-lg border border-manzhil-teal/10 overflow-hidden">
-                            <Table>
-                                <TableHeader>
-                                    <TableRow className="bg-manzhil-teal/5 hover:bg-manzhil-teal/5">
-                                        <TableHead>Image</TableHead>
-                                        <TableHead>Resident</TableHead>
-                                        <TableHead>Description</TableHead>
-                                        <TableHead>Courier</TableHead>
-                                        <TableHead>Received</TableHead>
-                                        <TableHead>Status</TableHead>
-                                        <TableHead className="text-right">Actions</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {filteredParcels.map((parcel) => (
-                                        <TableRow key={parcel.id} className="hover:bg-manzhil-teal/5">
-                                            <TableCell>
+                        <>
+                            {/* Desktop Table View */}
+                            <div className="hidden md:block rounded-lg border border-manzhil-teal/10 overflow-hidden">
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow className="bg-manzhil-teal/5 hover:bg-manzhil-teal/5">
+                                            <TableHead>Image</TableHead>
+                                            <TableHead>Resident</TableHead>
+                                            <TableHead>Description</TableHead>
+                                            <TableHead>Courier</TableHead>
+                                            <TableHead>Received</TableHead>
+                                            <TableHead>Status</TableHead>
+                                            <TableHead className="text-right">Actions</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {filteredParcels.map((parcel) => (
+                                            <TableRow key={parcel.id} className="hover:bg-manzhil-teal/5">
+                                                <TableCell>
+                                                    <a
+                                                        href={parcel.image_url}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="block w-12 h-12 rounded-lg overflow-hidden border border-manzhil-teal/20 hover:border-manzhil-teal transition-colors"
+                                                    >
+                                                        <img
+                                                            src={parcel.image_url}
+                                                            alt="Parcel"
+                                                            loading="lazy"
+                                                            className="w-full h-full object-cover"
+                                                        />
+                                                    </a>
+                                                </TableCell>
+                                                <TableCell>
+                                                    <div className="flex flex-col">
+                                                        <span className="font-medium text-manzhil-dark">{parcel.profiles?.name || "Unknown"}</span>
+                                                        <span className="text-xs text-gray-500">{parcel.profiles?.apartment_number}</span>
+                                                    </div>
+                                                </TableCell>
+                                                <TableCell className="text-gray-600 max-w-[200px] truncate">
+                                                    {parcel.description || "—"}
+                                                </TableCell>
+                                                <TableCell className="text-gray-600">
+                                                    {parcel.courier_name || "—"}
+                                                </TableCell>
+                                                <TableCell className="text-gray-600 text-sm">
+                                                    {formatDate(parcel.created_at)}
+                                                </TableCell>
+                                                <TableCell>{getStatusBadge(parcel.status)}</TableCell>
+                                                <TableCell className="text-right">
+                                                    <div className="flex gap-2 justify-end">
+                                                        <Button
+                                                            variant="outline"
+                                                            size="sm"
+                                                            onClick={() => openViewModal(parcel)}
+                                                            className="h-8 w-8 p-0 border-manzhil-teal/30 hover:bg-manzhil-teal/10"
+                                                            title="View Details"
+                                                        >
+                                                            <Eye className="h-4 w-4 text-manzhil-teal" />
+                                                        </Button>
+
+                                                        {parcel.status === "pending" && (
+                                                            <>
+                                                                <Button
+                                                                    variant="outline"
+                                                                    size="sm"
+                                                                    onClick={() => handleResendNotification(parcel)}
+                                                                    disabled={isNotifying}
+                                                                    className="h-8 px-3 border-manzhil-teal/30 hover:bg-manzhil-teal/10 text-manzhil-teal"
+                                                                    title="Resend Notification"
+                                                                >
+                                                                    <Bell className="h-4 w-4" />
+                                                                </Button>
+                                                                <Button
+                                                                    variant="outline"
+                                                                    size="sm"
+                                                                    onClick={() => handleMarkCollected(parcel)}
+                                                                    className="h-8 px-3 border-green-300 hover:bg-green-50 text-green-600"
+                                                                    title="Mark as Collected"
+                                                                >
+                                                                    <CheckCircle className="h-4 w-4" />
+                                                                </Button>
+                                                            </>
+                                                        )}
+                                                    </div>
+                                                </TableCell>
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                </Table>
+                            </div>
+
+                            {/* Mobile Card View */}
+                            <div className="md:hidden space-y-4">
+                                {filteredParcels.map((parcel) => (
+                                    <Card key={parcel.id} className="border-manzhil-teal/10 shadow-sm">
+                                        <CardContent className="p-4 space-y-4">
+                                            <div className="flex gap-3">
                                                 <a
                                                     href={parcel.image_url}
                                                     target="_blank"
                                                     rel="noopener noreferrer"
-                                                    className="block w-12 h-12 rounded-lg overflow-hidden border border-manzhil-teal/20 hover:border-manzhil-teal transition-colors"
+                                                    className="block w-16 h-16 rounded-lg overflow-hidden border border-manzhil-teal/20 flex-shrink-0"
                                                 >
                                                     <img
                                                         src={parcel.image_url}
                                                         alt="Parcel"
+                                                        loading="lazy"
                                                         className="w-full h-full object-cover"
                                                     />
                                                 </a>
-                                            </TableCell>
-                                            <TableCell>
-                                                <div className="flex flex-col">
-                                                    <span className="font-medium text-manzhil-dark">{parcel.profiles?.name || "Unknown"}</span>
-                                                    <span className="text-xs text-gray-500">{parcel.profiles?.apartment_number}</span>
-                                                </div>
-                                            </TableCell>
-                                            <TableCell className="text-gray-600 max-w-[200px] truncate">
-                                                {parcel.description || "—"}
-                                            </TableCell>
-                                            <TableCell className="text-gray-600">
-                                                {parcel.courier_name || "—"}
-                                            </TableCell>
-                                            <TableCell className="text-gray-600 text-sm">
-                                                {formatDate(parcel.created_at)}
-                                            </TableCell>
-                                            <TableCell>{getStatusBadge(parcel.status)}</TableCell>
-                                            <TableCell className="text-right">
-                                                <div className="flex gap-2 justify-end">
-                                                    <Button
-                                                        variant="outline"
-                                                        size="sm"
-                                                        onClick={() => openViewModal(parcel)}
-                                                        className="h-8 w-8 p-0 border-manzhil-teal/30 hover:bg-manzhil-teal/10"
-                                                        title="View Details"
-                                                    >
-                                                        <Eye className="h-4 w-4 text-manzhil-teal" />
-                                                    </Button>
-
-                                                    {parcel.status === "pending" && (
-                                                        <>
-                                                            <Button
-                                                                variant="outline"
-                                                                size="sm"
-                                                                onClick={() => handleResendNotification(parcel)}
-                                                                disabled={isNotifying}
-                                                                className="h-8 px-3 border-manzhil-teal/30 hover:bg-manzhil-teal/10 text-manzhil-teal"
-                                                                title="Resend Notification"
-                                                            >
-                                                                <Bell className="h-4 w-4" />
-                                                            </Button>
-                                                            <Button
-                                                                variant="outline"
-                                                                size="sm"
-                                                                onClick={() => handleMarkCollected(parcel)}
-                                                                className="h-8 px-3 border-green-300 hover:bg-green-50 text-green-600"
-                                                                title="Mark as Collected"
-                                                            >
-                                                                <CheckCircle className="h-4 w-4" />
-                                                            </Button>
-                                                        </>
+                                                <div className="flex-1 min-w-0">
+                                                    <div className="flex justify-between items-start">
+                                                        <div>
+                                                            <h3 className="font-medium text-manzhil-dark">{parcel.profiles?.name || "Unknown"}</h3>
+                                                            <p className="text-xs text-gray-500">{parcel.profiles?.apartment_number}</p>
+                                                        </div>
+                                                        {getStatusBadge(parcel.status)}
+                                                    </div>
+                                                    {parcel.description && (
+                                                        <p className="text-sm text-gray-600 mt-1 truncate">{parcel.description}</p>
                                                     )}
                                                 </div>
-                                            </TableCell>
-                                        </TableRow>
-                                    ))}
-                                </TableBody>
-                            </Table>
-                        </div>
+                                            </div>
+
+                                            <div className="grid grid-cols-2 gap-3 text-sm">
+                                                <div>
+                                                    <span className="text-gray-500 block text-xs">Courier</span>
+                                                    <span className="font-medium text-gray-700">{parcel.courier_name || "—"}</span>
+                                                </div>
+                                                <div>
+                                                    <span className="text-gray-500 block text-xs">Received</span>
+                                                    <span className="font-medium text-gray-700">{formatDate(parcel.created_at)}</span>
+                                                </div>
+                                            </div>
+
+                                            <div className="flex justify-end items-center pt-3 border-t border-gray-100 gap-2">
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    onClick={() => openViewModal(parcel)}
+                                                    className="h-8 w-8 p-0 border-manzhil-teal/30"
+                                                >
+                                                    <Eye className="h-4 w-4 text-manzhil-teal" />
+                                                </Button>
+                                                {parcel.status === "pending" && (
+                                                    <>
+                                                        <Button
+                                                            variant="outline"
+                                                            size="sm"
+                                                            onClick={() => handleResendNotification(parcel)}
+                                                            disabled={isNotifying}
+                                                            className="h-8 w-8 p-0 border-manzhil-teal/30 text-manzhil-teal"
+                                                        >
+                                                            <Bell className="h-4 w-4" />
+                                                        </Button>
+                                                        <Button
+                                                            variant="outline"
+                                                            size="sm"
+                                                            onClick={() => handleMarkCollected(parcel)}
+                                                            className="h-8 text-xs border-green-300 text-green-600"
+                                                        >
+                                                            <CheckCircle className="h-3.5 w-3.5 mr-1" />
+                                                            Collected
+                                                        </Button>
+                                                    </>
+                                                )}
+                                            </div>
+                                        </CardContent>
+                                    </Card>
+                                ))}
+                            </div>
+                        </>
                     )}
                 </CardContent>
             </Card>
 
             {/* View Details Modal */}
             <Dialog open={isViewModalOpen} onOpenChange={setIsViewModalOpen}>
-                <DialogContent className="sm:max-w-[500px]">
+                <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
                     <DialogHeader>
                         <DialogTitle className="flex items-center gap-2 text-manzhil-dark">
                             <Package className="h-5 w-5 text-manzhil-teal" />
@@ -472,6 +557,7 @@ export function ParcelsTable() {
                                     <img
                                         src={selectedParcel.image_url}
                                         alt="Parcel"
+                                        loading="lazy"
                                         className="w-full h-48 object-cover"
                                     />
                                 </a>
@@ -556,7 +642,7 @@ export function ParcelsTable() {
                 setIsRegisterModalOpen(open)
                 if (!open) resetForm()
             }}>
-                <DialogContent className="sm:max-w-[500px]">
+                <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
                     <DialogHeader>
                         <DialogTitle className="flex items-center gap-2 text-manzhil-dark">
                             <Package className="h-5 w-5 text-manzhil-teal" />

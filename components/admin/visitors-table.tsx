@@ -253,91 +253,161 @@ export function VisitorsTable() {
                         )}
                     </div>
                 ) : (
-                    <div className="rounded-lg border border-manzhil-teal/10 overflow-hidden">
-                        <Table>
-                            <TableHeader>
-                                <TableRow className="bg-manzhil-teal/5 hover:bg-manzhil-teal/5">
-                                    <TableHead>CNIC Image</TableHead>
-                                    <TableHead>Visit Date</TableHead>
-                                    <TableHead>Resident</TableHead>
-                                    <TableHead>Status</TableHead>
-                                    <TableHead className="text-right">Actions</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {filteredVisitors.map((visitor) => (
-                                    <TableRow key={visitor.id} className="hover:bg-manzhil-teal/5">
-                                        <TableCell>
-                                            {visitor.cnic_image_url ? (
-                                                <button
-                                                    onClick={() => openImageModal(visitor.cnic_image_url!)}
-                                                    className="relative group"
-                                                >
-                                                    <img
-                                                        src={visitor.cnic_image_url}
-                                                        alt="CNIC"
-                                                        className="w-16 h-10 object-cover rounded border border-gray-200 group-hover:border-manzhil-teal transition-colors"
-                                                    />
-                                                    <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 rounded flex items-center justify-center transition-opacity">
-                                                        <Eye className="h-4 w-4 text-white" />
-                                                    </div>
-                                                </button>
-                                            ) : visitor.visitor_cnic ? (
-                                                <span className="text-gray-600 font-mono text-sm">{visitor.visitor_cnic}</span>
-                                            ) : (
-                                                <span className="text-gray-400 flex items-center gap-1">
-                                                    <ImageIcon className="h-4 w-4" />
-                                                    No image
-                                                </span>
-                                            )}
-                                        </TableCell>
-                                        <TableCell className="text-gray-600">{formatDate(visitor.visit_date)}</TableCell>
-                                        <TableCell>
-                                            <div className="flex flex-col">
-                                                <span className="font-medium text-manzhil-dark">{visitor.profiles?.name || "Unknown"}</span>
-                                                <span className="text-xs text-gray-500">{visitor.profiles?.apartment_number}</span>
-                                            </div>
-                                        </TableCell>
-                                        <TableCell>{getStatusBadge(visitor.status)}</TableCell>
-                                        <TableCell className="text-right">
-                                            <div className="flex gap-2 justify-end">
-                                                {/* View Button */}
-                                                <Button
-                                                    variant="outline"
-                                                    size="sm"
-                                                    onClick={() => openViewModal(visitor)}
-                                                    className="h-8 w-8 p-0 border-manzhil-teal/30 hover:bg-manzhil-teal/10"
-                                                    title="View Details"
-                                                >
-                                                    <Eye className="h-4 w-4 text-manzhil-teal" />
-                                                </Button>
-
-                                                {/* Notify Arrival Button - only for pending visitors */}
-                                                {visitor.status === "pending" && (
+                    <>
+                        {/* Desktop Table View */}
+                        <div className="hidden md:block rounded-lg border border-manzhil-teal/10 overflow-hidden">
+                            <Table>
+                                <TableHeader>
+                                    <TableRow className="bg-manzhil-teal/5 hover:bg-manzhil-teal/5">
+                                        <TableHead>CNIC Image</TableHead>
+                                        <TableHead>Visit Date</TableHead>
+                                        <TableHead>Resident</TableHead>
+                                        <TableHead>Status</TableHead>
+                                        <TableHead className="text-right">Actions</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {filteredVisitors.map((visitor) => (
+                                        <TableRow key={visitor.id} className="hover:bg-manzhil-teal/5">
+                                            <TableCell>
+                                                {visitor.cnic_image_url ? (
+                                                    <button
+                                                        onClick={() => openImageModal(visitor.cnic_image_url!)}
+                                                        className="relative group"
+                                                    >
+                                                        <img
+                                                            src={visitor.cnic_image_url}
+                                                            alt="CNIC"
+                                                            loading="lazy"
+                                                            className="w-16 h-10 object-cover rounded border border-gray-200 group-hover:border-manzhil-teal transition-colors"
+                                                        />
+                                                        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 rounded flex items-center justify-center transition-opacity">
+                                                            <Eye className="h-4 w-4 text-white" />
+                                                        </div>
+                                                    </button>
+                                                ) : visitor.visitor_cnic ? (
+                                                    <span className="text-gray-600 font-mono text-sm">{visitor.visitor_cnic}</span>
+                                                ) : (
+                                                    <span className="text-gray-400 flex items-center gap-1">
+                                                        <ImageIcon className="h-4 w-4" />
+                                                        No image
+                                                    </span>
+                                                )}
+                                            </TableCell>
+                                            <TableCell className="text-gray-600">{formatDate(visitor.visit_date)}</TableCell>
+                                            <TableCell>
+                                                <div className="flex flex-col">
+                                                    <span className="font-medium text-manzhil-dark">{visitor.profiles?.name || "Unknown"}</span>
+                                                    <span className="text-xs text-gray-500">{visitor.profiles?.apartment_number}</span>
+                                                </div>
+                                            </TableCell>
+                                            <TableCell>{getStatusBadge(visitor.status)}</TableCell>
+                                            <TableCell className="text-right">
+                                                <div className="flex gap-2 justify-end">
+                                                    {/* View Button */}
                                                     <Button
                                                         variant="outline"
                                                         size="sm"
-                                                        onClick={() => openNotifyModal(visitor)}
-                                                        className="h-8 px-3 border-manzhil-teal/30 hover:bg-manzhil-teal/10 text-manzhil-teal hover:text-manzhil-dark"
-                                                        title="Mark as Arrived & Notify"
+                                                        onClick={() => openViewModal(visitor)}
+                                                        className="h-8 w-8 p-0 border-manzhil-teal/30 hover:bg-manzhil-teal/10"
+                                                        title="View Details"
                                                     >
-                                                        <Bell className="h-4 w-4 mr-1" />
-                                                        Notify
+                                                        <Eye className="h-4 w-4 text-manzhil-teal" />
                                                     </Button>
-                                                )}
+
+                                                    {/* Notify Arrival Button - only for pending visitors */}
+                                                    {visitor.status === "pending" && (
+                                                        <Button
+                                                            variant="outline"
+                                                            size="sm"
+                                                            onClick={() => openNotifyModal(visitor)}
+                                                            className="h-8 px-3 border-manzhil-teal/30 hover:bg-manzhil-teal/10 text-manzhil-teal hover:text-manzhil-dark"
+                                                            title="Mark as Arrived & Notify"
+                                                        >
+                                                            <Bell className="h-4 w-4 mr-1" />
+                                                            Notify
+                                                        </Button>
+                                                    )}
+                                                </div>
+                                            </TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                        </div>
+
+                        {/* Mobile Card View */}
+                        <div className="md:hidden space-y-4">
+                            {filteredVisitors.map((visitor) => (
+                                <Card key={visitor.id} className="border-manzhil-teal/10 shadow-sm">
+                                    <CardContent className="p-4 space-y-4">
+                                        <div className="flex justify-between items-start">
+                                            <div>
+                                                <h3 className="font-medium text-manzhil-dark">{visitor.profiles?.name || "Unknown"}</h3>
+                                                <p className="text-xs text-gray-500">{visitor.profiles?.apartment_number}</p>
                                             </div>
-                                        </TableCell>
-                                    </TableRow>
-                                ))}
-                            </TableBody>
-                        </Table>
-                    </div>
+                                            {getStatusBadge(visitor.status)}
+                                        </div>
+
+                                        <div className="grid grid-cols-2 gap-3 text-sm">
+                                            <div>
+                                                <span className="text-gray-500 block text-xs">Visit Date</span>
+                                                <span className="font-medium text-gray-700">{formatDate(visitor.visit_date)}</span>
+                                            </div>
+                                            <div>
+                                                <span className="text-gray-500 block text-xs">Visitor</span>
+                                                <span className="font-medium text-gray-700">{visitor.visitor_name || "—"}</span>
+                                            </div>
+                                            {visitor.cnic_image_url && (
+                                                <div className="col-span-2">
+                                                    <span className="text-gray-500 block text-xs mb-2">CNIC Image</span>
+                                                    <button
+                                                        onClick={() => openImageModal(visitor.cnic_image_url!)}
+                                                        className="relative group"
+                                                    >
+                                                        <img
+                                                            src={visitor.cnic_image_url}
+                                                            alt="CNIC"
+                                                            loading="lazy"
+                                                            className="w-20 h-12 object-cover rounded border border-gray-200 group-hover:border-manzhil-teal transition-colors"
+                                                        />
+                                                    </button>
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        <div className="flex justify-end items-center pt-3 border-t border-gray-100 gap-2">
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={() => openViewModal(visitor)}
+                                                className="h-8 w-8 p-0 border-manzhil-teal/30"
+                                            >
+                                                <Eye className="h-4 w-4 text-manzhil-teal" />
+                                            </Button>
+                                            {visitor.status === "pending" && (
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    onClick={() => openNotifyModal(visitor)}
+                                                    className="h-8 text-xs border-manzhil-teal/30 text-manzhil-teal"
+                                                >
+                                                    <Bell className="h-3.5 w-3.5 mr-1" />
+                                                    Notify Arrival
+                                                </Button>
+                                            )}
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            ))}
+                        </div>
+                    </>
                 )}
             </CardContent>
 
             {/* View Details Modal */}
             <Dialog open={isViewModalOpen} onOpenChange={setIsViewModalOpen}>
-                <DialogContent className="sm:max-w-[500px]">
+                <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
                     <DialogHeader>
                         <DialogTitle className="flex items-center gap-2 text-manzhil-dark">
                             <Ticket className="h-5 w-5 text-manzhil-teal" />
@@ -357,6 +427,7 @@ export function VisitorsTable() {
                                         <img
                                             src={selectedVisitor.cnic_image_url}
                                             alt="CNIC"
+                                            loading="lazy"
                                             className="w-full max-h-48 object-contain rounded-lg border border-gray-200 group-hover:border-manzhil-teal transition-colors"
                                         />
                                         <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 rounded-lg flex items-center justify-center transition-opacity">
@@ -433,7 +504,7 @@ export function VisitorsTable() {
 
             {/* Image Fullscreen Modal */}
             <Dialog open={isImageModalOpen} onOpenChange={setIsImageModalOpen}>
-                <DialogContent className="sm:max-w-[90vw] sm:max-h-[90vh] p-2">
+                <DialogContent className="sm:max-w-[90vw] sm:max-h-[90vh] max-h-[85vh] p-2">
                     <DialogHeader className="sr-only">
                         <DialogTitle>CNIC Image</DialogTitle>
                     </DialogHeader>
@@ -449,7 +520,7 @@ export function VisitorsTable() {
 
             {/* Notify Arrival Modal */}
             <Dialog open={isNotifyModalOpen} onOpenChange={setIsNotifyModalOpen}>
-                <DialogContent className="sm:max-w-[400px]">
+                <DialogContent className="sm:max-w-[400px] max-h-[90vh] overflow-y-auto">
                     <DialogHeader>
                         <DialogTitle className="flex items-center gap-2 text-manzhil-dark">
                             <Bell className="h-5 w-5 text-manzhil-teal" />

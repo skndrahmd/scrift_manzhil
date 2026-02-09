@@ -451,7 +451,7 @@ export function ComplaintsTable() {
 
             {/* Complaint Details Modal */}
             <Dialog open={isViewModalOpen} onOpenChange={setIsViewModalOpen}>
-                <DialogContent className="sm:max-w-[500px]">
+                <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
                     <DialogHeader>
                         <DialogTitle className="flex items-center gap-2 text-manzhil-dark">
                             <Eye className="h-5 w-5 text-manzhil-teal" />

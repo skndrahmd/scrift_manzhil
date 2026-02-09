@@ -403,13 +403,13 @@ export function ResidentsTable() {
                                     Add Resident
                                 </Button>
                             </DialogTrigger>
-                            <DialogContent>
+                            <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
                                 <DialogHeader>
                                     <DialogTitle>Add New Resident</DialogTitle>
                                 </DialogHeader>
                                 <div className="grid gap-4 py-4">
-                                    <div className="grid grid-cols-4 items-center gap-4">
-                                        <Label htmlFor="name" className="text-right">Name *</Label>
+                                    <div className="grid sm:grid-cols-4 items-center gap-2 sm:gap-4">
+                                        <Label htmlFor="name" className="sm:text-right">Name *</Label>
                                         <Input
                                             id="name"
                                             value={newUser.name}
@@ -417,8 +417,8 @@ export function ResidentsTable() {
                                             className="col-span-3"
                                         />
                                     </div>
-                                    <div className="grid grid-cols-4 items-center gap-4">
-                                        <Label htmlFor="phone" className="text-right">Phone *</Label>
+                                    <div className="grid sm:grid-cols-4 items-center gap-2 sm:gap-4">
+                                        <Label htmlFor="phone" className="sm:text-right">Phone *</Label>
                                         <Input
                                             id="phone"
                                             value={newUser.phone_number}
@@ -427,8 +427,8 @@ export function ResidentsTable() {
                                             placeholder="+1234567890"
                                         />
                                     </div>
-                                    <div className="grid grid-cols-4 items-center gap-4">
-                                        <Label htmlFor="apartment" className="text-right">Apartment *</Label>
+                                    <div className="grid sm:grid-cols-4 items-center gap-2 sm:gap-4">
+                                        <Label htmlFor="apartment" className="sm:text-right">Apartment *</Label>
                                         <Input
                                             id="apartment"
                                             value={newUser.apartment_number}
@@ -437,8 +437,8 @@ export function ResidentsTable() {
                                             placeholder="A-101"
                                         />
                                     </div>
-                                    <div className="grid grid-cols-4 items-center gap-4">
-                                        <Label htmlFor="cnic" className="text-right">CNIC</Label>
+                                    <div className="grid sm:grid-cols-4 items-center gap-2 sm:gap-4">
+                                        <Label htmlFor="cnic" className="sm:text-right">CNIC</Label>
                                         <Input
                                             id="cnic"
                                             value={newUser.cnic}
@@ -446,8 +446,8 @@ export function ResidentsTable() {
                                             className="col-span-3"
                                         />
                                     </div>
-                                    <div className="grid grid-cols-4 items-center gap-4">
-                                        <Label htmlFor="maintenance" className="text-right">Maintenance</Label>
+                                    <div className="grid sm:grid-cols-4 items-center gap-2 sm:gap-4">
+                                        <Label htmlFor="maintenance" className="sm:text-right">Maintenance</Label>
                                         <Input
                                             id="maintenance"
                                             type="number"
@@ -696,38 +696,38 @@ export function ResidentsTable() {
 
             {/* Edit Dialog */}
             <Dialog open={isEditUserOpen} onOpenChange={setIsEditUserOpen}>
-                <DialogContent>
+                <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
                     <DialogHeader>
                         <DialogTitle>Edit Resident</DialogTitle>
                     </DialogHeader>
                     {editingUser && (
                         <div className="grid gap-4 py-4">
-                            <div className="grid grid-cols-4 items-center gap-4">
-                                <Label className="text-right">Name</Label>
+                            <div className="grid sm:grid-cols-4 items-center gap-2 sm:gap-4">
+                                <Label className="sm:text-right">Name</Label>
                                 <Input
                                     value={editingUser.name}
                                     onChange={(e) => setEditingUser({ ...editingUser, name: e.target.value })}
                                     className="col-span-3"
                                 />
                             </div>
-                            <div className="grid grid-cols-4 items-center gap-4">
-                                <Label className="text-right">Phone</Label>
+                            <div className="grid sm:grid-cols-4 items-center gap-2 sm:gap-4">
+                                <Label className="sm:text-right">Phone</Label>
                                 <Input
                                     value={editingUser.phone_number}
                                     onChange={(e) => setEditingUser({ ...editingUser, phone_number: e.target.value })}
                                     className="col-span-3"
                                 />
                             </div>
-                            <div className="grid grid-cols-4 items-center gap-4">
-                                <Label className="text-right">Apartment</Label>
+                            <div className="grid sm:grid-cols-4 items-center gap-2 sm:gap-4">
+                                <Label className="sm:text-right">Apartment</Label>
                                 <Input
                                     value={editingUser.apartment_number}
                                     onChange={(e) => setEditingUser({ ...editingUser, apartment_number: e.target.value })}
                                     className="col-span-3"
                                 />
                             </div>
-                            <div className="grid grid-cols-4 items-center gap-4">
-                                <Label className="text-right">Maintenance</Label>
+                            <div className="grid sm:grid-cols-4 items-center gap-2 sm:gap-4">
+                                <Label className="sm:text-right">Maintenance</Label>
                                 <Input
                                     type="number"
                                     value={editingUser.maintenance_charges}

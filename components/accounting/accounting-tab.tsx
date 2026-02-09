@@ -391,7 +391,7 @@ export function AccountingTab() {
                             <CardTitle>Financial Reports</CardTitle>
                         </CardHeader>
                         <CardContent>
-                            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                                 {reportCards.map((report) => {
                                     const Icon = report.icon
                                     const isGeneratingPdf = generatingReport === `${report.id}-pdf`

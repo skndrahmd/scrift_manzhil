@@ -674,7 +674,7 @@ export function AnalyticsDashboard() {
                                     <BarChart data={complaintData.topSubcategories} layout="vertical">
                                         <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} />
                                         <XAxis type="number" />
-                                        <YAxis dataKey="name" type="category" width={180} tick={{ fontSize: 11 }} />
+                                        <YAxis dataKey="name" type="category" width={120} tick={{ fontSize: 10 }} />
                                         <Tooltip content={<CustomTooltip />} />
                                         <Bar dataKey="count" fill={CHART_COLORS.secondary} radius={[0, 4, 4, 0]} />
                                     </BarChart>
@@ -686,7 +686,7 @@ export function AnalyticsDashboard() {
 
                 {/* Bookings Tab */}
                 <TabsContent value="bookings" className="space-y-6">
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                         <Card className="border-0 shadow-lg shadow-manzhil-teal/5">
                             <CardContent className="p-5">
                                 <div className="flex items-center gap-3">

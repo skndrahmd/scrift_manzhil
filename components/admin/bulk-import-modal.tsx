@@ -295,7 +295,7 @@ export function BulkImportModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[700px]">
+      <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
             {step === "upload" && "Bulk Import Residents"}
@@ -406,8 +406,8 @@ export function BulkImportModal({
                         result.status === "error"
                           ? "bg-red-50 dark:bg-red-950/20"
                           : result.status === "warning"
-                          ? "bg-yellow-50 dark:bg-yellow-950/20"
-                          : ""
+                            ? "bg-yellow-50 dark:bg-yellow-950/20"
+                            : ""
                       }
                     >
                       <TableCell className="font-mono text-xs">
