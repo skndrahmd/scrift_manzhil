@@ -173,6 +173,23 @@ async function handlePoliciesAcceptance(
       const settings = await getCachedSettings()
       const bookingCharges = settings?.booking_charges || 500
 
+      // Double-check slot availability right before insert to minimize race condition window
+      const { data: checkAgain } = await supabase
+        .from("bookings")
+        .select("id")
+        .eq("booking_date", userState.date)
+        .in("status", ["confirmed", "payment_pending"])
+        .limit(1)
+
+      if (checkAgain && checkAgain.length > 0) {
+        clearState(phoneNumber)
+        return `⚠️ *Date No Longer Available*
+
+Just booked by someone else. Please choose another date.
+
+Reply *0* for menu`
+      }
+
       const { data: booking, error: bookingError } = await supabase
         .from("bookings")
         .insert([

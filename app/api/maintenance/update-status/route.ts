@@ -23,6 +23,7 @@ export async function POST(request: NextRequest) {
       .select(
         `
         *,
+        updated_at,
         profiles:profiles!maintenance_payments_profile_id_fkey (
           id,
           name,
@@ -41,6 +42,9 @@ export async function POST(request: NextRequest) {
       })
     }
 
+    // Store original updated_at for optimistic locking
+    const originalUpdatedAt = payment.updated_at
+
     const updates: Record<string, unknown> = {
       status: isPaid ? "paid" : "unpaid",
       updated_at: getPakistanISOString(),
@@ -56,10 +60,27 @@ export async function POST(request: NextRequest) {
       updates.confirmation_sent_at = null
     }
 
-    const { error: updateError } = await supabase.from("maintenance_payments").update(updates).eq("id", paymentId)
+    // Optimistic locking: only update if record hasn't changed since we read it
+    const { data: updateResult, error: updateError } = await supabase
+      .from("maintenance_payments")
+      .update(updates)
+      .eq("id", paymentId)
+      .eq("updated_at", originalUpdatedAt)
+      .select()
 
     if (updateError) {
       throw updateError
+    }
+
+    // If no rows were updated, the record was modified by another process
+    if (!updateResult || updateResult.length === 0) {
+      return new Response(JSON.stringify({
+        error: "Record was modified by another process. Please refresh and try again.",
+        code: "CONCURRENT_MODIFICATION"
+      }), {
+        status: 409,
+        headers: { "Content-Type": "application/json" },
+      })
     }
 
     // Also update the profiles table to keep maintenance_paid in sync

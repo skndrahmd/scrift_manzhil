@@ -37,7 +37,8 @@ export async function POST(request: NextRequest) {
         subcategory,
         description,
         profile_id,
-        created_at
+        created_at,
+        updated_at
       `
       )
       .eq("id", complaintId)
@@ -51,6 +52,9 @@ export async function POST(request: NextRequest) {
       })
     }
 
+    // Store original updated_at for optimistic locking
+    const originalUpdatedAt = complaint.updated_at
+
     // Fetch profile separately (more reliable than join)
     const { data: profile, error: profileError } = await supabase
       .from("profiles")
@@ -62,12 +66,26 @@ export async function POST(request: NextRequest) {
       console.error("[COMPLAINT UPDATE] Profile fetch error:", profileError)
     }
 
-    const { error: updateError } = await supabase
+    // Optimistic locking: only update if record hasn't changed since we read it
+    const { data: updateResult, error: updateError } = await supabase
       .from("complaints")
       .update({ status, updated_at: getPakistanISOString() })
       .eq("id", complaintId)
+      .eq("updated_at", originalUpdatedAt)
+      .select()
 
     if (updateError) throw updateError
+
+    // If no rows were updated, the record was modified by another process
+    if (!updateResult || updateResult.length === 0) {
+      return new Response(JSON.stringify({
+        error: "Record was modified by another process. Please refresh and try again.",
+        code: "CONCURRENT_MODIFICATION"
+      }), {
+        status: 409,
+        headers: { "Content-Type": "application/json" },
+      })
+    }
 
     console.log("[COMPLAINT UPDATE] Profile data:", {
       hasProfile: !!profile,

@@ -65,9 +65,12 @@ export async function POST(request: NextRequest) {
       })
     }
 
+    // Store original updated_at for optimistic locking
+    const originalUpdatedAt = booking.updated_at
+
     console.log("Found booking:", booking)
 
-    // Update the booking payment status
+    // Optimistic locking: only update if record hasn't changed since we read it
     const { data: updatedBooking, error: updateError } = await supabase
       .from("bookings")
       .update({
@@ -75,6 +78,7 @@ export async function POST(request: NextRequest) {
         updated_at: getPakistanISOString(),
       })
       .eq("id", bookingId)
+      .eq("updated_at", originalUpdatedAt)
       .select()
       .single()
 
@@ -82,6 +86,17 @@ export async function POST(request: NextRequest) {
       console.error("Error updating booking:", updateError)
       return new Response(JSON.stringify({ error: `Failed to update booking: ${updateError.message}` }), {
         status: 500,
+        headers: { "Content-Type": "application/json" },
+      })
+    }
+
+    // If no rows were updated, the record was modified by another process
+    if (!updatedBooking) {
+      return new Response(JSON.stringify({
+        error: "Booking was modified by another process. Please refresh and try again.",
+        code: "CONCURRENT_MODIFICATION"
+      }), {
+        status: 409,
         headers: { "Content-Type": "application/json" },
       })
     }
