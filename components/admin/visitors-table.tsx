@@ -263,7 +263,7 @@ export function VisitorsTable() {
                                         <TableRow key={visitor.id} className="hover:bg-manzhil-teal/5">
                                             <TableCell>
                                                 <Badge variant="outline" className="font-mono text-xs">
-                                                    {visitor.id.substring(0, 8)}
+                                                    {visitor.id.substring(0, 5)}
                                                 </Badge>
                                             </TableCell>
                                             <TableCell>
@@ -332,7 +332,7 @@ export function VisitorsTable() {
                                             </div>
                                             <div className="flex items-center gap-2">
                                                 <Badge variant="outline" className="font-mono text-xs">
-                                                    {visitor.id.substring(0, 8)}
+                                                    {visitor.id.substring(0, 5)}
                                                 </Badge>
                                                 {getStatusBadge(visitor.status)}
                                             </div>
@@ -398,7 +398,7 @@ export function VisitorsTable() {
                             {/* Pass ID */}
                             <div className="flex items-center gap-2">
                                 <Badge variant="outline" className="font-mono text-sm px-3 py-1">
-                                    Pass ID: {selectedVisitor.id.substring(0, 8)}
+                                    Pass ID: {selectedVisitor.id.substring(0, 5)}
                                 </Badge>
                             </div>
 
