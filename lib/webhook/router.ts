@@ -273,13 +273,21 @@ Enter the date you'd like to book:
     },
 
     // Visitor flow
-    visitor_date: {
-      step: "visitor_cnic_image",
+    visitor_car_number: {
+      step: "visitor_name",
       message: () => `🔙 *Going Back*
 
 🎫 *Visitor Entry Pass*
 
-Send a *photo of visitor's CNIC* 📸
+Enter the *visitor's name* ✍️
+
+*B* to go back, *0* for menu`,
+    },
+    visitor_date: {
+      step: "visitor_car_number",
+      message: () => `🔙 *Going Back*
+
+🚗 Enter the visitor's *car number* (license plate).
 
 *B* to go back, *0* for menu`,
     },

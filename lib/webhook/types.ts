@@ -50,12 +50,9 @@ export interface StaffData {
  * Visitor data structure during conversation
  */
 export interface VisitorData {
-  name?: string
-  cnic?: string
-  phone?: string
-  date?: string
-  cnic_image_url?: string
+  visitor_name?: string
   car_number?: string
+  cnic_image_url?: string  // kept for backward compat, unused in new flow
 }
 
 /**

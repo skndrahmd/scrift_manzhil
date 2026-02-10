@@ -1,11 +1,11 @@
 /**
  * Visitor Entry Pass Flow Handler
- * 3-step flow: Upload CNIC image → Enter car number (optional) → Enter date → Auto-save
+ * 3-step flow: Enter visitor name → Enter car number → Enter date → Auto-save
  */
 
 import { supabaseAdmin } from "@/lib/supabase"
 import { isDateFormat, parseDate } from "@/lib/dateUtils"
-import type { Profile, UserState, VisitorData, MediaInfo } from "../types"
+import type { Profile, UserState, VisitorData } from "../types"
 import { setState, clearState } from "../state"
 import { formatDate } from "../utils"
 
@@ -14,14 +14,14 @@ import { formatDate } from "../utils"
  */
 export function initializeVisitorFlow(phoneNumber: string): string {
     setState(phoneNumber, {
-        step: "visitor_cnic_image",
+        step: "visitor_name",
         type: "visitor",
         visitor: {},
     })
 
     return `🎫 *Visitor Entry Pass*
 
-Send a *photo of visitor's CNIC* 📸
+Enter the *visitor's name* ✍️
 
 *B* to go back, *0* for menu`
 }
@@ -33,15 +33,14 @@ export async function handleVisitorFlow(
     message: string,
     profile: Profile,
     phoneNumber: string,
-    userState: UserState,
-    mediaInfo?: MediaInfo
+    userState: UserState
 ): Promise<string> {
     const step = userState.step
     const visitor = userState.visitor || {}
 
     switch (step) {
-        case "visitor_cnic_image":
-            return await handleCNICImageUpload(message, phoneNumber, visitor, profile, mediaInfo)
+        case "visitor_name":
+            return handleNameInput(message, phoneNumber, visitor)
 
         case "visitor_car_number":
             return handleCarNumberInput(message, phoneNumber, visitor)
@@ -55,107 +54,38 @@ export async function handleVisitorFlow(
 }
 
 /**
- * Handle CNIC image upload
+ * Handle visitor name input
  */
-async function handleCNICImageUpload(
+function handleNameInput(
     message: string,
     phoneNumber: string,
-    visitor: VisitorData,
-    profile: Profile,
-    mediaInfo?: MediaInfo
-): Promise<string> {
-    // Check if we received an image
-    if (!mediaInfo || !mediaInfo.url) {
-        return `📸 *Please send an image*
+    visitor: VisitorData
+): string {
+    const name = message.trim()
 
-Send a photo of the visitor's CNIC.
+    if (name.length < 2) {
+        return `❌ *Name too short*
+
+Please enter the visitor's full name (at least 2 characters).
 
 *B* to go back, *0* for menu`
     }
 
-    try {
-        console.log("[Visitor] Downloading image from Twilio:", mediaInfo.url)
+    setState(phoneNumber, {
+        step: "visitor_car_number",
+        type: "visitor",
+        visitor: { ...visitor, visitor_name: name },
+    })
 
-        // Download image from Twilio (requires auth)
-        const twilioAccountSid = process.env.TWILIO_ACCOUNT_SID
-        const twilioAuthToken = process.env.TWILIO_AUTH_TOKEN
-
-        const response = await fetch(mediaInfo.url, {
-            headers: {
-                Authorization: `Basic ${Buffer.from(`${twilioAccountSid}:${twilioAuthToken}`).toString("base64")}`,
-            },
-        })
-
-        if (!response.ok) {
-            console.error("[Visitor] Failed to download image:", response.status)
-            return `❌ *Upload Failed*
-
-Please try sending the image again.
-
-*B* to go back, *0* for menu`
-        }
-
-        const imageBuffer = await response.arrayBuffer()
-        const buffer = Buffer.from(imageBuffer)
-
-        // Generate unique filename
-        const timestamp = Date.now()
-        const extension = mediaInfo.contentType.split("/")[1] || "jpg"
-        const fileName = `${profile.id}/${timestamp}.${extension}`
-
-        console.log("[Visitor] Uploading to Supabase:", fileName)
-
-        // Upload to Supabase Storage
-        const { error: uploadError } = await supabaseAdmin.storage
-            .from("visitor-cnics")
-            .upload(fileName, buffer, {
-                contentType: mediaInfo.contentType,
-                upsert: false,
-            })
-
-        if (uploadError) {
-            console.error("[Visitor] Storage error:", uploadError)
-            return `❌ *Upload Failed*
-
-Please try sending the image again.
-
-*B* to go back, *0* for menu`
-        }
-
-        // Get public URL
-        const { data: urlData } = supabaseAdmin.storage
-            .from("visitor-cnics")
-            .getPublicUrl(fileName)
-
-        const imageUrl = urlData.publicUrl
-        console.log("[Visitor] Image uploaded:", imageUrl)
-
-        // Save URL to state and move to car number step
-        setState(phoneNumber, {
-            step: "visitor_car_number",
-            type: "visitor",
-            visitor: { ...visitor, cnic_image_url: imageUrl },
-        })
-
-        return `✅ *CNIC Image Saved*
+    return `✅ Name: ${name}
 
 🚗 Enter the visitor's *car number* (license plate).
 
-Type *skip* if no vehicle.
-
 *B* to go back, *0* for menu`
-    } catch (error) {
-        console.error("[Visitor] Image upload error:", error)
-        return `❌ *Upload Failed*
-
-Please try sending the image again.
-
-*B* to go back, *0* for menu`
-    }
 }
 
 /**
- * Handle car number input (optional step)
+ * Handle car number input
  */
 function handleCarNumberInput(
     message: string,
@@ -163,11 +93,18 @@ function handleCarNumberInput(
     visitor: VisitorData
 ): string {
     const input = message.trim()
-    const isSkip = input.toLowerCase() === "skip" || input === "-"
+
+    if (input.length < 2) {
+        return `❌ *Car number too short*
+
+Please enter a valid car number / license plate.
+
+*B* to go back, *0* for menu`
+    }
 
     const updatedVisitor = {
         ...visitor,
-        car_number: isSkip ? undefined : input,
+        car_number: input,
     }
 
     setState(phoneNumber, {
@@ -176,9 +113,9 @@ function handleCarNumberInput(
         visitor: updatedVisitor,
     })
 
-    const carAck = isSkip ? "" : `🚗 Car: ${input}\n`
+    return `🚗 Car: ${input}
 
-    return `${carAck}📅 Enter *date of visit*.
+📅 Enter *date of visit*.
 Formats: DD-MM-YYYY, "tomorrow", "next Monday"
 
 *B* to go back, *0* for menu`
@@ -241,12 +178,11 @@ Visitor passes can only be registered up to 30 days in advance.
             .from("visitor_passes")
             .insert({
                 resident_id: profile.id,
-                cnic_image_url: visitor.cnic_image_url,
+                visitor_name: visitor.visitor_name || null,
                 car_number: visitor.car_number || null,
                 visit_date: parsedDateStr,
                 status: "pending",
-                // These fields are now optional
-                visitor_name: null,
+                cnic_image_url: null,
                 visitor_cnic: null,
                 visitor_phone: null,
             })
@@ -265,13 +201,20 @@ Reply *0* for menu`
         clearState(phoneNumber)
         const formattedDate = formatDate(parsedDateStr)
         const carLine = visitor.car_number ? `\n🚗 Car: ${visitor.car_number}` : ""
+        const passId = data.id.substring(0, 5)
 
         return `✅ *Visitor Pass Created!*
 
-📸 CNIC: Saved${carLine}
-📅 Visit: ${formattedDate}
+Forward this to your visitor:
 
-Security has been notified. You'll receive a message when your visitor arrives.
+—————————————
+🎫 *Visitor Pass*
+🆔 Pass ID: *${passId}*
+👤 Name: ${visitor.visitor_name}${carLine}
+📅 Date: ${formattedDate}
+
+Show this message at the gate.
+—————————————
 
 Reply *0* for menu`
     } catch (error) {

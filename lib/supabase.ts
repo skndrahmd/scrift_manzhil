@@ -145,7 +145,6 @@ export type VisitorPass = {
   car_number: string | null
   visit_date: string
   status: "pending" | "arrived" | "cancelled"
-  daily_entry_number: number | null
   notified_at: string | null
   created_at: string
   updated_at: string
