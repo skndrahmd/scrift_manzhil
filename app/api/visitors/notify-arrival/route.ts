@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { supabase } from "@/lib/supabase"
+import { supabaseAdmin } from "@/lib/supabase"
 import { sendVisitorArrivalNotification } from "@/lib/twilio/notifications/visitor"
 
 export async function POST(request: Request) {
@@ -14,7 +14,7 @@ export async function POST(request: Request) {
         }
 
         // Fetch the visitor pass with resident profile
-        const { data: visitorPass, error: fetchError } = await supabase
+        const { data: visitorPass, error: fetchError } = await supabaseAdmin
             .from("visitor_passes")
             .select(`
         *,
@@ -44,12 +44,28 @@ export async function POST(request: Request) {
             )
         }
 
-        // Update visitor pass status to arrived
-        const { error: updateError } = await supabase
+        // Calculate daily entry number
+        const today = new Date().toISOString().split("T")[0]
+
+        const { count, error: countError } = await supabaseAdmin
+            .from("visitor_passes")
+            .select("*", { count: "exact", head: true })
+            .eq("visit_date", today)
+            .not("daily_entry_number", "is", null)
+
+        if (countError) {
+            console.error("[Visitor Notify] Error counting entries:", countError)
+        }
+
+        const dailyEntryNumber = (count || 0) + 1
+
+        // Update visitor pass status to arrived with entry number
+        const { error: updateError } = await supabaseAdmin
             .from("visitor_passes")
             .update({
                 status: "arrived",
                 notified_at: new Date().toISOString(),
+                daily_entry_number: dailyEntryNumber,
             })
             .eq("id", visitorPassId)
 
@@ -69,6 +85,8 @@ export async function POST(request: Request) {
                 apartmentNumber: visitorPass.profiles.apartment_number || "",
                 cnicImageUrl: visitorPass.cnic_image_url,
                 visitDate: visitorPass.visit_date,
+                entryNumber: dailyEntryNumber,
+                carNumber: visitorPass.car_number || null,
             })
 
             if (!result.ok) {
@@ -80,7 +98,8 @@ export async function POST(request: Request) {
 
         return NextResponse.json({
             success: true,
-            message: "Visitor marked as arrived and resident notified",
+            entryNumber: dailyEntryNumber,
+            message: `Entry #${dailyEntryNumber} — Visitor marked as arrived and resident notified`,
         })
     } catch (error) {
         console.error("[Visitor Notify] Error:", error)

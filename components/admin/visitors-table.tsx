@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useMemo } from "react"
 import { useAdmin } from "@/app/admin/layout"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import {
@@ -14,6 +14,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import {
     Select,
     SelectContent,
@@ -37,12 +38,15 @@ import {
     X,
     Loader2,
     ImageIcon,
+    Plus,
+    Car,
+    Hash,
 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import type { VisitorPass } from "@/lib/supabase"
 
 export function VisitorsTable() {
-    const { visitors, fetchVisitors, loading } = useAdmin()
+    const { visitors, profiles, fetchVisitors, loading } = useAdmin()
     const { toast } = useToast()
 
     const [searchQuery, setSearchQuery] = useState("")
@@ -54,6 +58,31 @@ export function VisitorsTable() {
     const [isNotifying, setIsNotifying] = useState(false)
     const [isImageModalOpen, setIsImageModalOpen] = useState(false)
     const [selectedImageUrl, setSelectedImageUrl] = useState<string | null>(null)
+
+    // Add Entry modal state
+    const [isAddEntryModalOpen, setIsAddEntryModalOpen] = useState(false)
+    const [isSubmittingEntry, setIsSubmittingEntry] = useState(false)
+    const [entryResidentId, setEntryResidentId] = useState("")
+    const [entryVisitorName, setEntryVisitorName] = useState("")
+    const [entryCarNumber, setEntryCarNumber] = useState("")
+    const [residentSearch, setResidentSearch] = useState("")
+
+    // Entry result dialog
+    const [entryResultNumber, setEntryResultNumber] = useState<number | null>(null)
+
+    // Filtered residents for dropdown
+    const filteredResidents = useMemo(() => {
+        if (!residentSearch) return profiles.slice(0, 20)
+        const q = residentSearch.toLowerCase()
+        return profiles
+            .filter(
+                (p) =>
+                    p.name?.toLowerCase().includes(q) ||
+                    p.apartment_number?.toLowerCase().includes(q) ||
+                    p.phone_number?.includes(q)
+            )
+            .slice(0, 20)
+    }, [profiles, residentSearch])
 
     // Format date for display
     const formatDate = (dateStr: string) => {
@@ -87,6 +116,7 @@ export function VisitorsTable() {
             (visitor.visitor_name?.toLowerCase().includes(searchLower) ?? false) ||
             (visitor.visitor_cnic?.includes(searchQuery) ?? false) ||
             (visitor.visitor_phone?.includes(searchQuery) ?? false) ||
+            (visitor.car_number?.toLowerCase().includes(searchLower) ?? false) ||
             (visitor.profiles?.name?.toLowerCase().includes(searchLower) ?? false) ||
             (visitor.profiles?.apartment_number?.toLowerCase().includes(searchLower) ?? false)
 
@@ -140,7 +170,7 @@ export function VisitorsTable() {
 
             if (data.success) {
                 toast({
-                    title: "Notification Sent",
+                    title: `Entry #${data.entryNumber} — Notification Sent`,
                     description: `${selectedVisitor.profiles?.name || "Resident"} has been notified of their visitor's arrival.`,
                 })
                 setIsNotifyModalOpen(false)
@@ -160,6 +190,55 @@ export function VisitorsTable() {
         }
     }
 
+    // Handle add entry submit
+    const handleAddEntry = async () => {
+        if (!entryResidentId) {
+            toast({
+                title: "Error",
+                description: "Please select a resident.",
+                variant: "destructive",
+            })
+            return
+        }
+
+        setIsSubmittingEntry(true)
+        try {
+            const response = await fetch("/api/visitors/create", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    residentId: entryResidentId,
+                    visitorName: entryVisitorName || undefined,
+                    carNumber: entryCarNumber || undefined,
+                }),
+            })
+
+            const data = await response.json()
+
+            if (data.success) {
+                setIsAddEntryModalOpen(false)
+                setEntryResultNumber(data.entryNumber)
+                // Reset form
+                setEntryResidentId("")
+                setEntryVisitorName("")
+                setEntryCarNumber("")
+                setResidentSearch("")
+                fetchVisitors()
+            } else {
+                throw new Error(data.error || "Failed to create entry")
+            }
+        } catch (error) {
+            console.error("Error creating entry:", error)
+            toast({
+                title: "Error",
+                description: "Failed to create visitor entry. Please try again.",
+                variant: "destructive",
+            })
+        } finally {
+            setIsSubmittingEntry(false)
+        }
+    }
+
     // Clear filters
     const clearFilters = () => {
         setSearchQuery("")
@@ -173,10 +252,20 @@ export function VisitorsTable() {
         <Card className="border-0 shadow-lg shadow-manzhil-teal/10">
             <CardHeader className="pb-4">
                 <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-                    <CardTitle className="flex items-center gap-2 text-manzhil-dark">
-                        <Ticket className="h-5 w-5 text-manzhil-teal" />
-                        Visitor Passes
-                    </CardTitle>
+                    <div className="flex items-center gap-3">
+                        <CardTitle className="flex items-center gap-2 text-manzhil-dark">
+                            <Ticket className="h-5 w-5 text-manzhil-teal" />
+                            Visitor Passes
+                        </CardTitle>
+                        <Button
+                            size="sm"
+                            onClick={() => setIsAddEntryModalOpen(true)}
+                            className="bg-manzhil-teal hover:bg-manzhil-dark"
+                        >
+                            <Plus className="h-4 w-4 mr-1" />
+                            Add Entry
+                        </Button>
+                    </div>
 
                     {/* Filters */}
                     <div className="flex flex-wrap items-center gap-3">
@@ -184,10 +273,10 @@ export function VisitorsTable() {
                         <div className="relative">
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                             <Input
-                                placeholder="Search visitors..."
+                                placeholder="Search visitors, car #..."
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
-                                className="pl-9 w-[200px] border-manzhil-teal/20 focus:border-manzhil-teal"
+                                className="pl-9 w-[220px] border-manzhil-teal/20 focus:border-manzhil-teal"
                             />
                         </div>
 
@@ -259,7 +348,9 @@ export function VisitorsTable() {
                             <Table>
                                 <TableHeader>
                                     <TableRow className="bg-manzhil-teal/5 hover:bg-manzhil-teal/5">
-                                        <TableHead>CNIC Image</TableHead>
+                                        <TableHead>Entry #</TableHead>
+                                        <TableHead>Image</TableHead>
+                                        <TableHead>Car #</TableHead>
                                         <TableHead>Visit Date</TableHead>
                                         <TableHead>Resident</TableHead>
                                         <TableHead>Status</TableHead>
@@ -269,6 +360,15 @@ export function VisitorsTable() {
                                 <TableBody>
                                     {filteredVisitors.map((visitor) => (
                                         <TableRow key={visitor.id} className="hover:bg-manzhil-teal/5">
+                                            <TableCell>
+                                                {visitor.daily_entry_number ? (
+                                                    <Badge className="bg-manzhil-teal/10 text-manzhil-teal hover:bg-manzhil-teal/10 font-mono font-bold text-sm">
+                                                        #{visitor.daily_entry_number}
+                                                    </Badge>
+                                                ) : (
+                                                    <span className="text-gray-400">—</span>
+                                                )}
+                                            </TableCell>
                                             <TableCell>
                                                 {visitor.cnic_image_url ? (
                                                     <button
@@ -292,6 +392,13 @@ export function VisitorsTable() {
                                                         <ImageIcon className="h-4 w-4" />
                                                         No image
                                                     </span>
+                                                )}
+                                            </TableCell>
+                                            <TableCell>
+                                                {visitor.car_number ? (
+                                                    <span className="font-mono text-sm text-gray-700">{visitor.car_number}</span>
+                                                ) : (
+                                                    <span className="text-gray-400">—</span>
                                                 )}
                                             </TableCell>
                                             <TableCell className="text-gray-600">{formatDate(visitor.visit_date)}</TableCell>
@@ -346,7 +453,14 @@ export function VisitorsTable() {
                                                 <h3 className="font-medium text-manzhil-dark">{visitor.profiles?.name || "Unknown"}</h3>
                                                 <p className="text-xs text-gray-500">{visitor.profiles?.apartment_number}</p>
                                             </div>
-                                            {getStatusBadge(visitor.status)}
+                                            <div className="flex items-center gap-2">
+                                                {visitor.daily_entry_number && (
+                                                    <Badge className="bg-manzhil-teal/10 text-manzhil-teal hover:bg-manzhil-teal/10 font-mono font-bold">
+                                                        #{visitor.daily_entry_number}
+                                                    </Badge>
+                                                )}
+                                                {getStatusBadge(visitor.status)}
+                                            </div>
                                         </div>
 
                                         <div className="grid grid-cols-2 gap-3 text-sm">
@@ -358,9 +472,15 @@ export function VisitorsTable() {
                                                 <span className="text-gray-500 block text-xs">Visitor</span>
                                                 <span className="font-medium text-gray-700">{visitor.visitor_name || "—"}</span>
                                             </div>
+                                            {visitor.car_number && (
+                                                <div>
+                                                    <span className="text-gray-500 block text-xs">Car #</span>
+                                                    <span className="font-mono text-gray-700">{visitor.car_number}</span>
+                                                </div>
+                                            )}
                                             {visitor.cnic_image_url && (
                                                 <div className="col-span-2">
-                                                    <span className="text-gray-500 block text-xs mb-2">CNIC Image</span>
+                                                    <span className="text-gray-500 block text-xs mb-2">Image</span>
                                                     <button
                                                         onClick={() => openImageModal(visitor.cnic_image_url!)}
                                                         className="relative group"
@@ -416,10 +536,19 @@ export function VisitorsTable() {
                     </DialogHeader>
                     {selectedVisitor && (
                         <div className="space-y-6 py-4">
+                            {/* Entry Number */}
+                            {selectedVisitor.daily_entry_number && (
+                                <div className="flex items-center gap-2">
+                                    <Badge className="bg-manzhil-teal/10 text-manzhil-teal hover:bg-manzhil-teal/10 font-mono font-bold text-lg px-3 py-1">
+                                        Entry #{selectedVisitor.daily_entry_number}
+                                    </Badge>
+                                </div>
+                            )}
+
                             {/* CNIC Image */}
                             {selectedVisitor.cnic_image_url && (
                                 <div className="space-y-3">
-                                    <h4 className="text-sm font-medium text-gray-500 uppercase tracking-wide">CNIC Image</h4>
+                                    <h4 className="text-sm font-medium text-gray-500 uppercase tracking-wide">Image</h4>
                                     <button
                                         onClick={() => openImageModal(selectedVisitor.cnic_image_url!)}
                                         className="relative group w-full"
@@ -449,6 +578,12 @@ export function VisitorsTable() {
                                         <div>
                                             <p className="text-xs text-gray-500">Visitor Name</p>
                                             <p className="font-medium">{selectedVisitor.visitor_name}</p>
+                                        </div>
+                                    )}
+                                    {selectedVisitor.car_number && (
+                                        <div>
+                                            <p className="text-xs text-gray-500">Car Number</p>
+                                            <p className="font-mono font-medium">{selectedVisitor.car_number}</p>
                                         </div>
                                     )}
                                     {selectedVisitor.visitor_cnic && (
@@ -547,6 +682,11 @@ export function VisitorsTable() {
                                     Resident: <span className="font-medium text-manzhil-dark">{selectedVisitor.profiles?.name}</span>
                                     <span className="text-gray-400 ml-1">({selectedVisitor.profiles?.apartment_number})</span>
                                 </p>
+                                {selectedVisitor.car_number && (
+                                    <p className="text-sm text-gray-600">
+                                        Car: <span className="font-mono font-medium">{selectedVisitor.car_number}</span>
+                                    </p>
+                                )}
                             </div>
                         </div>
                     )}
@@ -574,6 +714,150 @@ export function VisitorsTable() {
                                     Mark Arrived & Notify
                                 </>
                             )}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Add Entry Modal */}
+            <Dialog open={isAddEntryModalOpen} onOpenChange={setIsAddEntryModalOpen}>
+                <DialogContent className="sm:max-w-[450px] max-h-[90vh] overflow-y-auto">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2 text-manzhil-dark">
+                            <Plus className="h-5 w-5 text-manzhil-teal" />
+                            New Visitor Entry
+                        </DialogTitle>
+                        <DialogDescription>
+                            Log a visitor at the gate. The resident will be notified via WhatsApp.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="py-4 space-y-4">
+                        {/* Resident Selection */}
+                        <div className="space-y-2">
+                            <Label>Resident *</Label>
+                            <Input
+                                placeholder="Search by name, apartment, phone..."
+                                value={residentSearch}
+                                onChange={(e) => setResidentSearch(e.target.value)}
+                                className="border-manzhil-teal/20 focus:border-manzhil-teal"
+                            />
+                            {(residentSearch || !entryResidentId) && (
+                                <div className="max-h-40 overflow-y-auto rounded-md border border-manzhil-teal/20">
+                                    {filteredResidents.length === 0 ? (
+                                        <div className="p-3 text-sm text-gray-500 text-center">No residents found</div>
+                                    ) : (
+                                        filteredResidents.map((profile) => (
+                                            <button
+                                                key={profile.id}
+                                                onClick={() => {
+                                                    setEntryResidentId(profile.id)
+                                                    setResidentSearch(
+                                                        `${profile.name} (${profile.apartment_number})`
+                                                    )
+                                                }}
+                                                className={`w-full text-left px-3 py-2 text-sm hover:bg-manzhil-teal/10 transition-colors ${
+                                                    entryResidentId === profile.id
+                                                        ? "bg-manzhil-teal/10 font-medium"
+                                                        : ""
+                                                }`}
+                                            >
+                                                <span className="font-medium text-manzhil-dark">{profile.name}</span>
+                                                <span className="text-gray-400 ml-2">{profile.apartment_number}</span>
+                                            </button>
+                                        ))
+                                    )}
+                                </div>
+                            )}
+                            {entryResidentId && !residentSearch.includes("(") && (
+                                <p className="text-xs text-gray-500">Resident selected</p>
+                            )}
+                        </div>
+
+                        {/* Visitor Name */}
+                        <div className="space-y-2">
+                            <Label>Visitor Name (optional)</Label>
+                            <Input
+                                placeholder="Enter visitor name"
+                                value={entryVisitorName}
+                                onChange={(e) => setEntryVisitorName(e.target.value)}
+                                className="border-manzhil-teal/20 focus:border-manzhil-teal"
+                            />
+                        </div>
+
+                        {/* Car Number */}
+                        <div className="space-y-2">
+                            <Label className="flex items-center gap-1">
+                                <Car className="h-4 w-4" />
+                                Car Number (optional)
+                            </Label>
+                            <Input
+                                placeholder="e.g. ABC-1234"
+                                value={entryCarNumber}
+                                onChange={(e) => setEntryCarNumber(e.target.value)}
+                                className="border-manzhil-teal/20 focus:border-manzhil-teal font-mono"
+                            />
+                        </div>
+                    </div>
+                    <DialogFooter className="gap-2">
+                        <Button
+                            variant="outline"
+                            onClick={() => setIsAddEntryModalOpen(false)}
+                            disabled={isSubmittingEntry}
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            onClick={handleAddEntry}
+                            disabled={isSubmittingEntry || !entryResidentId}
+                            className="bg-manzhil-teal hover:bg-manzhil-dark"
+                        >
+                            {isSubmittingEntry ? (
+                                <>
+                                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                    Creating...
+                                </>
+                            ) : (
+                                <>
+                                    <Plus className="h-4 w-4 mr-2" />
+                                    Create Entry
+                                </>
+                            )}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Entry Result Dialog */}
+            <Dialog
+                open={entryResultNumber !== null}
+                onOpenChange={() => setEntryResultNumber(null)}
+            >
+                <DialogContent className="sm:max-w-[350px]">
+                    <DialogHeader>
+                        <DialogTitle className="text-center text-manzhil-dark">
+                            Visitor Entry Created
+                        </DialogTitle>
+                    </DialogHeader>
+                    <div className="py-6 text-center space-y-4">
+                        <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-manzhil-teal/10">
+                            <Hash className="h-10 w-10 text-manzhil-teal" />
+                        </div>
+                        <div>
+                            <p className="text-4xl font-bold text-manzhil-teal font-mono">
+                                #{entryResultNumber}
+                            </p>
+                            <p className="text-sm text-gray-500 mt-1">Today&apos;s Entry Number</p>
+                        </div>
+                        <p className="text-sm text-gray-600">
+                            Resident has been notified via WhatsApp.
+                        </p>
+                    </div>
+                    <DialogFooter>
+                        <Button
+                            onClick={() => setEntryResultNumber(null)}
+                            className="w-full bg-manzhil-teal hover:bg-manzhil-dark"
+                        >
+                            Done
                         </Button>
                     </DialogFooter>
                 </DialogContent>

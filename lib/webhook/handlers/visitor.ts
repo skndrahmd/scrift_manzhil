@@ -1,6 +1,6 @@
 /**
  * Visitor Entry Pass Flow Handler
- * Simplified 2-step flow: Upload CNIC image → Enter date → Auto-save
+ * 3-step flow: Upload CNIC image → Enter car number (optional) → Enter date → Auto-save
  */
 
 import { supabaseAdmin } from "@/lib/supabase"
@@ -42,6 +42,9 @@ export async function handleVisitorFlow(
     switch (step) {
         case "visitor_cnic_image":
             return await handleCNICImageUpload(message, phoneNumber, visitor, profile, mediaInfo)
+
+        case "visitor_car_number":
+            return handleCarNumberInput(message, phoneNumber, visitor)
 
         case "visitor_date":
             return await handleDateInputAndSave(message, profile, phoneNumber, visitor)
@@ -127,17 +130,18 @@ Please try sending the image again.
         const imageUrl = urlData.publicUrl
         console.log("[Visitor] Image uploaded:", imageUrl)
 
-        // Save URL to state and move to date step
+        // Save URL to state and move to car number step
         setState(phoneNumber, {
-            step: "visitor_date",
+            step: "visitor_car_number",
             type: "visitor",
             visitor: { ...visitor, cnic_image_url: imageUrl },
         })
 
         return `✅ *CNIC Image Saved*
 
-Enter *date of visit*.
-Formats: DD-MM-YYYY, "tomorrow", "next Monday"
+🚗 Enter the visitor's *car number* (license plate).
+
+Type *skip* if no vehicle.
 
 *B* to go back, *0* for menu`
     } catch (error) {
@@ -148,6 +152,36 @@ Please try sending the image again.
 
 *B* to go back, *0* for menu`
     }
+}
+
+/**
+ * Handle car number input (optional step)
+ */
+function handleCarNumberInput(
+    message: string,
+    phoneNumber: string,
+    visitor: VisitorData
+): string {
+    const input = message.trim()
+    const isSkip = input.toLowerCase() === "skip" || input === "-"
+
+    const updatedVisitor = {
+        ...visitor,
+        car_number: isSkip ? undefined : input,
+    }
+
+    setState(phoneNumber, {
+        step: "visitor_date",
+        type: "visitor",
+        visitor: updatedVisitor,
+    })
+
+    const carAck = isSkip ? "" : `🚗 Car: ${input}\n`
+
+    return `${carAck}📅 Enter *date of visit*.
+Formats: DD-MM-YYYY, "tomorrow", "next Monday"
+
+*B* to go back, *0* for menu`
 }
 
 /**
@@ -208,6 +242,7 @@ Visitor passes can only be registered up to 30 days in advance.
             .insert({
                 resident_id: profile.id,
                 cnic_image_url: visitor.cnic_image_url,
+                car_number: visitor.car_number || null,
                 visit_date: parsedDateStr,
                 status: "pending",
                 // These fields are now optional
@@ -229,10 +264,11 @@ Reply *0* for menu`
 
         clearState(phoneNumber)
         const formattedDate = formatDate(parsedDateStr)
+        const carLine = visitor.car_number ? `\n🚗 Car: ${visitor.car_number}` : ""
 
         return `✅ *Visitor Pass Created!*
 
-📸 CNIC: Saved
+📸 CNIC: Saved${carLine}
 📅 Visit: ${formattedDate}
 
 Security has been notified. You'll receive a message when your visitor arrives.

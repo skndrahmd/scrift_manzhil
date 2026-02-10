@@ -14,6 +14,8 @@ export interface VisitorArrivalParams {
     apartmentNumber: string
     cnicImageUrl: string | null
     visitDate: string
+    entryNumber: number
+    carNumber?: string | null
 }
 
 /**
@@ -28,7 +30,9 @@ export async function sendVisitorArrivalNotification(
         residentName,
         apartmentNumber,
         cnicImageUrl,
-        visitDate
+        visitDate,
+        entryNumber,
+        carNumber
     } = params
 
     const formattedDate = formatDate(visitDate)
@@ -38,11 +42,15 @@ export async function sendVisitorArrivalNotification(
         "1": residentName || "Resident",
         "2": apartmentNumber || "N/A",
         "3": formattedDate,
+        "4": String(entryNumber),
     }
 
-    const fallbackMessage = `🔔 *Visitor Arrived!*
+    const carLine = carNumber ? `\n🚗 Car: ${carNumber}` : ""
 
-📅 ${formattedDate}
+    const fallbackMessage = `🔔 *Visitor Arrived!*
+🎫 Entry #${entryNumber}
+
+📅 ${formattedDate}${carLine}
 
 Hi ${residentName || "Resident"} (${apartmentNumber}), your visitor is at the entrance.
 

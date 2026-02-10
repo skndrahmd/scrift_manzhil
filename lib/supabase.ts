@@ -142,8 +142,10 @@ export type VisitorPass = {
   visitor_cnic: string | null
   visitor_phone: string | null
   cnic_image_url: string | null
+  car_number: string | null
   visit_date: string
   status: "pending" | "arrived" | "cancelled"
+  daily_entry_number: number | null
   notified_at: string | null
   created_at: string
   updated_at: string

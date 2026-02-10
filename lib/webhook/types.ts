@@ -55,6 +55,7 @@ export interface VisitorData {
   phone?: string
   date?: string
   cnic_image_url?: string
+  car_number?: string
 }
 
 /**
