@@ -21,6 +21,7 @@ import {
     Ticket,
     Package,
     Megaphone,
+    Building,
 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -48,6 +49,12 @@ const navItems = [
         href: "/admin",
         icon: Users,
         pageKey: "residents" as PageKey,
+    },
+    {
+        title: "Units",
+        href: "/admin/units",
+        icon: Building,
+        pageKey: "units" as PageKey,
     },
     {
         title: "Bookings",

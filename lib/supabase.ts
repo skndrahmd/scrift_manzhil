@@ -23,6 +23,20 @@ export const supabaseAdmin = supabaseServiceKey
   })
   : supabase // Fallback to regular client if service key not available
 
+export type Unit = {
+  id: string
+  apartment_number: string
+  floor_number: string | null
+  unit_type: string | null
+  maintenance_charges: number
+  maintenance_paid: boolean
+  last_payment_date: string | null
+  is_occupied: boolean
+  created_at: string
+  updated_at: string
+  profiles?: Profile[]
+}
+
 export type Profile = {
   id: string
   phone_number: string
@@ -30,7 +44,9 @@ export type Profile = {
   cnic: string | null
   apartment_number: string
   building_block?: string | null
+  unit_id: string | null
   is_active: boolean
+  is_primary_resident: boolean
   maintenance_charges: number
   maintenance_paid: boolean
   last_payment_date: string | null
@@ -99,6 +115,7 @@ export type TimeSlot = {
 export type MaintenancePayment = {
   id: string
   profile_id: string
+  unit_id: string | null
   year: number
   month: number
   amount: number
@@ -281,6 +298,7 @@ export type AdminPermission = {
 export type PageKey =
   | "dashboard"
   | "residents"
+  | "units"
   | "bookings"
   | "complaints"
   | "visitors"
@@ -294,6 +312,7 @@ export type PageKey =
 export const PAGE_KEYS: { key: PageKey; label: string; route: string }[] = [
   { key: "dashboard", label: "Dashboard", route: "/admin/dashboard" },
   { key: "residents", label: "Residents", route: "/admin" },
+  { key: "units", label: "Units", route: "/admin/units" },
   { key: "bookings", label: "Bookings", route: "/admin/bookings" },
   { key: "complaints", label: "Complaints", route: "/admin/complaints" },
   { key: "visitors", label: "Visitors", route: "/admin/visitors" },

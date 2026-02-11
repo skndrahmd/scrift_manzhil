@@ -3,22 +3,22 @@ import { supabase } from "@/lib/supabase"
 
 export async function POST(request: NextRequest) {
   try {
-    const { profileId, months = 12 } = await request.json()
+    const { unitId, months = 12 } = await request.json()
 
-    if (!profileId) return new Response("profileId required", { status: 400 })
+    if (!unitId) return new Response("unitId required", { status: 400 })
 
-    // Optimized: Only fetch maintenance_charges field
-    const { data: profile } = await supabase
-      .from("profiles")
+    // Fetch maintenance_charges from units table
+    const { data: unit } = await supabase
+      .from("units")
       .select("maintenance_charges")
-      .eq("id", profileId)
+      .eq("id", unitId)
       .single()
-    if (!profile) return new Response("Profile not found", { status: 404 })
+    if (!unit) return new Response("Unit not found", { status: 404 })
 
-    const amount = profile.maintenance_charges || 0
+    const amount = unit.maintenance_charges || 0
 
     const now = new Date()
-    
+
     // Generate all year-month combinations we need to check
     const monthsToCheck: Array<{ year: number; month: number }> = []
     for (let i = 0; i < months; i++) {
@@ -29,11 +29,11 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    // Optimized: Fetch all existing payments at once (fixes N+1 problem)
+    // Fetch all existing payments at once by unit_id
     const { data: existingPayments } = await supabase
       .from("maintenance_payments")
       .select("year, month")
-      .eq("profile_id", profileId)
+      .eq("unit_id", unitId)
       .in("year", [...new Set(monthsToCheck.map(m => m.year))])
 
     // Create a Set of existing year-month combinations for fast lookup
@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
     const toInsert: any[] = []
     for (const { year, month } of monthsToCheck) {
       if (!existingSet.has(`${year}-${month}`)) {
-        toInsert.push({ profile_id: profileId, year, month, amount, status: "unpaid" })
+        toInsert.push({ unit_id: unitId, year, month, amount, status: "unpaid" })
       }
     }
 

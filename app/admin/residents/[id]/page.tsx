@@ -69,6 +69,7 @@ export default function ResidentProfilePage({ params }: { params: { id: string }
   const [filter, setFilter] = useState<"all" | "paid" | "unpaid">("all")
   const [bookingsPeriod, setBookingsPeriod] = useState<Period>("all")
   const [complaintsPeriod, setComplaintsPeriod] = useState<Period>("all")
+  const [isProfilePrimary, setIsProfilePrimary] = useState(true)
 
   useEffect(() => {
     void load()
@@ -79,17 +80,36 @@ export default function ResidentProfilePage({ params }: { params: { id: string }
     const { data: p } = await supabase.from("profiles").select("*").eq("id", params.id).single()
     setProfile((p as Profile) || null)
 
+    let isPrimary = false
     if (p) {
-      await ensureMaintenanceFromCreation(params.id, p.maintenance_charges ?? 0, p.created_at)
+      // Determine if this resident is primary
+      const { data: aptResidents } = await supabase
+        .from("profiles")
+        .select("id, is_primary_resident")
+        .eq("apartment_number", p.apartment_number)
+        .eq("is_active", true)
+      const residents = (aptResidents || []) as { id: string; is_primary_resident: boolean }[]
+      const explicitPrimary = residents.find((r) => r.is_primary_resident)
+      const primary = explicitPrimary || (residents.length === 1 ? residents[0] : null)
+      isPrimary = primary?.id === params.id
+      setIsProfilePrimary(isPrimary)
+
+      if (isPrimary) {
+        await ensureMaintenanceFromCreation(params.id, p.maintenance_charges ?? 0, p.created_at)
+      }
     }
 
-    const { data: pays } = await supabase
-      .from("maintenance_payments")
-      .select("*")
-      .eq("profile_id", params.id)
-      .order("year", { ascending: false })
-      .order("month", { ascending: false })
-    setPayments((pays as MaintenancePayment[]) || [])
+    if (isPrimary) {
+      const { data: pays } = await supabase
+        .from("maintenance_payments")
+        .select("*")
+        .eq("profile_id", params.id)
+        .order("year", { ascending: false })
+        .order("month", { ascending: false })
+      setPayments((pays as MaintenancePayment[]) || [])
+    } else {
+      setPayments([])
+    }
 
     const { data: bs } = await supabase
       .from("bookings")
@@ -273,46 +293,52 @@ export default function ResidentProfilePage({ params }: { params: { id: string }
             </div>
 
             {/* Maintenance Status Badge */}
-            <div className="hidden md:block">
-              <Badge className={`text-sm px-4 py-2 ${profile?.maintenance_paid ? 'bg-white/20 text-white border-white/30' : 'bg-red-500 text-white border-red-400'}`}>
-                {profile?.maintenance_paid ? '✓ Maintenance Paid' : '⚠ Dues Pending'}
-              </Badge>
-            </div>
+            {isProfilePrimary && (
+              <div className="hidden md:block">
+                <Badge className={`text-sm px-4 py-2 ${profile?.maintenance_paid ? 'bg-white/20 text-white border-white/30' : 'bg-red-500 text-white border-red-400'}`}>
+                  {profile?.maintenance_paid ? '✓ Maintenance Paid' : '⚠ Dues Pending'}
+                </Badge>
+              </div>
+            )}
           </div>
         </div>
 
         {/* Monthly Charge Info */}
-        <div className="bg-white px-6 py-4 border-t border-manzhil-teal/10">
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            <div>
-              <span className="text-sm text-gray-500">Monthly Maintenance</span>
-              <p className="text-xl font-medium text-manzhil-dark">Rs. {profile?.maintenance_charges?.toLocaleString() ?? "0"}</p>
-            </div>
-            <div className="md:hidden">
-              <Badge className={`${profile?.maintenance_paid ? 'bg-manzhil-teal/20 text-manzhil-dark' : 'bg-red-100 text-red-700'}`}>
-                {profile?.maintenance_paid ? '✓ Paid' : '⚠ Pending'}
-              </Badge>
+        {isProfilePrimary && (
+          <div className="bg-white px-6 py-4 border-t border-manzhil-teal/10">
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <div>
+                <span className="text-sm text-gray-500">Monthly Maintenance</span>
+                <p className="text-xl font-medium text-manzhil-dark">Rs. {profile?.maintenance_charges?.toLocaleString() ?? "0"}</p>
+              </div>
+              <div className="md:hidden">
+                <Badge className={`${profile?.maintenance_paid ? 'bg-manzhil-teal/20 text-manzhil-dark' : 'bg-red-100 text-red-700'}`}>
+                  {profile?.maintenance_paid ? '✓ Paid' : '⚠ Pending'}
+                </Badge>
+              </div>
             </div>
           </div>
-        </div>
+        )}
       </Card>
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Maintenance Stats */}
-        <Card className="border-0 shadow-lg shadow-manzhil-teal/10 bg-[#0F766E] text-white hover:shadow-xl hover:-translate-y-0.5 transition-all relative overflow-hidden group">
-          <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-            <CheckCircle className="w-24 h-24 -mr-8 -mt-8 rotate-12" />
-          </div>
-          <CardContent className="p-5 relative z-10">
-            <div className="flex items-center justify-between mb-4">
-              <p className="text-sm font-medium text-white/90">Maintenance</p>
-              <Badge variant="outline" className="text-xs bg-white/20 text-white border-white/30">{payments.length} total</Badge>
+        {isProfilePrimary && (
+          <Card className="border-0 shadow-lg shadow-manzhil-teal/10 bg-[#0F766E] text-white hover:shadow-xl hover:-translate-y-0.5 transition-all relative overflow-hidden group">
+            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+              <CheckCircle className="w-24 h-24 -mr-8 -mt-8 rotate-12" />
             </div>
-            <p className="text-4xl font-medium text-white mb-2">{paidPayments} Paid</p>
-            <p className="text-xs text-white/70 font-medium">{unpaidPayments} unpaid months</p>
-          </CardContent>
-        </Card>
+            <CardContent className="p-5 relative z-10">
+              <div className="flex items-center justify-between mb-4">
+                <p className="text-sm font-medium text-white/90">Maintenance</p>
+                <Badge variant="outline" className="text-xs bg-white/20 text-white border-white/30">{payments.length} total</Badge>
+              </div>
+              <p className="text-4xl font-medium text-white mb-2">{paidPayments} Paid</p>
+              <p className="text-xs text-white/70 font-medium">{unpaidPayments} unpaid months</p>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Bookings Stats */}
         <Card className="border-0 shadow-lg shadow-manzhil-teal/10 bg-[#0F766E] text-white hover:shadow-xl hover:-translate-y-0.5 transition-all relative overflow-hidden group">
@@ -359,18 +385,20 @@ export default function ResidentProfilePage({ params }: { params: { id: string }
         </Card>
       </div>
 
-      <Tabs defaultValue="maintenance" className="space-y-6">
+      <Tabs defaultValue={isProfilePrimary ? "maintenance" : "bookings"} className="space-y-6">
         <TabsList className="bg-white h-auto w-full md:w-fit overflow-x-auto justify-start rounded-xl shadow-lg shadow-manzhil-teal/5 border border-manzhil-teal/10 p-1.5 gap-1 scrollbar-hide">
-          <TabsTrigger
-            value="maintenance"
-            className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-manzhil-dark data-[state=active]:to-manzhil-teal data-[state=active]:text-white rounded-lg text-sm px-4 py-2.5 transition-all flex items-center gap-2 flex-shrink-0"
-          >
-            <DollarSign className="h-4 w-4" />
-            Maintenance
-            {unpaidPayments > 0 && (
-              <span className="bg-red-500 text-white text-xs rounded-full px-2 py-0.5">{unpaidPayments}</span>
-            )}
-          </TabsTrigger>
+          {isProfilePrimary && (
+            <TabsTrigger
+              value="maintenance"
+              className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-manzhil-dark data-[state=active]:to-manzhil-teal data-[state=active]:text-white rounded-lg text-sm px-4 py-2.5 transition-all flex items-center gap-2 flex-shrink-0"
+            >
+              <DollarSign className="h-4 w-4" />
+              Maintenance
+              {unpaidPayments > 0 && (
+                <span className="bg-red-500 text-white text-xs rounded-full px-2 py-0.5">{unpaidPayments}</span>
+              )}
+            </TabsTrigger>
+          )}
           <TabsTrigger
             value="bookings"
             className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-manzhil-dark data-[state=active]:to-manzhil-teal data-[state=active]:text-white rounded-lg text-sm px-4 py-2.5 transition-all flex items-center gap-2 flex-shrink-0"

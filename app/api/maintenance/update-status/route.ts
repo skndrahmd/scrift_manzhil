@@ -83,20 +83,20 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    // Also update the profiles table to keep maintenance_paid in sync
-    const profileId = payment.profiles?.id || (payment as any).profile_id
-    if (profileId) {
-      const { error: profileUpdateError } = await supabase
-        .from("profiles")
+    // Update the units table to keep maintenance_paid in sync
+    const unitId = (payment as any).unit_id
+    if (unitId) {
+      const { error: unitUpdateError } = await supabase
+        .from("units")
         .update({
           maintenance_paid: isPaid,
           last_payment_date: isPaid ? getPakistanISOString().split("T")[0] : null,
           updated_at: getPakistanISOString(),
         })
-        .eq("id", profileId)
+        .eq("id", unitId)
 
-      if (profileUpdateError) {
-        console.error("Failed to update profile maintenance status:", profileUpdateError)
+      if (unitUpdateError) {
+        console.error("Failed to update unit maintenance status:", unitUpdateError)
       }
     }
 

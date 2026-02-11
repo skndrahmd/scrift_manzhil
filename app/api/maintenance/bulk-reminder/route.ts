@@ -5,65 +5,70 @@ import { sendMessage, formatCurrency } from "@/lib/twilio"
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { profileIds } = body as { profileIds: string[] }
+    const { unitIds } = body as { unitIds: string[] }
 
-    if (!profileIds || !Array.isArray(profileIds) || profileIds.length === 0) {
-      return new Response(JSON.stringify({ error: "No profile IDs provided" }), {
+    if (!unitIds || !Array.isArray(unitIds) || unitIds.length === 0) {
+      return new Response(JSON.stringify({ error: "No unit IDs provided" }), {
         status: 400,
         headers: { "Content-Type": "application/json" },
       })
     }
 
-    console.log(`[BULK MAINTENANCE REMINDER] Sending reminders to ${profileIds.length} residents`)
+    console.log(`[BULK MAINTENANCE REMINDER] Sending reminders for ${unitIds.length} units`)
 
-    // Fetch profiles for selected residents
-    const { data: profiles, error: profileError } = await supabase
-      .from("profiles")
-      .select("id, name, phone_number, maintenance_charges, last_payment_date, maintenance_paid")
-      .in("id", profileIds)
-      .eq("is_active", true)
+    // Fetch units with their primary residents
+    const { data: units, error: unitError } = await supabase
+      .from("units")
+      .select("id, apartment_number, maintenance_charges, last_payment_date, maintenance_paid, profiles(id, name, phone_number, is_primary_resident, is_active)")
+      .in("id", unitIds)
 
-    if (profileError) {
-      console.error("[BULK MAINTENANCE REMINDER] Error fetching profiles:", profileError)
-      return new Response(JSON.stringify({ error: "Failed to fetch profiles" }), {
+    if (unitError) {
+      console.error("[BULK MAINTENANCE REMINDER] Error fetching units:", unitError)
+      return new Response(JSON.stringify({ error: "Failed to fetch units" }), {
         status: 500,
         headers: { "Content-Type": "application/json" },
       })
     }
 
-    if (!profiles || profiles.length === 0) {
-      return new Response(JSON.stringify({ error: "No valid profiles found" }), {
+    if (!units || units.length === 0) {
+      return new Response(JSON.stringify({ error: "No valid units found" }), {
         status: 404,
         headers: { "Content-Type": "application/json" },
       })
     }
 
     const results = {
-      total: profiles.length,
+      total: units.length,
       sent: 0,
       failed: 0,
       errors: [] as string[],
     }
 
-    // Send reminders to each selected resident
-    for (const profile of profiles) {
-      if (!profile.phone_number) {
-        console.warn(`[BULK MAINTENANCE REMINDER] No phone number for profile ${profile.id}`)
+    // Send reminders to primary resident of each unit
+    for (const unit of units) {
+      const residents = (unit.profiles as any[]) || []
+      const primaryResident =
+        residents.find((r) => r.is_primary_resident && r.is_active) ||
+        residents.find((r) => r.is_active) ||
+        null
+
+      if (!primaryResident?.phone_number) {
+        console.warn(`[BULK MAINTENANCE REMINDER] No primary resident with phone for unit ${unit.apartment_number}`)
         results.failed++
-        results.errors.push(`${profile.name}: No phone number`)
+        results.errors.push(`Unit ${unit.apartment_number}: No primary resident with phone number`)
         continue
       }
 
       try {
-        const residentName = profile.name || "Resident"
-        const monthlyCharges = profile.maintenance_charges || 0
+        const residentName = primaryResident.name || "Resident"
+        const monthlyCharges = unit.maintenance_charges || 0
 
         // Calculate overdue months if last payment date exists
         let overdueMonths = 0
         let lastPaymentText = ""
 
-        if (profile.last_payment_date) {
-          const lastPayment = new Date(profile.last_payment_date)
+        if (unit.last_payment_date) {
+          const lastPayment = new Date(unit.last_payment_date)
           const currentDate = new Date()
           overdueMonths = (currentDate.getFullYear() - lastPayment.getFullYear()) * 12 +
             (currentDate.getMonth() - lastPayment.getMonth())
@@ -83,7 +88,7 @@ export async function POST(request: NextRequest) {
           "",
           "Maintenance Payment Reminder",
           "",
-          `Hi ${residentName}, this is a payment reminder.${lastPaymentText}`,
+          `Hi ${residentName}, this is a payment reminder for Unit ${unit.apartment_number}.${lastPaymentText}`,
           "",
           "Payment Details:",
           `Monthly Charges: Rs. ${formatCurrency(monthlyCharges)}`,
@@ -97,20 +102,20 @@ export async function POST(request: NextRequest) {
           "- Manzhil by Scrift Team",
         ].filter(Boolean).join("\n")
 
-        const result = await sendMessage(profile.phone_number, message)
+        const result = await sendMessage(primaryResident.phone_number, message)
 
         if (result.ok) {
-          console.log(`[BULK MAINTENANCE REMINDER] Sent to ${profile.name} (${profile.phone_number})`)
+          console.log(`[BULK MAINTENANCE REMINDER] Sent to ${primaryResident.name} for unit ${unit.apartment_number}`)
           results.sent++
         } else {
-          console.error(`[BULK MAINTENANCE REMINDER] Failed to send to ${profile.name}:`, result.error)
+          console.error(`[BULK MAINTENANCE REMINDER] Failed to send for unit ${unit.apartment_number}:`, result.error)
           results.failed++
-          results.errors.push(`${profile.name}: ${result.error || 'Unknown error'}`)
+          results.errors.push(`Unit ${unit.apartment_number}: ${result.error || 'Unknown error'}`)
         }
       } catch (error) {
-        console.error(`[BULK MAINTENANCE REMINDER] Error sending to ${profile.name}:`, error)
+        console.error(`[BULK MAINTENANCE REMINDER] Error sending for unit ${unit.apartment_number}:`, error)
         results.failed++
-        results.errors.push(`${profile.name}: ${error instanceof Error ? error.message : 'Unknown error'}`)
+        results.errors.push(`Unit ${unit.apartment_number}: ${error instanceof Error ? error.message : 'Unknown error'}`)
       }
     }
 

@@ -22,10 +22,11 @@ export async function POST(request: NextRequest) {
     const currentYear = today.getFullYear()
     const currentMonth = today.getMonth() + 1
 
-    const { data: profiles, error: pErr } = await supabase
-      .from("profiles")
-      .select("id, name, phone_number, maintenance_charges")
-    if (pErr || !profiles) return new Response("Profiles fetch error", { status: 500 })
+    // Fetch all units with their primary residents for contact info
+    const { data: units, error: uErr } = await supabase
+      .from("units")
+      .select("id, apartment_number, maintenance_charges, profiles(id, name, phone_number, is_primary_resident, is_active)")
+    if (uErr || !units) return new Response("Units fetch error", { status: 500 })
 
     // Fetch all ledgers for context
     const { data: ledgers } = await supabase
@@ -33,16 +34,27 @@ export async function POST(request: NextRequest) {
       .select("*")
       .gte("year", currentYear - 1)
 
-    const ledgerByProfile = new Map<string, any[]>()
+    const ledgerByUnit = new Map<string, any[]>()
     ;(ledgers || []).forEach((row) => {
-      const arr = ledgerByProfile.get(row.profile_id) || []
+      const key = row.unit_id
+      if (!key) return
+      const arr = ledgerByUnit.get(key) || []
       arr.push(row)
-      ledgerByProfile.set(row.profile_id, arr)
+      ledgerByUnit.set(key, arr)
     })
 
-    // Process each profile
-    for (const prof of profiles) {
-      const rows = ledgerByProfile.get(prof.id) || []
+    // Process each unit
+    for (const unit of units) {
+      const residents = (unit.profiles as any[]) || []
+      const primaryResident =
+        residents.find((r) => r.is_primary_resident && r.is_active) ||
+        residents.find((r) => r.is_active) ||
+        null
+
+      // Skip units with no active residents or no phone number
+      if (!primaryResident?.phone_number) continue
+
+      const rows = ledgerByUnit.get(unit.id) || []
 
       // Check if current month invoice exists
       const hasCurrent = rows.some((r) => r.year === currentYear && r.month === currentMonth)
@@ -52,10 +64,11 @@ export async function POST(request: NextRequest) {
         const { data: inserted } = await supabase
           .from("maintenance_payments")
           .insert({
-            profile_id: prof.id,
+            unit_id: unit.id,
+            profile_id: primaryResident.id,
             year: currentYear,
             month: currentMonth,
-            amount: prof.maintenance_charges ?? 0,
+            amount: unit.maintenance_charges ?? 0,
             status: "unpaid",
           })
           .select()
@@ -63,7 +76,7 @@ export async function POST(request: NextRequest) {
 
         if (inserted) {
           rows.push(inserted)
-          ledgerByProfile.set(prof.id, rows)
+          ledgerByUnit.set(unit.id, rows)
 
           // Send invoice ready message
           const invoiceLink = `${APP_BASE_URL}/maintenance-invoice/${inserted.id}?snapshot=unpaid`
@@ -71,10 +84,10 @@ export async function POST(request: NextRequest) {
           const dueDate = formatDate(new Date(currentYear, currentMonth - 1, 10).toISOString().slice(0, 10))
 
           await sendMaintenanceInvoice({
-            phone: prof.phone_number,
-            name: prof.name || "Resident",
+            phone: primaryResident.phone_number,
+            name: primaryResident.name || "Resident",
             monthYear: monthYearLabel,
-            amount: prof.maintenance_charges ?? 0,
+            amount: unit.maintenance_charges ?? 0,
             dueDate,
             invoiceUrl: invoiceLink,
           })
@@ -87,10 +100,11 @@ export async function POST(request: NextRequest) {
           const { data: inserted } = await supabase
             .from("maintenance_payments")
             .insert({
-              profile_id: prof.id,
+              unit_id: unit.id,
+              profile_id: primaryResident.id,
               year: currentYear,
               month: currentMonth,
-              amount: prof.maintenance_charges ?? 0,
+              amount: unit.maintenance_charges ?? 0,
               status: "unpaid",
             })
             .select()
@@ -98,12 +112,12 @@ export async function POST(request: NextRequest) {
 
           if (inserted) {
             rows.push(inserted)
-            ledgerByProfile.set(prof.id, rows)
+            ledgerByUnit.set(unit.id, rows)
           }
         }
 
         // Get all unpaid invoices
-        const unpaid = (ledgerByProfile.get(prof.id) || [])
+        const unpaid = (ledgerByUnit.get(unit.id) || [])
           .filter((r) => r.status !== "paid")
           .sort((a, b) => (a.year === b.year ? a.month - b.month : a.year - b.year))
 
@@ -120,8 +134,8 @@ export async function POST(request: NextRequest) {
         const invoiceLink = `${APP_BASE_URL}/maintenance-invoice/${unpaid[0].id}?snapshot=unpaid`
 
         await sendMaintenanceReminder({
-          phone: prof.phone_number,
-          name: prof.name || "Resident",
+          phone: primaryResident.phone_number,
+          name: primaryResident.name || "Resident",
           monthsList,
           totalAmount: totalDue,
           invoiceUrl: invoiceLink,

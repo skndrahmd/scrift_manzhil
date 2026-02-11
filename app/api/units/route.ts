@@ -1,0 +1,91 @@
+import type { NextRequest } from "next/server"
+import { supabaseAdmin } from "@/lib/supabase"
+import { getPakistanISOString } from "@/lib/dateUtils"
+
+export async function POST(request: NextRequest) {
+    try {
+        const body = await request.json()
+        const { apartment_number, maintenance_charges, floor_number, unit_type } = body
+
+        if (!apartment_number) {
+            return new Response(
+                JSON.stringify({ error: "apartment_number is required" }),
+                { status: 400, headers: { "Content-Type": "application/json" } }
+            )
+        }
+
+        const { data, error } = await supabaseAdmin
+            .from("units")
+            .insert({
+                apartment_number,
+                maintenance_charges: maintenance_charges || 5000,
+                floor_number: floor_number || null,
+                unit_type: unit_type || null,
+                is_occupied: false,
+            })
+            .select()
+            .single()
+
+        if (error) {
+            if (error.code === "23505") {
+                return new Response(
+                    JSON.stringify({ error: "A unit with this apartment number already exists" }),
+                    { status: 409, headers: { "Content-Type": "application/json" } }
+                )
+            }
+            throw error
+        }
+
+        return new Response(JSON.stringify({ success: true, unit: data }), {
+            status: 201,
+            headers: { "Content-Type": "application/json" },
+        })
+    } catch (error) {
+        console.error("[UNITS CREATE] Error:", error)
+        return new Response(
+            JSON.stringify({ error: "Failed to create unit" }),
+            { status: 500, headers: { "Content-Type": "application/json" } }
+        )
+    }
+}
+
+export async function PATCH(request: NextRequest) {
+    try {
+        const body = await request.json()
+        const { unitId, maintenance_charges, floor_number, unit_type } = body
+
+        if (!unitId) {
+            return new Response(
+                JSON.stringify({ error: "unitId is required" }),
+                { status: 400, headers: { "Content-Type": "application/json" } }
+            )
+        }
+
+        const updates: Record<string, unknown> = {
+            updated_at: getPakistanISOString(),
+        }
+        if (maintenance_charges !== undefined) updates.maintenance_charges = maintenance_charges
+        if (floor_number !== undefined) updates.floor_number = floor_number
+        if (unit_type !== undefined) updates.unit_type = unit_type
+
+        const { data, error } = await supabaseAdmin
+            .from("units")
+            .update(updates)
+            .eq("id", unitId)
+            .select()
+            .single()
+
+        if (error) throw error
+
+        return new Response(JSON.stringify({ success: true, unit: data }), {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+        })
+    } catch (error) {
+        console.error("[UNITS UPDATE] Error:", error)
+        return new Response(
+            JSON.stringify({ error: "Failed to update unit" }),
+            { status: 500, headers: { "Content-Type": "application/json" } }
+        )
+    }
+}

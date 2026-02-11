@@ -21,6 +21,7 @@ import {
     type Booking,
     type Complaint,
     type Profile,
+    type Unit,
     type Feedback,
     type BookingSettings,
     type VisitorPass,
@@ -36,6 +37,7 @@ interface AdminContextType {
     bookings: Booking[]
     complaints: Complaint[]
     profiles: Profile[]
+    units: Unit[]
     feedback: Feedback[]
     visitors: VisitorPass[]
     parcels: Parcel[]
@@ -63,6 +65,7 @@ interface AdminContextType {
     fetchBookings: () => Promise<void>
     fetchComplaints: () => Promise<void>
     fetchProfiles: () => Promise<void>
+    fetchUnits: () => Promise<void>
     fetchFeedback: () => Promise<void>
     fetchVisitors: () => Promise<void>
     fetchParcels: () => Promise<void>
@@ -92,6 +95,7 @@ function AdminLayoutContent({
     const [bookings, setBookings] = useState<Booking[]>([])
     const [complaints, setComplaints] = useState<Complaint[]>([])
     const [profiles, setProfiles] = useState<Profile[]>([])
+    const [units, setUnits] = useState<Unit[]>([])
     const [feedback, setFeedback] = useState<Feedback[]>([])
     const [visitors, setVisitors] = useState<VisitorPass[]>([])
     const [parcels, setParcels] = useState<Parcel[]>([])
@@ -165,6 +169,14 @@ function AdminLayoutContent({
         if (data) setProfiles(data)
     }
 
+    const fetchUnits = async () => {
+        const { data } = await supabase
+            .from("units")
+            .select("*, profiles(*)")
+            .order("apartment_number", { ascending: true })
+        if (data) setUnits(data)
+    }
+
     const fetchFeedback = async () => {
         const { data } = await supabase
             .from("feedback")
@@ -196,7 +208,7 @@ function AdminLayoutContent({
 
     const refreshData = async () => {
         setRefreshing(true)
-        await Promise.all([fetchBookings(), fetchComplaints(), fetchProfiles(), fetchFeedback(), fetchVisitors(), fetchParcels(), fetchSettings()])
+        await Promise.all([fetchBookings(), fetchComplaints(), fetchProfiles(), fetchUnits(), fetchFeedback(), fetchVisitors(), fetchParcels(), fetchSettings()])
         setRefreshing(false)
         toast({
             title: "Data Refreshed",
@@ -207,7 +219,7 @@ function AdminLayoutContent({
     useEffect(() => {
         const fetchAllData = async () => {
             setLoading(true)
-            await Promise.all([fetchBookings(), fetchComplaints(), fetchProfiles(), fetchFeedback(), fetchVisitors(), fetchParcels(), fetchSettings()])
+            await Promise.all([fetchBookings(), fetchComplaints(), fetchProfiles(), fetchUnits(), fetchFeedback(), fetchVisitors(), fetchParcels(), fetchSettings()])
             setLoading(false)
         }
         fetchAllData()
@@ -231,6 +243,14 @@ function AdminLayoutContent({
             .channel('profiles-admin')
             .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, () => {
                 fetchProfiles()
+                fetchUnits()
+            })
+            .subscribe()
+
+        const unitsChannel = supabase
+            .channel('units-admin')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'units' }, () => {
+                fetchUnits()
             })
             .subscribe()
 
@@ -259,6 +279,7 @@ function AdminLayoutContent({
             supabase.removeChannel(bookingsChannel)
             supabase.removeChannel(complaintsChannel)
             supabase.removeChannel(profilesChannel)
+            supabase.removeChannel(unitsChannel)
             supabase.removeChannel(feedbackChannel)
             supabase.removeChannel(visitorsChannel)
             supabase.removeChannel(parcelsChannel)
@@ -269,6 +290,7 @@ function AdminLayoutContent({
         bookings,
         complaints,
         profiles,
+        units,
         feedback,
         visitors,
         parcels,
@@ -288,6 +310,7 @@ function AdminLayoutContent({
         fetchBookings,
         fetchComplaints,
         fetchProfiles,
+        fetchUnits,
         fetchFeedback,
         fetchVisitors,
         fetchParcels,

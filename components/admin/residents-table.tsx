@@ -22,6 +22,7 @@ import {
     Eye,
     Send,
     Upload,
+    Star,
 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -64,6 +65,35 @@ export function ResidentsTable() {
 
     const itemsPerPage = 10
 
+    // Build primary resident lookup per apartment
+    const primaryResidentMap = useMemo(() => {
+        const grouped = new Map<string, Profile[]>()
+        profiles.forEach((p) => {
+            if (!p.is_active) return
+            const apt = p.apartment_number
+            if (!grouped.has(apt)) grouped.set(apt, [])
+            grouped.get(apt)!.push(p)
+        })
+        const map = new Map<string, Profile>()
+        grouped.forEach((residents, apt) => {
+            const primary = residents.find((r) => r.is_primary_resident) || (residents.length === 1 ? residents[0] : null)
+            if (primary) map.set(apt, primary)
+        })
+        return map
+    }, [profiles])
+
+    const isPrimary = (profile: Profile) => {
+        const primary = primaryResidentMap.get(profile.apartment_number)
+        return primary?.id === profile.id
+    }
+
+    // For secondary residents, maintenance status is synced with primary
+    const getMaintenanceStatus = (profile: Profile): boolean => {
+        if (isPrimary(profile)) return profile.maintenance_paid
+        const primary = primaryResidentMap.get(profile.apartment_number)
+        return primary ? primary.maintenance_paid : profile.maintenance_paid
+    }
+
     // Filter profiles
     const filteredProfiles = useMemo(() => {
         return profiles.filter((profile) => {
@@ -73,14 +103,15 @@ export function ResidentsTable() {
                 profile.phone_number?.includes(searchTerm) ||
                 profile.apartment_number?.toLowerCase().includes(searchTerm.toLowerCase())
 
+            const status = getMaintenanceStatus(profile)
             const matchesMaintenance =
                 maintenanceFilter === "all" ||
-                (maintenanceFilter === "paid" && profile.maintenance_paid) ||
-                (maintenanceFilter === "unpaid" && !profile.maintenance_paid)
+                (maintenanceFilter === "paid" && status) ||
+                (maintenanceFilter === "unpaid" && !status)
 
             return matchesSearch && matchesMaintenance
         })
-    }, [profiles, searchTerm, maintenanceFilter])
+    }, [profiles, searchTerm, maintenanceFilter, primaryResidentMap])
 
     const residentsDisplay = useMemo(
         () => filterByPeriod(filteredProfiles, residentsPeriod, (p) => p.created_at),
@@ -371,7 +402,7 @@ export function ResidentsTable() {
                                         name: p.name || "N/A",
                                         phone: p.phone_number || "N/A",
                                         apartment: p.apartment_number || "N/A",
-                                        status: p.maintenance_paid ? "Paid" : "Unpaid",
+                                        status: getMaintenanceStatus(p) ? "Paid" : "Unpaid",
                                     })),
                                     fileName: `residents-${residentsPeriod}.pdf`,
                                 })
@@ -505,21 +536,38 @@ export function ResidentsTable() {
                                                 disabled={profile.maintenance_paid}
                                             />
                                         </TableCell>
-                                        <TableCell className="font-medium">{profile.name}</TableCell>
+                                        <TableCell className="font-medium">
+                                            <div className="flex items-center gap-2">
+                                                {profile.name}
+                                                {isPrimary(profile) ? (
+                                                    <Badge className="bg-amber-100 text-amber-800 border-amber-200 text-xs px-1.5 py-0">
+                                                        <Star className="h-2.5 w-2.5 mr-0.5" />Primary
+                                                    </Badge>
+                                                ) : (
+                                                    <Badge variant="outline" className="text-gray-500 border-gray-300 text-xs px-1.5 py-0">
+                                                        Secondary
+                                                    </Badge>
+                                                )}
+                                            </div>
+                                        </TableCell>
                                         <TableCell className="text-gray-600">{profile.phone_number}</TableCell>
                                         <TableCell className="text-gray-600">{profile.apartment_number}</TableCell>
-                                        <TableCell className="text-gray-600">Rs. {profile.maintenance_charges.toLocaleString()}</TableCell>
+                                        <TableCell className="text-gray-600">{isPrimary(profile) ? `Rs. ${profile.maintenance_charges.toLocaleString()}` : '—'}</TableCell>
                                         <TableCell>
-                                            <Badge
-                                                variant={profile.maintenance_paid ? "default" : "destructive"}
-                                                className={profile.maintenance_paid ? "bg-manzhil-teal/20 text-manzhil-dark" : "bg-red-100 text-red-700"}
-                                            >
-                                                {profile.maintenance_paid ? (
-                                                    <><CheckCircle className="h-3 w-3 mr-1" />Paid</>
-                                                ) : (
-                                                    <><XCircle className="h-3 w-3 mr-1" />Unpaid</>
-                                                )}
-                                            </Badge>
+                                            {isPrimary(profile) ? (
+                                                <Badge
+                                                    variant={getMaintenanceStatus(profile) ? "default" : "destructive"}
+                                                    className={getMaintenanceStatus(profile) ? "bg-manzhil-teal/20 text-manzhil-dark" : "bg-red-100 text-red-700"}
+                                                >
+                                                    {getMaintenanceStatus(profile) ? (
+                                                        <><CheckCircle className="h-3 w-3 mr-1" />Paid</>
+                                                    ) : (
+                                                        <><XCircle className="h-3 w-3 mr-1" />Unpaid</>
+                                                    )}
+                                                </Badge>
+                                            ) : (
+                                                <span className="text-xs text-gray-400">N/A</span>
+                                            )}
                                         </TableCell>
                                         <TableCell className="text-right">
                                             <div className="flex gap-2 justify-end">
@@ -539,21 +587,23 @@ export function ResidentsTable() {
                                                 >
                                                     <Edit className="h-4 w-4 text-manzhil-teal" />
                                                 </Button>
-                                                <Button
-                                                    variant="outline"
-                                                    size="sm"
-                                                    className={`h-8 w-8 p-0 ${profile.maintenance_paid ? "text-red-600 hover:bg-red-50 border-red-200" : "text-manzhil-teal hover:bg-manzhil-teal/5 border-manzhil-teal/30"}`}
-                                                    onClick={() => updateMaintenanceStatus(profile.id, !profile.maintenance_paid)}
-                                                    disabled={updatingMaintenanceId === profile.id}
-                                                >
-                                                    {updatingMaintenanceId === profile.id ? (
-                                                        <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                                                    ) : profile.maintenance_paid ? (
-                                                        <XCircle className="h-4 w-4" />
-                                                    ) : (
-                                                        <CheckCircle className="h-4 w-4" />
-                                                    )}
-                                                </Button>
+                                                {isPrimary(profile) && (
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        className={`h-8 w-8 p-0 ${profile.maintenance_paid ? "text-red-600 hover:bg-red-50 border-red-200" : "text-manzhil-teal hover:bg-manzhil-teal/5 border-manzhil-teal/30"}`}
+                                                        onClick={() => updateMaintenanceStatus(profile.id, !profile.maintenance_paid)}
+                                                        disabled={updatingMaintenanceId === profile.id}
+                                                    >
+                                                        {updatingMaintenanceId === profile.id ? (
+                                                            <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                                                        ) : profile.maintenance_paid ? (
+                                                            <XCircle className="h-4 w-4" />
+                                                        ) : (
+                                                            <CheckCircle className="h-4 w-4" />
+                                                        )}
+                                                    </Button>
+                                                )}
                                                 <Button
                                                     variant="outline"
                                                     size="sm"
@@ -584,7 +634,18 @@ export function ResidentsTable() {
                                 <CardContent className="p-4 space-y-4">
                                     <div className="flex justify-between items-start">
                                         <div>
-                                            <h3 className="font-medium text-manzhil-dark">{profile.name}</h3>
+                                            <div className="flex items-center gap-2">
+                                                <h3 className="font-medium text-manzhil-dark">{profile.name}</h3>
+                                                {isPrimary(profile) ? (
+                                                    <Badge className="bg-amber-100 text-amber-800 text-[10px] px-1 py-0">
+                                                        <Star className="h-2 w-2 mr-0.5" />Primary
+                                                    </Badge>
+                                                ) : (
+                                                    <Badge variant="outline" className="text-gray-500 border-gray-300 text-[10px] px-1 py-0">
+                                                        Secondary
+                                                    </Badge>
+                                                )}
+                                            </div>
                                             <p className="text-sm text-gray-500">{profile.apartment_number}</p>
                                         </div>
                                         <Checkbox
@@ -599,19 +660,25 @@ export function ResidentsTable() {
                                             <span className="text-gray-500 block">Phone</span>
                                             <span className="font-medium text-gray-700">{profile.phone_number}</span>
                                         </div>
-                                        <div>
-                                            <span className="text-gray-500 block">Maintenance</span>
-                                            <span className="font-medium text-gray-700">Rs. {profile.maintenance_charges.toLocaleString()}</span>
-                                        </div>
+                                        {isPrimary(profile) && (
+                                            <div>
+                                                <span className="text-gray-500 block">Maintenance</span>
+                                                <span className="font-medium text-gray-700">Rs. {profile.maintenance_charges.toLocaleString()}</span>
+                                            </div>
+                                        )}
                                     </div>
 
                                     <div className="flex justify-between items-center pt-2 border-t border-gray-100">
-                                        <Badge
-                                            variant={profile.maintenance_paid ? "default" : "destructive"}
-                                            className={profile.maintenance_paid ? "bg-manzhil-teal/20 text-manzhil-dark" : "bg-red-100 text-red-700"}
-                                        >
-                                            {profile.maintenance_paid ? "Paid" : "Unpaid"}
-                                        </Badge>
+                                        {isPrimary(profile) ? (
+                                            <Badge
+                                                variant={getMaintenanceStatus(profile) ? "default" : "destructive"}
+                                                className={getMaintenanceStatus(profile) ? "bg-manzhil-teal/20 text-manzhil-dark" : "bg-red-100 text-red-700"}
+                                            >
+                                                {getMaintenanceStatus(profile) ? "Paid" : "Unpaid"}
+                                            </Badge>
+                                        ) : (
+                                            <span className="text-xs text-gray-400">No dues</span>
+                                        )}
                                         <div className="flex gap-2">
                                             <Link href={`/admin/residents/${profile.id}`}>
                                                 <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-500">
@@ -629,21 +696,23 @@ export function ResidentsTable() {
                                             >
                                                 <Edit className="h-4 w-4" />
                                             </Button>
-                                            <Button
-                                                variant="ghost"
-                                                size="icon"
-                                                className="h-8 w-8"
-                                                onClick={() => updateMaintenanceStatus(profile.id, !profile.maintenance_paid)}
-                                                disabled={updatingMaintenanceId === profile.id}
-                                            >
-                                                {updatingMaintenanceId === profile.id ? (
-                                                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                                                ) : profile.maintenance_paid ? (
-                                                    <XCircle className="h-4 w-4 text-red-600" />
-                                                ) : (
-                                                    <CheckCircle className="h-4 w-4 text-manzhil-teal" />
-                                                )}
-                                            </Button>
+                                            {isPrimary(profile) && (
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="h-8 w-8"
+                                                    onClick={() => updateMaintenanceStatus(profile.id, !profile.maintenance_paid)}
+                                                    disabled={updatingMaintenanceId === profile.id}
+                                                >
+                                                    {updatingMaintenanceId === profile.id ? (
+                                                        <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                                                    ) : profile.maintenance_paid ? (
+                                                        <XCircle className="h-4 w-4 text-red-600" />
+                                                    ) : (
+                                                        <CheckCircle className="h-4 w-4 text-manzhil-teal" />
+                                                    )}
+                                                </Button>
+                                            )}
                                             <Button
                                                 variant="ghost"
                                                 size="icon"
