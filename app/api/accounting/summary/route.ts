@@ -19,28 +19,19 @@ export async function GET(request: NextRequest) {
             : `${year}-12-31`
 
         // Fetch booking revenue (paid bookings)
-        const { data: bookings, error: bookingsError } = await supabaseAdmin
+        // Note: Date range filtered in JS to avoid PostgREST DATE column comparison issues
+        const { data: allPaidBookings, error: bookingsError } = await supabaseAdmin
             .from("bookings")
             .select("booking_charges, payment_status, booking_date")
             .eq("payment_status", "paid")
-            .gte("booking_date", startDate)
-            .lte("booking_date", endDate)
 
         if (bookingsError) throw bookingsError
 
-        // Debug: query ALL bookings without any filters
-        const { data: allBookings, error: allBookingsError } = await supabaseAdmin
-            .from("bookings")
-            .select("id, booking_charges, payment_status, booking_date")
+        const bookings = allPaidBookings?.filter(b => {
+            return b.booking_date >= startDate && b.booking_date <= endDate
+        }) || []
 
-        console.log("=== ACCOUNTING DEBUG ===")
-        console.log("Date range:", startDate, "to", endDate)
-        console.log("ALL bookings (no filters):", JSON.stringify(allBookings))
-        console.log("ALL bookings error:", allBookingsError)
-        console.log("Filtered bookings:", JSON.stringify(bookings))
-
-        const bookingRevenue = bookings?.reduce((sum, b) => sum + (b.booking_charges || 0), 0) || 0
-        console.log("Booking revenue calculated:", bookingRevenue)
+        const bookingRevenue = bookings.reduce((sum, b) => sum + (b.booking_charges || 0), 0) || 0
 
         // Fetch maintenance revenue (paid maintenance)
         const { data: maintenance, error: maintenanceError } = await supabaseAdmin
@@ -56,13 +47,16 @@ export async function GET(request: NextRequest) {
             : maintenance?.reduce((sum, m) => sum + (m.amount || 0), 0) || 0
 
         // Fetch expenses
-        const { data: expenses, error: expensesError } = await supabaseAdmin
+        // Note: Date range filtered in JS to avoid PostgREST DATE column comparison issues
+        const { data: allExpenses, error: expensesError } = await supabaseAdmin
             .from("expenses")
             .select("amount, expense_date")
-            .gte("expense_date", startDate)
-            .lte("expense_date", endDate)
 
-        const totalExpenses = expenses?.reduce((sum, e) => sum + (e.amount || 0), 0) || 0
+        const expenses = allExpenses?.filter(e => {
+            return e.expense_date >= startDate && e.expense_date <= endDate
+        }) || []
+
+        const totalExpenses = expenses.reduce((sum, e) => sum + (e.amount || 0), 0) || 0
 
         // Fetch outstanding dues (unpaid bookings + unpaid maintenance)
         const { data: unpaidBookings } = await supabaseAdmin
