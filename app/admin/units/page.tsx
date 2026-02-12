@@ -320,7 +320,7 @@ export default function UnitsPage() {
                                     {/* Unit Header */}
                                     <div className="flex items-start justify-between mb-4">
                                         <div className="flex items-center gap-3">
-                                            <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-manzhil-dark to-manzhil-teal flex items-center justify-center text-white font-medium text-lg shadow-md">
+                                            <div className="h-12 min-w-12 px-2 rounded-xl bg-gradient-to-br from-manzhil-dark to-manzhil-teal flex items-center justify-center text-white font-medium text-xs shadow-md shrink-0">
                                                 {unit.apartment_number}
                                             </div>
                                             <div>
