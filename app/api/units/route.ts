@@ -14,11 +14,18 @@ export async function POST(request: NextRequest) {
             )
         }
 
+        if (!maintenance_charges || maintenance_charges <= 0) {
+            return new Response(
+                JSON.stringify({ error: "maintenance_charges is required and must be greater than 0" }),
+                { status: 400, headers: { "Content-Type": "application/json" } }
+            )
+        }
+
         const { data, error } = await supabaseAdmin
             .from("units")
             .insert({
                 apartment_number,
-                maintenance_charges: maintenance_charges || 5000,
+                maintenance_charges,
                 floor_number: floor_number || null,
                 unit_type: unit_type || null,
                 is_occupied: false,

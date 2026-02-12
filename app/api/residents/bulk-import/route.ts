@@ -79,7 +79,7 @@ export async function POST(request: NextRequest) {
               .from('units')
               .insert({
                 apartment_number: residentData.apartment_number,
-                maintenance_charges: residentData.maintenance_charges || 5000,
+                maintenance_charges: residentData.maintenance_charges,
                 is_occupied: true,
               })
               .select('id')

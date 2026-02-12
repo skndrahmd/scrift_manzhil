@@ -46,7 +46,7 @@ export default function UnitsPage() {
         apartment_number: "",
         floor_number: "",
         unit_type: "",
-        maintenance_charges: "5000",
+        maintenance_charges: "",
     })
 
     // Bulk import state
@@ -130,6 +130,15 @@ export default function UnitsPage() {
             return
         }
 
+        if (!newUnit.maintenance_charges || isNaN(parseFloat(newUnit.maintenance_charges)) || parseFloat(newUnit.maintenance_charges) <= 0) {
+            toast({
+                title: "Validation Error",
+                description: "Maintenance charges are required and must be greater than 0.",
+                variant: "destructive",
+            })
+            return
+        }
+
         setIsSubmitting(true)
         try {
             const response = await fetch("/api/units", {
@@ -139,7 +148,7 @@ export default function UnitsPage() {
                     apartment_number: newUnit.apartment_number.trim(),
                     floor_number: newUnit.floor_number.trim() || null,
                     unit_type: newUnit.unit_type || null,
-                    maintenance_charges: parseFloat(newUnit.maintenance_charges) || 5000,
+                    maintenance_charges: parseFloat(newUnit.maintenance_charges),
                 }),
             })
 
@@ -162,7 +171,7 @@ export default function UnitsPage() {
             })
 
             setIsAddUnitOpen(false)
-            setNewUnit({ apartment_number: "", floor_number: "", unit_type: "", maintenance_charges: "5000" })
+            setNewUnit({ apartment_number: "", floor_number: "", unit_type: "", maintenance_charges: "" })
             await fetchUnits()
         } catch (error) {
             console.error("Error creating unit:", error)

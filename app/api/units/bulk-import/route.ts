@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
           apartment_number: unitData.apartment_number,
           floor_number: unitData.floor_number || null,
           unit_type: unitData.unit_type || null,
-          maintenance_charges: unitData.maintenance_charges || 5000,
+          maintenance_charges: unitData.maintenance_charges,
           is_occupied: false,
         })
         .select()
