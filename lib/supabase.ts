@@ -5,6 +5,10 @@ const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  global: {
+    fetch: (url: RequestInfo | URL, options: RequestInit = {}) =>
+      fetch(url, { ...options, cache: 'no-store' }),
+  },
   realtime: {
     params: {
       eventsPerSecond: 10,
@@ -16,6 +20,10 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
 // Only create if service key is available (runtime only)
 export const supabaseAdmin = supabaseServiceKey
   ? createClient(supabaseUrl, supabaseServiceKey, {
+    global: {
+      fetch: (url: RequestInfo | URL, options: RequestInit = {}) =>
+        fetch(url, { ...options, cache: 'no-store' }),
+    },
     auth: {
       autoRefreshToken: false,
       persistSession: false,
