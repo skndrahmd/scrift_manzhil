@@ -111,16 +111,25 @@ export async function POST(request: NextRequest) {
 
         if (error) throw error
 
-        // Also create a transaction record for this expense
-        await supabaseAdmin.from("transactions").insert({
-            transaction_type: "expense",
-            reference_id: data.id,
-            amount: -Math.abs(amount), // Expenses are negative
-            description: `Expense: ${description}`,
-            transaction_date: expense_date,
-            payment_method,
-            notes
-        })
+        // Also create a transaction record for this expense (with duplicate guard)
+        const { data: existingTxn } = await supabaseAdmin
+            .from("transactions")
+            .select("id")
+            .eq("reference_id", data.id)
+            .eq("transaction_type", "expense")
+            .maybeSingle()
+
+        if (!existingTxn) {
+            await supabaseAdmin.from("transactions").insert({
+                transaction_type: "expense",
+                reference_id: data.id,
+                amount: -Math.abs(amount), // Expenses are negative
+                description: `Expense: ${description}`,
+                transaction_date: expense_date,
+                payment_method,
+                notes
+            })
+        }
 
         return NextResponse.json({ expense: data })
     } catch (error: any) {

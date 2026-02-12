@@ -83,6 +83,20 @@ export async function POST(request: NextRequest) {
       })
     }
 
+    // If marking as unpaid, clean up any transaction records for this payment
+    if (!isPaid) {
+      try {
+        await supabaseAdmin
+          .from("transactions")
+          .delete()
+          .eq("reference_id", paymentId)
+          .eq("transaction_type", "maintenance_income")
+        console.log("Cleaned up transaction records for maintenance payment:", paymentId)
+      } catch (cleanupError) {
+        console.error("Error cleaning up transaction records:", cleanupError)
+      }
+    }
+
     // Update the units table to keep maintenance_paid in sync
     const unitId = (payment as any).unit_id
     if (unitId) {
@@ -116,20 +130,31 @@ export async function POST(request: NextRequest) {
         console.error("Failed to send maintenance payment notification:", notifyError)
       }
 
-      // Create transaction record for accounting
+      // Create transaction record for accounting (with duplicate guard)
       try {
-        const monthName = new Date(payment.year, payment.month - 1, 1).toLocaleString("en-US", { month: "long" })
-        await supabaseAdmin.from("transactions").insert({
-          transaction_type: "maintenance_income",
-          reference_id: payment.id,
-          profile_id: payment.profiles?.id || (payment as any).profile_id,
-          amount: Number(payment.amount),
-          description: `Maintenance - ${monthName} ${payment.year}`,
-          transaction_date: new Date().toISOString().split('T')[0],
-          payment_method: "cash",
-          notes: `Apartment: ${payment.profiles?.apartment_number || 'N/A'}`
-        })
-        console.log("Transaction record created for maintenance payment:", payment.id)
+        const { data: existingTxn } = await supabaseAdmin
+          .from("transactions")
+          .select("id")
+          .eq("reference_id", payment.id)
+          .eq("transaction_type", "maintenance_income")
+          .maybeSingle()
+
+        if (!existingTxn) {
+          const monthName = new Date(payment.year, payment.month - 1, 1).toLocaleString("en-US", { month: "long" })
+          await supabaseAdmin.from("transactions").insert({
+            transaction_type: "maintenance_income",
+            reference_id: payment.id,
+            profile_id: payment.profiles?.id || (payment as any).profile_id,
+            amount: Number(payment.amount),
+            description: `Maintenance - ${monthName} ${payment.year}`,
+            transaction_date: new Date().toISOString().split('T')[0],
+            payment_method: "cash",
+            notes: `Apartment: ${payment.profiles?.apartment_number || 'N/A'}`
+          })
+          console.log("Transaction record created for maintenance payment:", payment.id)
+        } else {
+          console.log("Transaction record already exists for maintenance payment:", payment.id)
+        }
       } catch (transactionError) {
         console.error("Error creating transaction record:", transactionError)
       }

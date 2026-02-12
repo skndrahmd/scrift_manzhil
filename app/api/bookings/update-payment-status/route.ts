@@ -103,6 +103,20 @@ export async function POST(request: NextRequest) {
 
     console.log("Updated booking:", updatedBooking)
 
+    // If marking as unpaid, clean up any transaction records for this booking
+    if (paymentStatus === "pending") {
+      try {
+        await supabaseAdmin
+          .from("transactions")
+          .delete()
+          .eq("reference_id", bookingId)
+          .eq("transaction_type", "booking_income")
+        console.log("Cleaned up transaction records for booking:", bookingId)
+      } catch (cleanupError) {
+        console.error("Error cleaning up transaction records:", cleanupError)
+      }
+    }
+
     // Send WhatsApp notification if payment is confirmed
     if (paymentStatus === "paid" && booking.profiles?.phone_number) {
       try {
@@ -124,19 +138,30 @@ export async function POST(request: NextRequest) {
         // Don't fail the request if WhatsApp fails
       }
 
-      // Create transaction record for accounting
+      // Create transaction record for accounting (with duplicate guard)
       try {
-        await supabaseAdmin.from("transactions").insert({
-          transaction_type: "booking_income",
-          reference_id: booking.id,
-          profile_id: booking.profile_id,
-          amount: booking.booking_charges,
-          description: `Hall Booking - ${formatDate(booking.booking_date)}`,
-          transaction_date: new Date().toISOString().split('T')[0],
-          payment_method: "cash",
-          notes: `Booking from ${formatTime(booking.start_time)} to ${formatTime(booking.end_time)}`
-        })
-        console.log("Transaction record created for booking:", booking.id)
+        const { data: existingTxn } = await supabaseAdmin
+          .from("transactions")
+          .select("id")
+          .eq("reference_id", booking.id)
+          .eq("transaction_type", "booking_income")
+          .maybeSingle()
+
+        if (!existingTxn) {
+          await supabaseAdmin.from("transactions").insert({
+            transaction_type: "booking_income",
+            reference_id: booking.id,
+            profile_id: booking.profile_id,
+            amount: booking.booking_charges,
+            description: `Hall Booking - ${formatDate(booking.booking_date)}`,
+            transaction_date: new Date().toISOString().split('T')[0],
+            payment_method: "cash",
+            notes: `Booking from ${formatTime(booking.start_time)} to ${formatTime(booking.end_time)}`
+          })
+          console.log("Transaction record created for booking:", booking.id)
+        } else {
+          console.log("Transaction record already exists for booking:", booking.id)
+        }
       } catch (transactionError) {
         console.error("Error creating transaction record:", transactionError)
         // Don't fail the request if transaction record fails
