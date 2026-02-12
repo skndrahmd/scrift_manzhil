@@ -28,10 +28,16 @@ export async function GET(request: NextRequest) {
 
         if (bookingsError) throw bookingsError
 
+        // Debug: query ALL bookings without any filters
+        const { data: allBookings, error: allBookingsError } = await supabaseAdmin
+            .from("bookings")
+            .select("id, booking_charges, payment_status, booking_date")
+
         console.log("=== ACCOUNTING DEBUG ===")
         console.log("Date range:", startDate, "to", endDate)
-        console.log("Bookings query result:", JSON.stringify(bookings))
-        console.log("Bookings count:", bookings?.length)
+        console.log("ALL bookings (no filters):", JSON.stringify(allBookings))
+        console.log("ALL bookings error:", allBookingsError)
+        console.log("Filtered bookings:", JSON.stringify(bookings))
 
         const bookingRevenue = bookings?.reduce((sum, b) => sum + (b.booking_charges || 0), 0) || 0
         console.log("Booking revenue calculated:", bookingRevenue)
