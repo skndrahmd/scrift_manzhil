@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from "next/server"
-import { supabase } from "@/lib/supabase"
+import { supabaseAdmin } from "@/lib/supabase"
 
 export const dynamic = 'force-dynamic'
 
 // GET /api/accounting/categories - Fetch all expense categories
 export async function GET() {
     try {
-        const { data, error } = await supabase
+        const { data, error } = await supabaseAdmin
             .from("expense_categories")
             .select("*")
             .eq("is_active", true)
@@ -37,7 +37,7 @@ export async function POST(request: NextRequest) {
             )
         }
 
-        const { data, error } = await supabase
+        const { data, error } = await supabaseAdmin
             .from("expense_categories")
             .insert({
                 name,
@@ -73,7 +73,7 @@ export async function PUT(request: NextRequest) {
             )
         }
 
-        const { data, error } = await supabase
+        const { data, error } = await supabaseAdmin
             .from("expense_categories")
             .update(updateData)
             .eq("id", id)
@@ -106,7 +106,7 @@ export async function DELETE(request: NextRequest) {
         }
 
         // Soft delete - just mark as inactive
-        const { error } = await supabase
+        const { error } = await supabaseAdmin
             .from("expense_categories")
             .update({ is_active: false })
             .eq("id", id)

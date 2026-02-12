@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-import { supabase } from "@/lib/supabase"
+import { supabaseAdmin } from "@/lib/supabase"
 
 export const dynamic = 'force-dynamic'
 
@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
             : `${year}-12-31`
 
         // Fetch booking revenue (paid bookings)
-        const { data: bookings, error: bookingsError } = await supabase
+        const { data: bookings, error: bookingsError } = await supabaseAdmin
             .from("bookings")
             .select("booking_charges, payment_status, booking_date")
             .eq("payment_status", "paid")
@@ -31,7 +31,7 @@ export async function GET(request: NextRequest) {
         const bookingRevenue = bookings?.reduce((sum, b) => sum + (b.booking_charges || 0), 0) || 0
 
         // Fetch maintenance revenue (paid maintenance)
-        const { data: maintenance, error: maintenanceError } = await supabase
+        const { data: maintenance, error: maintenanceError } = await supabaseAdmin
             .from("maintenance_payments")
             .select("amount, status, year, month")
             .eq("status", "paid")
@@ -44,7 +44,7 @@ export async function GET(request: NextRequest) {
             : maintenance?.reduce((sum, m) => sum + (m.amount || 0), 0) || 0
 
         // Fetch expenses
-        const { data: expenses, error: expensesError } = await supabase
+        const { data: expenses, error: expensesError } = await supabaseAdmin
             .from("expenses")
             .select("amount, expense_date")
             .gte("expense_date", startDate)
@@ -53,13 +53,13 @@ export async function GET(request: NextRequest) {
         const totalExpenses = expenses?.reduce((sum, e) => sum + (e.amount || 0), 0) || 0
 
         // Fetch outstanding dues (unpaid bookings + unpaid maintenance)
-        const { data: unpaidBookings } = await supabase
+        const { data: unpaidBookings } = await supabaseAdmin
             .from("bookings")
             .select("booking_charges")
             .eq("payment_status", "pending")
             .neq("status", "cancelled")
 
-        const { data: unpaidMaintenance } = await supabase
+        const { data: unpaidMaintenance } = await supabaseAdmin
             .from("maintenance_payments")
             .select("amount")
             .eq("status", "unpaid")

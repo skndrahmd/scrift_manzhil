@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-import { supabase } from "@/lib/supabase"
+import { supabaseAdmin } from "@/lib/supabase"
 
 export const dynamic = 'force-dynamic'
 
@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
         const limit = parseInt(searchParams.get("limit") || "50")
         const offset = (page - 1) * limit
 
-        let query = supabase
+        let query = supabaseAdmin
             .from("transactions")
             .select(`
         *,
@@ -85,7 +85,7 @@ export async function POST(request: NextRequest) {
             )
         }
 
-        const { data, error } = await supabase
+        const { data, error } = await supabaseAdmin
             .from("transactions")
             .insert({
                 transaction_type,
@@ -126,7 +126,7 @@ export async function DELETE(request: NextRequest) {
             )
         }
 
-        const { error } = await supabase
+        const { error } = await supabaseAdmin
             .from("transactions")
             .delete()
             .eq("id", id)

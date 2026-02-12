@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-import { supabase } from "@/lib/supabase"
+import { supabaseAdmin } from "@/lib/supabase"
 
 export const dynamic = 'force-dynamic'
 
@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
         const limit = parseInt(searchParams.get("limit") || "50")
         const offset = (page - 1) * limit
 
-        let query = supabase
+        let query = supabaseAdmin
             .from("expenses")
             .select(`
         *,
@@ -88,7 +88,7 @@ export async function POST(request: NextRequest) {
             )
         }
 
-        const { data, error } = await supabase
+        const { data, error } = await supabaseAdmin
             .from("expenses")
             .insert({
                 category_id,
@@ -112,7 +112,7 @@ export async function POST(request: NextRequest) {
         if (error) throw error
 
         // Also create a transaction record for this expense
-        await supabase.from("transactions").insert({
+        await supabaseAdmin.from("transactions").insert({
             transaction_type: "expense",
             reference_id: data.id,
             amount: -Math.abs(amount), // Expenses are negative
@@ -145,7 +145,7 @@ export async function PUT(request: NextRequest) {
             )
         }
 
-        const { data, error } = await supabase
+        const { data, error } = await supabaseAdmin
             .from("expenses")
             .update(updateData)
             .eq("id", id)
@@ -181,13 +181,13 @@ export async function DELETE(request: NextRequest) {
         }
 
         // Also delete the associated transaction
-        await supabase
+        await supabaseAdmin
             .from("transactions")
             .delete()
             .eq("reference_id", id)
             .eq("transaction_type", "expense")
 
-        const { error } = await supabase
+        const { error } = await supabaseAdmin
             .from("expenses")
             .delete()
             .eq("id", id)
