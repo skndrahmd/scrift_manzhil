@@ -1,14 +1,6 @@
 {
   "crons": [
     {
-      "path": "/api/cron/booking-reminder",
-      "schedule": "0 7 * * *"
-    },
-    {
-      "path": "/api/cron/maintenance-reminder",
-      "schedule": "0 7 * * *"
-    },
-    {
       "path": "/api/cron/daily-reports",
       "schedule": "0 5 * * *"
     },
