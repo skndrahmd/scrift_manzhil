@@ -1,5 +1,5 @@
 import type { NextRequest } from "next/server"
-import { supabase } from "@/lib/supabase"
+import { supabaseAdmin } from "@/lib/supabase"
 import { sendTemplate, sendMessage, formatSubcategory } from "@/lib/twilio"
 import { getReminderRecipients } from "@/lib/admin/notifications"
 
@@ -19,7 +19,7 @@ export async function POST(request: NextRequest) {
     twentyFourHoursAgo.setHours(twentyFourHoursAgo.getHours() - 24)
 
     // Fetch complaints that are pending for more than 24 hours
-    const { data: pendingComplaints, error } = await supabase
+    const { data: pendingComplaints, error } = await supabaseAdmin
       .from("complaints")
       .select("*, profiles(name, apartment_number)")
       .eq("status", "pending")
