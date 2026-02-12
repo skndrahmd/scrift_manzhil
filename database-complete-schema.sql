@@ -319,7 +319,7 @@ CREATE INDEX idx_feedback_created ON feedback(created_at DESC);
 -- --------------------------------------------
 CREATE TABLE staff (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  profile_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  unit_id UUID NOT NULL REFERENCES units(id) ON DELETE CASCADE,
   name TEXT NOT NULL,
   cnic TEXT NOT NULL,
   phone_number TEXT NOT NULL,
@@ -352,7 +352,7 @@ CREATE POLICY "Public can select staff"
   ON staff FOR SELECT TO public USING (true);
 
 -- Indexes
-CREATE INDEX idx_staff_profile ON staff(profile_id);
+CREATE INDEX idx_staff_unit ON staff(unit_id);
 CREATE INDEX idx_staff_cnic ON staff(cnic);
 CREATE INDEX idx_staff_role ON staff(role);
 

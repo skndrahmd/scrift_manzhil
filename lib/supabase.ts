@@ -142,14 +142,14 @@ export type Feedback = {
 
 export type Staff = {
   id: string
-  profile_id: string
+  unit_id: string
   name: string
   cnic: string
   phone_number: string
   role: string
   created_at: string
   updated_at: string
-  profiles?: Profile
+  units?: Unit
 }
 
 export type VisitorPass = {

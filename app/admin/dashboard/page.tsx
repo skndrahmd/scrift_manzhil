@@ -28,6 +28,7 @@ export default function DashboardPage() {
         bookings,
         complaints,
         profiles,
+        units,
         feedback,
         loading,
     } = useAdmin()
@@ -35,13 +36,15 @@ export default function DashboardPage() {
     // Calculate stats
     const totalResidents = profiles.length
     const activeResidents = profiles.filter(p => p.is_active).length
+    const totalUnits = units.length
     const pendingComplaints = complaints.filter(c => c.status === "pending").length
     const inProgressComplaints = complaints.filter(c => c.status === "in-progress").length
     const todayBookings = bookings.filter(b => {
         const today = new Date().toISOString().split('T')[0]
         return b.booking_date === today
     }).length
-    const unpaidMaintenance = profiles.filter(p => !p.maintenance_paid).length
+    const unpaidUnits = units.filter(u => !u.maintenance_paid).length
+    const paidUnits = units.filter(u => u.maintenance_paid).length
     const recentBookings = [...bookings].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()).slice(0, 3)
     const recentComplaints = [...complaints].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()).slice(0, 3)
 
@@ -145,9 +148,9 @@ export default function DashboardPage() {
                         <div className="flex justify-between items-start mb-4">
                             <p className="text-sm font-medium text-white/90">Unpaid Maintenance</p>
                         </div>
-                        <p className="text-4xl font-medium text-white mb-2">{unpaidMaintenance}</p>
+                        <p className="text-4xl font-medium text-white mb-2">{unpaidUnits}</p>
                         <p className="text-xs text-white/70 font-medium">
-                            {Math.round((unpaidMaintenance / totalResidents) * 100) || 0}% of residents pending
+                            {totalUnits > 0 ? Math.round((unpaidUnits / totalUnits) * 100) : 0}% of units pending
                         </p>
                     </CardContent>
                 </Card>
@@ -288,9 +291,9 @@ export default function DashboardPage() {
                         <DollarSign className="h-5 w-5 text-manzhil-teal" />
                         Maintenance Payment Summary
                     </CardTitle>
-                    <Link href="/admin/residents">
+                    <Link href="/admin/units">
                         <Button variant="ghost" size="sm" className="text-manzhil-teal hover:text-manzhil-dark hover:bg-manzhil-teal/10">
-                            View All Residents
+                            View All Units
                             <ArrowRight className="w-4 h-4 ml-1" />
                         </Button>
                     </Link>
@@ -305,7 +308,7 @@ export default function DashboardPage() {
                                         <CheckCircle className="h-5 w-5 text-manzhil-teal" />
                                     </div>
                                     <div>
-                                        <p className="text-2xl font-semibold text-manzhil-dark">{activeResidents - unpaidMaintenance}</p>
+                                        <p className="text-2xl font-semibold text-manzhil-dark">{paidUnits}</p>
                                         <p className="text-sm text-gray-500">Paid</p>
                                     </div>
                                 </div>
@@ -316,7 +319,7 @@ export default function DashboardPage() {
                                         <Clock className="h-5 w-5 text-amber-600" />
                                     </div>
                                     <div>
-                                        <p className="text-2xl font-semibold text-amber-700">{unpaidMaintenance}</p>
+                                        <p className="text-2xl font-semibold text-amber-700">{unpaidUnits}</p>
                                         <p className="text-sm text-gray-500">Unpaid</p>
                                     </div>
                                 </div>
@@ -326,13 +329,13 @@ export default function DashboardPage() {
                                 <div className="flex justify-between text-sm">
                                     <span className="text-gray-500">Collection Rate</span>
                                     <span className="font-medium text-manzhil-dark">
-                                        {Math.round(((activeResidents - unpaidMaintenance) / activeResidents) * 100) || 0}%
+                                        {totalUnits > 0 ? Math.round((paidUnits / totalUnits) * 100) : 0}%
                                     </span>
                                 </div>
                                 <div className="h-3 bg-gray-200 rounded-full overflow-hidden">
                                     <div
                                         className="h-full bg-gradient-to-r from-manzhil-teal to-manzhil-dark rounded-full transition-all duration-500"
-                                        style={{ width: `${Math.round(((activeResidents - unpaidMaintenance) / activeResidents) * 100) || 0}%` }}
+                                        style={{ width: `${totalUnits > 0 ? Math.round((paidUnits / totalUnits) * 100) : 0}%` }}
                                     />
                                 </div>
                             </div>
@@ -341,12 +344,12 @@ export default function DashboardPage() {
                         {/* Unpaid Residents List */}
                         <div className="lg:col-span-2">
                             <div className="flex items-center justify-between mb-3">
-                                <p className="text-sm font-medium text-gray-700">Residents with Unpaid Maintenance</p>
+                                <p className="text-sm font-medium text-gray-700">Units with Unpaid Maintenance</p>
                                 <Badge variant="secondary" className="bg-amber-100 text-amber-700">
-                                    {unpaidMaintenance} pending
+                                    {unpaidUnits} pending
                                 </Badge>
                             </div>
-                            {unpaidMaintenance === 0 ? (
+                            {unpaidUnits === 0 ? (
                                 <div className="flex flex-col items-center justify-center py-12 text-center">
                                     <div className="h-16 w-16 rounded-full bg-manzhil-teal/10 flex items-center justify-center mb-4">
                                         <CheckCircle className="h-8 w-8 text-manzhil-teal" />
@@ -356,29 +359,33 @@ export default function DashboardPage() {
                                 </div>
                             ) : (
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-[200px] overflow-y-auto pr-2">
-                                    {profiles
-                                        .filter(p => !p.maintenance_paid && p.is_active)
+                                    {units
+                                        .filter(u => !u.maintenance_paid)
                                         .slice(0, 10)
-                                        .map(resident => (
-                                            <Link key={resident.id} href={`/admin/residents/${resident.id}`}>
-                                                <div className="flex items-center gap-3 p-3 bg-amber-50 hover:bg-amber-100 rounded-xl transition-colors cursor-pointer">
-                                                    <div className="h-8 w-8 rounded-full bg-amber-200 flex items-center justify-center text-amber-700 font-medium text-sm">
-                                                        {resident.name?.charAt(0)?.toUpperCase() || 'R'}
+                                        .map(u => {
+                                            const residents = (u.profiles || []) as any[]
+                                            const primary = residents.find((r: any) => r.is_primary_resident && r.is_active) || residents.find((r: any) => r.is_active)
+                                            return (
+                                                <Link key={u.id} href={`/admin/units/${u.id}`}>
+                                                    <div className="flex items-center gap-3 p-3 bg-amber-50 hover:bg-amber-100 rounded-xl transition-colors cursor-pointer">
+                                                        <div className="h-8 w-8 rounded-full bg-amber-200 flex items-center justify-center text-amber-700 font-medium text-sm">
+                                                            {u.apartment_number}
+                                                        </div>
+                                                        <div className="flex-1 min-w-0">
+                                                            <p className="font-medium text-sm text-gray-900 truncate">Unit {u.apartment_number}</p>
+                                                            <p className="text-xs text-gray-500">{primary?.name || 'No primary resident'}</p>
+                                                        </div>
+                                                        <ArrowRight className="h-4 w-4 text-amber-600 flex-shrink-0" />
                                                     </div>
-                                                    <div className="flex-1 min-w-0">
-                                                        <p className="font-medium text-sm text-gray-900 truncate">{resident.name}</p>
-                                                        <p className="text-xs text-gray-500">Apt {resident.apartment_number}</p>
-                                                    </div>
-                                                    <ArrowRight className="h-4 w-4 text-amber-600 flex-shrink-0" />
-                                                </div>
-                                            </Link>
-                                        ))
+                                                </Link>
+                                            )
+                                        })
                                     }
                                 </div>
                             )}
-                            {unpaidMaintenance > 10 && (
+                            {unpaidUnits > 10 && (
                                 <p className="text-xs text-gray-400 mt-2 text-center">
-                                    +{unpaidMaintenance - 10} more residents with unpaid maintenance
+                                    +{unpaidUnits - 10} more units with unpaid maintenance
                                 </p>
                             )}
                         </div>

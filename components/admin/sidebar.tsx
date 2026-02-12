@@ -45,16 +45,16 @@ const navItems = [
         pageKey: "dashboard" as PageKey,
     },
     {
-        title: "Residents",
-        href: "/admin",
-        icon: Users,
-        pageKey: "residents" as PageKey,
-    },
-    {
         title: "Units",
         href: "/admin/units",
         icon: Building,
         pageKey: "units" as PageKey,
+    },
+    {
+        title: "Residents",
+        href: "/admin",
+        icon: Users,
+        pageKey: "residents" as PageKey,
     },
     {
         title: "Bookings",

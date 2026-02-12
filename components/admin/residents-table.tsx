@@ -8,7 +8,6 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Checkbox } from "@/components/ui/checkbox"
 import { Label } from "@/components/ui/label"
 import {
     Users,
@@ -20,7 +19,6 @@ import {
     Edit,
     Trash2,
     Eye,
-    Send,
     Upload,
     Star,
 } from "lucide-react"
@@ -40,7 +38,7 @@ import { exportToPdf, filterByPeriod, periodLabel, type Period } from "@/lib/pdf
 import { BulkImportModal } from "./bulk-import-modal"
 
 export function ResidentsTable() {
-    const { profiles, fetchProfiles } = useAdmin()
+    const { profiles, units, fetchProfiles, fetchUnits } = useAdmin()
     const { toast } = useToast()
 
     // Local state
@@ -51,47 +49,44 @@ export function ResidentsTable() {
     const [isAddUserOpen, setIsAddUserOpen] = useState(false)
     const [isEditUserOpen, setIsEditUserOpen] = useState(false)
     const [editingUser, setEditingUser] = useState<Profile | null>(null)
-    const [updatingMaintenanceId, setUpdatingMaintenanceId] = useState<string | null>(null)
-    const [selectedResidents, setSelectedResidents] = useState<string[]>([])
-    const [sendingBulkReminder, setSendingBulkReminder] = useState(false)
     const [newUser, setNewUser] = useState({
         name: "",
         phone_number: "",
         cnic: "",
         apartment_number: "",
-        maintenance_charges: 5000,
     })
     const [isBulkImportOpen, setIsBulkImportOpen] = useState(false)
 
     const itemsPerPage = 10
 
-    // Build primary resident lookup per apartment
-    const primaryResidentMap = useMemo(() => {
-        const grouped = new Map<string, Profile[]>()
-        profiles.forEach((p) => {
-            if (!p.is_active) return
-            const apt = p.apartment_number
-            if (!grouped.has(apt)) grouped.set(apt, [])
-            grouped.get(apt)!.push(p)
-        })
-        const map = new Map<string, Profile>()
-        grouped.forEach((residents, apt) => {
-            const primary = residents.find((r) => r.is_primary_resident) || (residents.length === 1 ? residents[0] : null)
-            if (primary) map.set(apt, primary)
-        })
+    // Build unit lookup for maintenance status
+    const unitMap = useMemo(() => {
+        const map = new Map<string, typeof units[0]>()
+        units.forEach((u) => map.set(u.id, u))
         return map
-    }, [profiles])
+    }, [units])
 
     const isPrimary = (profile: Profile) => {
-        const primary = primaryResidentMap.get(profile.apartment_number)
-        return primary?.id === profile.id
+        if (profile.is_primary_resident) return true
+        // If no explicit primary, check if they're the only active resident in the unit
+        if (!profile.unit_id) return false
+        const unit = unitMap.get(profile.unit_id)
+        if (!unit) return false
+        const activeResidents = (unit.profiles || []).filter((r) => r.is_active)
+        return activeResidents.length === 1 && activeResidents[0].id === profile.id
     }
 
-    // For secondary residents, maintenance status is synced with primary
+    // Maintenance status comes from the unit
     const getMaintenanceStatus = (profile: Profile): boolean => {
-        if (isPrimary(profile)) return profile.maintenance_paid
-        const primary = primaryResidentMap.get(profile.apartment_number)
-        return primary ? primary.maintenance_paid : profile.maintenance_paid
+        if (!profile.unit_id) return false
+        const unit = unitMap.get(profile.unit_id)
+        return unit?.maintenance_paid ?? false
+    }
+
+    const getUnitCharges = (profile: Profile): number | null => {
+        if (!profile.unit_id) return null
+        const unit = unitMap.get(profile.unit_id)
+        return unit?.maintenance_charges ?? null
     }
 
     // Filter profiles
@@ -111,7 +106,7 @@ export function ResidentsTable() {
 
             return matchesSearch && matchesMaintenance
         })
-    }, [profiles, searchTerm, maintenanceFilter, primaryResidentMap])
+    }, [profiles, searchTerm, maintenanceFilter, unitMap])
 
     const residentsDisplay = useMemo(
         () => filterByPeriod(filteredProfiles, residentsPeriod, (p) => p.created_at),
@@ -145,9 +140,15 @@ export function ResidentsTable() {
 
         const formattedPhone = newUser.phone_number.startsWith("+") ? newUser.phone_number : `+${newUser.phone_number}`
 
+        // Look up unit by apartment_number
+        const unit = units.find(u => u.apartment_number === newUser.apartment_number)
+
         const { error } = await supabase.from("profiles").insert([{
-            ...newUser,
+            name: newUser.name,
             phone_number: formattedPhone,
+            cnic: newUser.cnic,
+            apartment_number: newUser.apartment_number,
+            unit_id: unit?.id || null,
         }])
 
         if (error) {
@@ -182,7 +183,6 @@ export function ResidentsTable() {
                 phone_number: "",
                 cnic: "",
                 apartment_number: "",
-                maintenance_charges: 5000,
             })
             setIsAddUserOpen(false)
             fetchProfiles()
@@ -191,6 +191,9 @@ export function ResidentsTable() {
 
     const editUser = async () => {
         if (!editingUser) return
+
+        // Look up unit by apartment_number
+        const unit = units.find(u => u.apartment_number === editingUser.apartment_number)
 
         const { error } = await supabase
             .from("profiles")
@@ -201,7 +204,7 @@ export function ResidentsTable() {
                     : `+${editingUser.phone_number}`,
                 cnic: editingUser.cnic,
                 apartment_number: editingUser.apartment_number,
-                maintenance_charges: editingUser.maintenance_charges,
+                unit_id: unit?.id || editingUser.unit_id || null,
                 updated_at: new Date().toISOString(),
             })
             .eq("id", editingUser.id)
@@ -226,102 +229,6 @@ export function ResidentsTable() {
         } else {
             toast({ title: "Success", description: "User deleted successfully" })
             fetchProfiles()
-        }
-    }
-
-    const updateMaintenanceStatus = async (profileId: string, isPaid: boolean) => {
-        setUpdatingMaintenanceId(profileId)
-        try {
-            const now = new Date()
-            const year = now.getFullYear()
-            const month = now.getMonth() + 1
-
-            let { data: payment } = await supabase
-                .from("maintenance_payments")
-                .select("id")
-                .eq("profile_id", profileId)
-                .eq("year", year)
-                .eq("month", month)
-                .maybeSingle()
-
-            if (!payment) {
-                const { data: profile } = await supabase
-                    .from("profiles")
-                    .select("maintenance_charges")
-                    .eq("id", profileId)
-                    .single()
-
-                const { data: newPayment } = await supabase
-                    .from("maintenance_payments")
-                    .insert({
-                        profile_id: profileId,
-                        year,
-                        month,
-                        amount: profile?.maintenance_charges || 5000,
-                        status: "unpaid",
-                    })
-                    .select("id")
-                    .single()
-
-                payment = newPayment
-            }
-
-            if (payment) {
-                const response = await fetch("/api/maintenance/update-status", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ paymentId: payment.id, isPaid }),
-                })
-
-                if (!response.ok) throw new Error("Failed to update payment status")
-
-                toast({
-                    title: "Success",
-                    description: isPaid ? "Marked as paid and resident notified" : "Marked as unpaid",
-                })
-            }
-
-            fetchProfiles()
-        } catch (error) {
-            toast({ title: "Error", description: "Failed to update maintenance status", variant: "destructive" })
-        } finally {
-            setUpdatingMaintenanceId(null)
-        }
-    }
-
-    const toggleResidentSelection = (profileId: string) => {
-        setSelectedResidents(prev =>
-            prev.includes(profileId)
-                ? prev.filter(id => id !== profileId)
-                : [...prev, profileId]
-        )
-    }
-
-    const toggleAllUnpaidResidents = () => {
-        const unpaidIds = filteredProfiles.filter(p => !p.maintenance_paid).map(p => p.id)
-        if (selectedResidents.length === unpaidIds.length) {
-            setSelectedResidents([])
-        } else {
-            setSelectedResidents(unpaidIds)
-        }
-    }
-
-    const sendBulkMaintenanceReminder = async () => {
-        setSendingBulkReminder(true)
-        try {
-            const response = await fetch("/api/cron/maintenance-reminder", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ profileIds: selectedResidents }),
-            })
-            if (response.ok) {
-                toast({ title: "Success", description: `Reminders sent to ${selectedResidents.length} residents` })
-                setSelectedResidents([])
-            }
-        } catch (error) {
-            toast({ title: "Error", description: "Failed to send reminders", variant: "destructive" })
-        } finally {
-            setSendingBulkReminder(false)
         }
     }
 
@@ -372,19 +279,6 @@ export function ResidentsTable() {
                                 <SelectItem value="monthly">This Month</SelectItem>
                             </SelectContent>
                         </Select>
-
-                        {/* Bulk Reminder Button */}
-                        {selectedResidents.length > 0 && (
-                            <Button
-                                onClick={sendBulkMaintenanceReminder}
-                                disabled={sendingBulkReminder}
-                                size="sm"
-                                className="bg-gradient-to-r from-manzhil-dark to-manzhil-teal hover:shadow-lg hover:shadow-manzhil-teal/30 transition-all"
-                            >
-                                <Send className="h-4 w-4 mr-2" />
-                                Send Reminder ({selectedResidents.length})
-                            </Button>
-                        )}
 
                         {/* Export PDF */}
                         <Button
@@ -477,16 +371,6 @@ export function ResidentsTable() {
                                             className="col-span-3"
                                         />
                                     </div>
-                                    <div className="grid sm:grid-cols-4 items-center gap-2 sm:gap-4">
-                                        <Label htmlFor="maintenance" className="sm:text-right">Maintenance</Label>
-                                        <Input
-                                            id="maintenance"
-                                            type="number"
-                                            value={newUser.maintenance_charges}
-                                            onChange={(e) => setNewUser({ ...newUser, maintenance_charges: Number(e.target.value) })}
-                                            className="col-span-3"
-                                        />
-                                    </div>
                                 </div>
                                 <div className="flex justify-end gap-3">
                                     <Button variant="outline" onClick={() => setIsAddUserOpen(false)}>Cancel</Button>
@@ -504,12 +388,6 @@ export function ResidentsTable() {
                     <Table>
                         <TableHeader>
                             <TableRow className="bg-gradient-to-r from-manzhil-teal/5 to-transparent">
-                                <TableHead className="w-12">
-                                    <Checkbox
-                                        checked={selectedResidents.length === filteredProfiles.filter(p => !p.maintenance_paid).length && filteredProfiles.filter(p => !p.maintenance_paid).length > 0}
-                                        onCheckedChange={toggleAllUnpaidResidents}
-                                    />
-                                </TableHead>
                                 <TableHead>Name</TableHead>
                                 <TableHead>Phone</TableHead>
                                 <TableHead>Apartment</TableHead>
@@ -521,7 +399,7 @@ export function ResidentsTable() {
                         <TableBody>
                             {paginatedResidents.length === 0 ? (
                                 <TableRow>
-                                    <TableCell colSpan={7} className="text-center py-12">
+                                    <TableCell colSpan={6} className="text-center py-12">
                                         <Users className="h-12 w-12 text-gray-300 mx-auto mb-4" />
                                         <p className="text-gray-500">No residents found</p>
                                     </TableCell>
@@ -529,13 +407,6 @@ export function ResidentsTable() {
                             ) : (
                                 paginatedResidents.map((profile) => (
                                     <TableRow key={profile.id} className="hover:bg-manzhil-teal/5 transition-colors">
-                                        <TableCell>
-                                            <Checkbox
-                                                checked={selectedResidents.includes(profile.id)}
-                                                onCheckedChange={() => toggleResidentSelection(profile.id)}
-                                                disabled={profile.maintenance_paid}
-                                            />
-                                        </TableCell>
                                         <TableCell className="font-medium">
                                             <div className="flex items-center gap-2">
                                                 {profile.name}
@@ -552,7 +423,7 @@ export function ResidentsTable() {
                                         </TableCell>
                                         <TableCell className="text-gray-600">{profile.phone_number}</TableCell>
                                         <TableCell className="text-gray-600">{profile.apartment_number}</TableCell>
-                                        <TableCell className="text-gray-600">{isPrimary(profile) ? `Rs. ${profile.maintenance_charges.toLocaleString()}` : '—'}</TableCell>
+                                        <TableCell className="text-gray-600">{(() => { const charges = getUnitCharges(profile); return charges != null ? `Rs. ${charges.toLocaleString()}` : '—' })()}</TableCell>
                                         <TableCell>
                                             {isPrimary(profile) ? (
                                                 <Badge
@@ -587,23 +458,6 @@ export function ResidentsTable() {
                                                 >
                                                     <Edit className="h-4 w-4 text-manzhil-teal" />
                                                 </Button>
-                                                {isPrimary(profile) && (
-                                                    <Button
-                                                        variant="outline"
-                                                        size="sm"
-                                                        className={`h-8 w-8 p-0 ${profile.maintenance_paid ? "text-red-600 hover:bg-red-50 border-red-200" : "text-manzhil-teal hover:bg-manzhil-teal/5 border-manzhil-teal/30"}`}
-                                                        onClick={() => updateMaintenanceStatus(profile.id, !profile.maintenance_paid)}
-                                                        disabled={updatingMaintenanceId === profile.id}
-                                                    >
-                                                        {updatingMaintenanceId === profile.id ? (
-                                                            <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                                                        ) : profile.maintenance_paid ? (
-                                                            <XCircle className="h-4 w-4" />
-                                                        ) : (
-                                                            <CheckCircle className="h-4 w-4" />
-                                                        )}
-                                                    </Button>
-                                                )}
                                                 <Button
                                                     variant="outline"
                                                     size="sm"
@@ -648,11 +502,6 @@ export function ResidentsTable() {
                                             </div>
                                             <p className="text-sm text-gray-500">{profile.apartment_number}</p>
                                         </div>
-                                        <Checkbox
-                                            checked={selectedResidents.includes(profile.id)}
-                                            onCheckedChange={() => toggleResidentSelection(profile.id)}
-                                            disabled={profile.maintenance_paid}
-                                        />
                                     </div>
 
                                     <div className="grid grid-cols-2 gap-2 text-sm">
@@ -660,12 +509,12 @@ export function ResidentsTable() {
                                             <span className="text-gray-500 block">Phone</span>
                                             <span className="font-medium text-gray-700">{profile.phone_number}</span>
                                         </div>
-                                        {isPrimary(profile) && (
+                                        {(() => { const charges = getUnitCharges(profile); return charges != null ? (
                                             <div>
                                                 <span className="text-gray-500 block">Maintenance</span>
-                                                <span className="font-medium text-gray-700">Rs. {profile.maintenance_charges.toLocaleString()}</span>
+                                                <span className="font-medium text-gray-700">Rs. {charges.toLocaleString()}</span>
                                             </div>
-                                        )}
+                                        ) : null })()}
                                     </div>
 
                                     <div className="flex justify-between items-center pt-2 border-t border-gray-100">
@@ -696,23 +545,6 @@ export function ResidentsTable() {
                                             >
                                                 <Edit className="h-4 w-4" />
                                             </Button>
-                                            {isPrimary(profile) && (
-                                                <Button
-                                                    variant="ghost"
-                                                    size="icon"
-                                                    className="h-8 w-8"
-                                                    onClick={() => updateMaintenanceStatus(profile.id, !profile.maintenance_paid)}
-                                                    disabled={updatingMaintenanceId === profile.id}
-                                                >
-                                                    {updatingMaintenanceId === profile.id ? (
-                                                        <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                                                    ) : profile.maintenance_paid ? (
-                                                        <XCircle className="h-4 w-4 text-red-600" />
-                                                    ) : (
-                                                        <CheckCircle className="h-4 w-4 text-manzhil-teal" />
-                                                    )}
-                                                </Button>
-                                            )}
                                             <Button
                                                 variant="ghost"
                                                 size="icon"
@@ -792,15 +624,6 @@ export function ResidentsTable() {
                                 <Input
                                     value={editingUser.apartment_number}
                                     onChange={(e) => setEditingUser({ ...editingUser, apartment_number: e.target.value })}
-                                    className="col-span-3"
-                                />
-                            </div>
-                            <div className="grid sm:grid-cols-4 items-center gap-2 sm:gap-4">
-                                <Label className="sm:text-right">Maintenance</Label>
-                                <Input
-                                    type="number"
-                                    value={editingUser.maintenance_charges}
-                                    onChange={(e) => setEditingUser({ ...editingUser, maintenance_charges: Number(e.target.value) })}
                                     className="col-span-3"
                                 />
                             </div>

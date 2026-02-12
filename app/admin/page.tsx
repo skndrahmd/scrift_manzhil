@@ -5,13 +5,12 @@ import { Card, CardContent } from "@/components/ui/card"
 import { ResidentsTable } from "@/components/admin/residents-table"
 import {
   Users,
-  Home,
   CreditCard,
   AlertCircle,
 } from "lucide-react"
 
 export default function AdminPage() {
-  const { profiles, complaints, loading } = useAdmin()
+  const { profiles, complaints, loading, units } = useAdmin()
 
   // Calculate stats
   const totalResidents = profiles.length
@@ -22,15 +21,11 @@ export default function AdminPage() {
     return created.getMonth() === now.getMonth() && created.getFullYear() === now.getFullYear()
   }).length
 
-  // Occupancy calculation (assuming max 40 apartments - adjust as needed)
-  const MAX_APARTMENTS = 40
-  const occupiedApartments = profiles.filter(p => p.is_active).length
-  const occupancyRate = MAX_APARTMENTS > 0 ? Math.round((occupiedApartments / MAX_APARTMENTS) * 100) : 0
-
-  // Payment compliance
-  const paidUpResidents = profiles.filter(p => p.maintenance_paid).length
-  const paymentComplianceRate = totalResidents > 0 ? Math.round((paidUpResidents / totalResidents) * 100) : 0
-  const residentsWithDues = totalResidents - paidUpResidents
+  // Payment compliance (unit-centric)
+  const totalUnits = units.length
+  const paidUnits = units.filter(u => u.maintenance_paid).length
+  const paymentComplianceRate = totalUnits > 0 ? Math.round((paidUnits / totalUnits) * 100) : 0
+  const unitsWithDues = totalUnits - paidUnits
 
   // Active issues (residents with pending/in-progress complaints)
   const residentsWithIssues = new Set(
@@ -53,7 +48,7 @@ export default function AdminPage() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {/* Total Residents */}
         <Card className="border-0 shadow-lg shadow-manzhil-teal/10 bg-[#0F766E] text-white hover:shadow-xl hover:-translate-y-0.5 transition-all relative overflow-hidden group">
           <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
@@ -81,7 +76,7 @@ export default function AdminPage() {
             </div>
             <p className="text-4xl font-medium text-white mb-2">{paymentComplianceRate}%</p>
             <p className="text-xs text-white/80">
-              {paidUpResidents} paid up / {residentsWithDues} with dues
+              {paidUnits} paid up / {unitsWithDues} with dues
             </p>
           </CardContent>
         </Card>

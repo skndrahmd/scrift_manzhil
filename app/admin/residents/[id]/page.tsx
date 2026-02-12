@@ -2,23 +2,18 @@
 
 import { useEffect, useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
-import { supabase, type Profile, type MaintenancePayment, type Booking, type Complaint, type Staff } from "@/lib/supabase"
+import { supabase, type Profile, type Booking, type Complaint } from "@/lib/supabase"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import Loader from "@/components/ui/loader"
-import { ChevronLeft, CheckCircle, XCircle, Calendar, MessageSquare, Filter, Users, DollarSign, AlertTriangle } from "lucide-react"
+import { ChevronLeft, Calendar, MessageSquare, Filter, AlertTriangle } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { exportToPdf, filterByPeriod, periodLabel, type Period } from "@/lib/pdf"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { formatDateForDisplay } from "@/lib/time-utils"
-
-function formatMonth(year: number, month: number) {
-  const date = new Date(year, month - 1, 1)
-  return date.toLocaleString("en-US", { month: "long", year: "numeric" })
-}
 
 function formatTime(timeString: string) {
   const [hours, minutes] = timeString.split(":")
@@ -62,14 +57,10 @@ export default function ResidentProfilePage({ params }: { params: { id: string }
   const { toast } = useToast()
   const [loading, setLoading] = useState(true)
   const [profile, setProfile] = useState<Profile | null>(null)
-  const [payments, setPayments] = useState<MaintenancePayment[]>([])
   const [bookings, setBookings] = useState<Booking[]>([])
   const [complaints, setComplaints] = useState<Complaint[]>([])
-  const [staff, setStaff] = useState<Staff[]>([])
-  const [filter, setFilter] = useState<"all" | "paid" | "unpaid">("all")
   const [bookingsPeriod, setBookingsPeriod] = useState<Period>("all")
   const [complaintsPeriod, setComplaintsPeriod] = useState<Period>("all")
-  const [isProfilePrimary, setIsProfilePrimary] = useState(true)
 
   useEffect(() => {
     void load()
@@ -79,37 +70,6 @@ export default function ResidentProfilePage({ params }: { params: { id: string }
     setLoading(true)
     const { data: p } = await supabase.from("profiles").select("*").eq("id", params.id).single()
     setProfile((p as Profile) || null)
-
-    let isPrimary = false
-    if (p) {
-      // Determine if this resident is primary
-      const { data: aptResidents } = await supabase
-        .from("profiles")
-        .select("id, is_primary_resident")
-        .eq("apartment_number", p.apartment_number)
-        .eq("is_active", true)
-      const residents = (aptResidents || []) as { id: string; is_primary_resident: boolean }[]
-      const explicitPrimary = residents.find((r) => r.is_primary_resident)
-      const primary = explicitPrimary || (residents.length === 1 ? residents[0] : null)
-      isPrimary = primary?.id === params.id
-      setIsProfilePrimary(isPrimary)
-
-      if (isPrimary) {
-        await ensureMaintenanceFromCreation(params.id, p.maintenance_charges ?? 0, p.created_at)
-      }
-    }
-
-    if (isPrimary) {
-      const { data: pays } = await supabase
-        .from("maintenance_payments")
-        .select("*")
-        .eq("profile_id", params.id)
-        .order("year", { ascending: false })
-        .order("month", { ascending: false })
-      setPayments((pays as MaintenancePayment[]) || [])
-    } else {
-      setPayments([])
-    }
 
     const { data: bs } = await supabase
       .from("bookings")
@@ -136,95 +96,8 @@ export default function ResidentProfilePage({ params }: { params: { id: string }
       .order("created_at", { ascending: false })
     setComplaints((cs as Complaint[]) || [])
 
-    const { data: staffData } = await supabase
-      .from("staff")
-      .select("*")
-      .eq("profile_id", params.id)
-      .order("created_at", { ascending: false })
-    setStaff((staffData as Staff[]) || [])
-
     setLoading(false)
   }
-
-  async function ensureMaintenanceFromCreation(profileId: string, amount: number, createdAt: string) {
-    const createdDate = new Date(createdAt)
-    const now = new Date()
-
-    const items: { year: number; month: number }[] = []
-    const currentDate = new Date(createdDate.getFullYear(), createdDate.getMonth(), 1)
-
-    while (currentDate <= now) {
-      items.push({ year: currentDate.getFullYear(), month: currentDate.getMonth() + 1 })
-      currentDate.setMonth(currentDate.getMonth() + 1)
-    }
-
-    const { data: existing } = await supabase
-      .from("maintenance_payments")
-      .select("year, month")
-      .eq("profile_id", profileId)
-      .in("year", Array.from(new Set(items.map((x) => x.year))))
-
-    const key = new Set((existing || []).map((e: any) => `${e.year}-${e.month}`))
-
-    const upserts = items
-      .filter((i) => !key.has(`${i.year}-${i.month}`))
-      .map((i) => ({
-        profile_id: profileId,
-        year: i.year,
-        month: i.month,
-        amount,
-        status: "unpaid",
-      }))
-
-    if (upserts.length > 0) {
-      await supabase.from("maintenance_payments").insert(upserts)
-    }
-  }
-
-  async function markPaid(row: MaintenancePayment) {
-    try {
-      const response = await fetch("/api/maintenance/update-status", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ paymentId: row.id, isPaid: true }),
-      })
-
-      if (!response.ok) {
-        const data = await response.json().catch(() => ({}))
-        throw new Error(typeof data?.error === "string" ? data.error : "Failed to update payment status")
-      }
-
-      toast({ title: "Updated", description: "Marked as paid and resident notified" })
-      await load()
-    } catch (error: any) {
-      toast({ title: "Error", description: error?.message || "Failed to update payment", variant: "destructive" })
-    }
-  }
-
-  async function markUnpaid(row: MaintenancePayment) {
-    try {
-      const response = await fetch("/api/maintenance/update-status", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ paymentId: row.id, isPaid: false }),
-      })
-
-      if (!response.ok) {
-        const data = await response.json().catch(() => ({}))
-        throw new Error(typeof data?.error === "string" ? data.error : "Failed to update payment status")
-      }
-
-      toast({ title: "Updated", description: "Marked as unpaid" })
-      await load()
-    } catch (error: any) {
-      toast({ title: "Error", description: error?.message || "Failed to update payment", variant: "destructive" })
-    }
-  }
-
-  const filteredPayments = useMemo(() => {
-    if (filter === "all") return payments
-    return payments.filter((p) => p.status === filter)
-  }, [payments, filter])
 
   const bookingsDisplay = useMemo(
     () => filterByPeriod(bookings, bookingsPeriod, (b) => b.booking_date),
@@ -236,8 +109,6 @@ export default function ResidentProfilePage({ params }: { params: { id: string }
   )
 
   // Calculate stats
-  const paidPayments = payments.filter(p => p.status === "paid").length
-  const unpaidPayments = payments.filter(p => p.status === "unpaid").length
   const confirmedBookings = bookings.filter(b => b.status === "confirmed").length
   const pendingBookings = bookings.filter(b => b.payment_status === "pending").length
   const resolvedComplaints = complaints.filter(c => c.status === "completed").length
@@ -291,55 +162,12 @@ export default function ResidentProfilePage({ params }: { params: { id: string }
                 <span>Member since {new Date(profile?.created_at || '').toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}</span>
               </div>
             </div>
-
-            {/* Maintenance Status Badge */}
-            {isProfilePrimary && (
-              <div className="hidden md:block">
-                <Badge className={`text-sm px-4 py-2 ${profile?.maintenance_paid ? 'bg-white/20 text-white border-white/30' : 'bg-red-500 text-white border-red-400'}`}>
-                  {profile?.maintenance_paid ? '✓ Maintenance Paid' : '⚠ Dues Pending'}
-                </Badge>
-              </div>
-            )}
           </div>
         </div>
-
-        {/* Monthly Charge Info */}
-        {isProfilePrimary && (
-          <div className="bg-white px-6 py-4 border-t border-manzhil-teal/10">
-            <div className="flex flex-wrap items-center justify-between gap-4">
-              <div>
-                <span className="text-sm text-gray-500">Monthly Maintenance</span>
-                <p className="text-xl font-medium text-manzhil-dark">Rs. {profile?.maintenance_charges?.toLocaleString() ?? "0"}</p>
-              </div>
-              <div className="md:hidden">
-                <Badge className={`${profile?.maintenance_paid ? 'bg-manzhil-teal/20 text-manzhil-dark' : 'bg-red-100 text-red-700'}`}>
-                  {profile?.maintenance_paid ? '✓ Paid' : '⚠ Pending'}
-                </Badge>
-              </div>
-            </div>
-          </div>
-        )}
       </Card>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Maintenance Stats */}
-        {isProfilePrimary && (
-          <Card className="border-0 shadow-lg shadow-manzhil-teal/10 bg-[#0F766E] text-white hover:shadow-xl hover:-translate-y-0.5 transition-all relative overflow-hidden group">
-            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-              <CheckCircle className="w-24 h-24 -mr-8 -mt-8 rotate-12" />
-            </div>
-            <CardContent className="p-5 relative z-10">
-              <div className="flex items-center justify-between mb-4">
-                <p className="text-sm font-medium text-white/90">Maintenance</p>
-                <Badge variant="outline" className="text-xs bg-white/20 text-white border-white/30">{payments.length} total</Badge>
-              </div>
-              <p className="text-4xl font-medium text-white mb-2">{paidPayments} Paid</p>
-              <p className="text-xs text-white/70 font-medium">{unpaidPayments} unpaid months</p>
-            </CardContent>
-          </Card>
-        )}
-
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-4">
         {/* Bookings Stats */}
         <Card className="border-0 shadow-lg shadow-manzhil-teal/10 bg-[#0F766E] text-white hover:shadow-xl hover:-translate-y-0.5 transition-all relative overflow-hidden group">
           <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
@@ -369,36 +197,10 @@ export default function ResidentProfilePage({ params }: { params: { id: string }
             <p className="text-xs text-white/70 font-medium">{pendingComplaints} in progress</p>
           </CardContent>
         </Card>
-
-        {/* Staff Stats */}
-        <Card className="border-0 shadow-lg shadow-manzhil-teal/10 bg-[#0F766E] text-white hover:shadow-xl hover:-translate-y-0.5 transition-all relative overflow-hidden group">
-          <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-            <Users className="w-24 h-24 -mr-8 -mt-8 rotate-12" />
-          </div>
-          <CardContent className="p-5 relative z-10">
-            <div className="flex items-center justify-between mb-4">
-              <p className="text-sm font-medium text-white/90">Staff Members</p>
-            </div>
-            <p className="text-4xl font-medium text-white mb-2">{staff.length} Staff</p>
-            <p className="text-xs text-white/70 font-medium">Registered members</p>
-          </CardContent>
-        </Card>
       </div>
 
-      <Tabs defaultValue={isProfilePrimary ? "maintenance" : "bookings"} className="space-y-6">
+      <Tabs defaultValue="bookings" className="space-y-6">
         <TabsList className="bg-white h-auto w-full md:w-fit overflow-x-auto justify-start rounded-xl shadow-lg shadow-manzhil-teal/5 border border-manzhil-teal/10 p-1.5 gap-1 scrollbar-hide">
-          {isProfilePrimary && (
-            <TabsTrigger
-              value="maintenance"
-              className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-manzhil-dark data-[state=active]:to-manzhil-teal data-[state=active]:text-white rounded-lg text-sm px-4 py-2.5 transition-all flex items-center gap-2 flex-shrink-0"
-            >
-              <DollarSign className="h-4 w-4" />
-              Maintenance
-              {unpaidPayments > 0 && (
-                <span className="bg-red-500 text-white text-xs rounded-full px-2 py-0.5">{unpaidPayments}</span>
-              )}
-            </TabsTrigger>
-          )}
           <TabsTrigger
             value="bookings"
             className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-manzhil-dark data-[state=active]:to-manzhil-teal data-[state=active]:text-white rounded-lg text-sm px-4 py-2.5 transition-all flex items-center gap-2 flex-shrink-0"
@@ -417,174 +219,7 @@ export default function ResidentProfilePage({ params }: { params: { id: string }
               <span className="bg-amber-500 text-white text-xs rounded-full px-2 py-0.5">{pendingComplaints}</span>
             )}
           </TabsTrigger>
-          <TabsTrigger
-            value="staff"
-            className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-manzhil-dark data-[state=active]:to-manzhil-teal data-[state=active]:text-white rounded-lg text-sm px-4 py-2.5 transition-all flex items-center gap-2 flex-shrink-0"
-          >
-            <Users className="h-4 w-4" />
-            Staff
-            <span className="bg-manzhil-dark/10 text-manzhil-dark text-xs rounded-full px-2 py-0.5">{staff.length}</span>
-          </TabsTrigger>
         </TabsList>
-
-        <TabsContent value="maintenance">
-          <Card className="border-0 shadow-xl shadow-manzhil-teal/5">
-            <CardHeader className="bg-white">
-              <CardTitle className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                <span className="text-lg sm:text-xl">Maintenance Payments</span>
-                <div className="flex flex-col sm:flex-row sm:items-center gap-2">
-                  <span className="text-sm font-medium text-gray-600 hidden sm:inline">Filter:</span>
-                  <div className="flex items-center gap-2">
-                    <Button
-                      size="sm"
-                      variant={filter === "all" ? "default" : "outline"}
-                      onClick={() => setFilter("all")}
-                      className="flex-1 sm:flex-none"
-                    >
-                      All
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant={filter === "paid" ? "default" : "outline"}
-                      onClick={() => setFilter("paid")}
-                      className="flex-1 sm:flex-none"
-                    >
-                      Paid
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant={filter === "unpaid" ? "default" : "outline"}
-                      onClick={() => setFilter("unpaid")}
-                      className="flex-1 sm:flex-none"
-                    >
-                      Unpaid
-                    </Button>
-                  </div>
-                </div>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-0">
-              {/* Desktop Table View */}
-              <div className="hidden md:block">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="bg-gradient-to-r from-manzhil-teal/5 to-transparent">
-                      <TableHead>Month</TableHead>
-                      <TableHead>Amount</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Paid Date</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredPayments.map((row) => (
-                      <TableRow key={row.id} className="hover:bg-manzhil-teal/5 transition-colors">
-                        <TableCell className="font-medium">{formatMonth(row.year, row.month)}</TableCell>
-                        <TableCell>Rs. {Number(row.amount).toLocaleString()}</TableCell>
-                        <TableCell>
-                          <Badge variant={row.status === "paid" ? "default" : "secondary"} className={row.status === "paid" ? "bg-manzhil-teal/20 text-manzhil-dark" : ""}>{row.status}</Badge>
-                        </TableCell>
-                        <TableCell>
-                          {row.paid_date ? new Date(row.paid_date + "T00:00:00").toLocaleDateString("en-GB") : "-"}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          {row.status === "paid" ? (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => markUnpaid(row)}
-                              className="text-red-600 hover:bg-red-50 hover:border-red-200"
-                            >
-                              <XCircle className="h-4 w-4 mr-1" /> Mark Unpaid
-                            </Button>
-                          ) : (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => markPaid(row)}
-                              className="text-manzhil-teal hover:bg-manzhil-teal/10 hover:border-manzhil-teal/30"
-                            >
-                              <CheckCircle className="h-4 w-4 mr-1" /> Mark Paid
-                            </Button>
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                    {filteredPayments.length === 0 && (
-                      <TableRow>
-                        <TableCell colSpan={5} className="text-center text-gray-500 py-8">
-                          No records
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
-
-              {/* Mobile Card View */}
-              <div className="block md:hidden p-4 space-y-3">
-                {filteredPayments.length === 0 ? (
-                  <div className="text-center text-gray-500 py-8">
-                    No records
-                  </div>
-                ) : (
-                  filteredPayments.map((row) => (
-                    <Card key={row.id} className="border border-gray-200 shadow-sm">
-                      <CardContent className="p-4 space-y-3">
-                        <div className="flex items-start justify-between">
-                          <div>
-                            <h3 className="font-semibold text-base text-gray-900">
-                              {formatMonth(row.year, row.month)}
-                            </h3>
-                            <p className="text-sm text-gray-500 mt-0.5">Maintenance Payment</p>
-                          </div>
-                          <Badge variant={row.status === "paid" ? "default" : "secondary"}>
-                            {row.status}
-                          </Badge>
-                        </div>
-
-                        <div className="space-y-2 text-sm">
-                          <div className="flex justify-between">
-                            <span className="text-gray-600">Amount:</span>
-                            <span className="font-medium text-gray-900">Rs. {Number(row.amount).toLocaleString()}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-gray-600">Paid Date:</span>
-                            <span className="font-medium text-gray-900">
-                              {row.paid_date ? new Date(row.paid_date + "T00:00:00").toLocaleDateString("en-GB") : "-"}
-                            </span>
-                          </div>
-                        </div>
-
-                        <div className="pt-2 border-t border-gray-100">
-                          {row.status === "paid" ? (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => markUnpaid(row)}
-                              className="w-full text-red-600 hover:bg-red-50 hover:border-red-200"
-                            >
-                              <XCircle className="h-4 w-4 mr-2" /> Mark as Unpaid
-                            </Button>
-                          ) : (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => markPaid(row)}
-                              className="w-full text-manzhil-teal hover:bg-manzhil-teal/10 hover:border-manzhil-teal/30"
-                            >
-                              <CheckCircle className="h-4 w-4 mr-2" /> Mark as Paid
-                            </Button>
-                          )}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
 
         <TabsContent value="bookings">
           <Card className="border-0 shadow-xl shadow-manzhil-teal/5">
@@ -802,68 +437,7 @@ export default function ResidentProfilePage({ params }: { params: { id: string }
             </CardContent>
           </Card>
         </TabsContent>
-
-        <TabsContent value="staff">
-          <Card className="border-0 shadow-xl shadow-manzhil-teal/5">
-            <CardHeader className="bg-white">
-              <CardTitle className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Users className="h-5 w-5 text-manzhil-teal" />
-                  <span>Staff Members</span>
-                </div>
-                <Badge variant="outline" className="text-lg px-4 py-2">
-                  {staff.length} Total
-                </Badge>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-0">
-              {staff.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-16 text-center">
-                  <Users className="h-16 w-16 text-gray-300 mb-4" />
-                  <h3 className="text-xl font-semibold text-gray-900 mb-2">No Staff Members</h3>
-                  <p className="text-gray-500 max-w-md">
-                    This resident hasn't registered any staff members yet. Staff can be added via WhatsApp.
-                  </p>
-                </div>
-              ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow className="bg-gradient-to-r from-manzhil-teal/5 to-transparent">
-                      <TableHead>Name</TableHead>
-                      <TableHead>CNIC</TableHead>
-                      <TableHead>Phone Number</TableHead>
-                      <TableHead>Role</TableHead>
-                      <TableHead>Registered On</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {staff.map((member) => (
-                      <TableRow key={member.id} className="hover:bg-manzhil-teal/5 transition-colors">
-                        <TableCell className="font-medium text-gray-900">{member.name}</TableCell>
-                        <TableCell className="font-mono text-gray-600">{member.cnic}</TableCell>
-                        <TableCell className="text-gray-600">{member.phone_number}</TableCell>
-                        <TableCell>
-                          <Badge variant="outline" className="bg-manzhil-teal/10 text-manzhil-dark border-manzhil-teal/30">
-                            {member.role}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-gray-600">
-                          {new Date(member.created_at).toLocaleDateString("en-GB", {
-                            day: "2-digit",
-                            month: "short",
-                            year: "numeric",
-                          })}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
       </Tabs>
     </div>
   )
 }
-

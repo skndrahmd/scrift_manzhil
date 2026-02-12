@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useRef } from "react"
+import { useState, useRef, useMemo, useEffect } from "react"
 import { useAdmin } from "@/app/admin/layout"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import {
@@ -60,6 +60,9 @@ export function ParcelsTable() {
 
     // Register form state
     const [selectedResidentId, setSelectedResidentId] = useState<string>("")
+    const [residentSearchQuery, setResidentSearchQuery] = useState("")
+    const [showResidentDropdown, setShowResidentDropdown] = useState(false)
+    const residentSearchRef = useRef<HTMLDivElement>(null)
     const [description, setDescription] = useState("")
     const [senderName, setSenderName] = useState("")
     const [courierName, setCourierName] = useState("")
@@ -107,6 +110,29 @@ export function ParcelsTable() {
         return matchesSearch && matchesStatus
     })
 
+    // Filtered residents for search
+    const filteredResidents = useMemo(() => {
+        if (!residentSearchQuery.trim()) return []
+        const query = residentSearchQuery.toLowerCase()
+        return profiles
+            .filter(p => p.is_active && (
+                p.name.toLowerCase().includes(query) ||
+                p.apartment_number.toLowerCase().includes(query)
+            ))
+            .slice(0, 10)
+    }, [profiles, residentSearchQuery])
+
+    // Click outside handler for resident search dropdown
+    useEffect(() => {
+        const handleClickOutside = (e: MouseEvent) => {
+            if (residentSearchRef.current && !residentSearchRef.current.contains(e.target as Node)) {
+                setShowResidentDropdown(false)
+            }
+        }
+        document.addEventListener("mousedown", handleClickOutside)
+        return () => document.removeEventListener("mousedown", handleClickOutside)
+    }, [])
+
     // Handle image selection
     const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0]
@@ -131,6 +157,8 @@ export function ParcelsTable() {
     // Reset form
     const resetForm = () => {
         setSelectedResidentId("")
+        setResidentSearchQuery("")
+        setShowResidentDropdown(false)
         setDescription("")
         setSenderName("")
         setCourierName("")
@@ -657,18 +685,50 @@ export function ParcelsTable() {
                         {/* Resident Selector */}
                         <div className="space-y-2">
                             <Label htmlFor="resident">Recipient Resident *</Label>
-                            <Select value={selectedResidentId} onValueChange={setSelectedResidentId}>
-                                <SelectTrigger className="border-manzhil-teal/20">
-                                    <SelectValue placeholder="Select resident..." />
-                                </SelectTrigger>
-                                <SelectContent className="max-h-[200px]">
-                                    {profiles.map((profile) => (
-                                        <SelectItem key={profile.id} value={profile.id}>
-                                            {profile.name} — {profile.apartment_number}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
+                            <div className="relative" ref={residentSearchRef}>
+                                <div className="relative">
+                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                                    <Input
+                                        placeholder="Search resident by name or apartment..."
+                                        value={residentSearchQuery}
+                                        onChange={(e) => {
+                                            setResidentSearchQuery(e.target.value)
+                                            setShowResidentDropdown(true)
+                                            if (!e.target.value.trim()) {
+                                                setSelectedResidentId("")
+                                            }
+                                        }}
+                                        onFocus={() => {
+                                            if (residentSearchQuery.trim()) setShowResidentDropdown(true)
+                                        }}
+                                        className="pl-9 border-manzhil-teal/20 focus:border-manzhil-teal"
+                                    />
+                                </div>
+                                {showResidentDropdown && filteredResidents.length > 0 && (
+                                    <div className="absolute z-50 w-full mt-1 bg-white border border-manzhil-teal/20 rounded-md shadow-lg max-h-[200px] overflow-y-auto">
+                                        {filteredResidents.map((profile) => (
+                                            <button
+                                                key={profile.id}
+                                                type="button"
+                                                className="w-full px-3 py-2 text-left hover:bg-manzhil-teal/5 flex justify-between items-center text-sm"
+                                                onClick={() => {
+                                                    setSelectedResidentId(profile.id)
+                                                    setResidentSearchQuery(`${profile.name} — ${profile.apartment_number}`)
+                                                    setShowResidentDropdown(false)
+                                                }}
+                                            >
+                                                <span className="font-medium text-manzhil-dark">{profile.name}</span>
+                                                <span className="text-gray-500 text-xs">{profile.apartment_number}</span>
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
+                                {showResidentDropdown && residentSearchQuery.trim() && filteredResidents.length === 0 && (
+                                    <div className="absolute z-50 w-full mt-1 bg-white border border-manzhil-teal/20 rounded-md shadow-lg p-3 text-sm text-gray-500 text-center">
+                                        No residents found
+                                    </div>
+                                )}
+                            </div>
                         </div>
 
                         {/* Image Upload - Camera Only */}

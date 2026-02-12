@@ -106,6 +106,7 @@ export interface Profile {
   last_payment_date: string | null
   cnic: string | null
   building_block: string | null
+  unit_id: string | null
   created_at: string
 }
 

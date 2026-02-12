@@ -4,7 +4,15 @@ import { useAdmin } from "../layout"
 import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/ui/dialog"
 import {
     Building,
     Search,
@@ -14,15 +22,34 @@ import {
     CreditCard,
     ChevronRight,
     Home,
+    Plus,
+    Upload,
+    Loader2,
 } from "lucide-react"
 import Link from "next/link"
 import { useMemo, useState } from "react"
-import type { Unit, Profile, Complaint } from "@/lib/supabase"
+import type { Complaint } from "@/lib/supabase"
+import { useToast } from "@/hooks/use-toast"
+import { BulkImportUnitsModal } from "@/components/admin/bulk-import-units-modal"
 
 export default function UnitsPage() {
-    const { units, complaints, loading } = useAdmin()
+    const { units, complaints, loading, fetchUnits } = useAdmin()
+    const { toast } = useToast()
     const [searchQuery, setSearchQuery] = useState("")
     const [statusFilter, setStatusFilter] = useState<"all" | "paid" | "unpaid">("all")
+
+    // Add Unit dialog state
+    const [isAddUnitOpen, setIsAddUnitOpen] = useState(false)
+    const [isSubmitting, setIsSubmitting] = useState(false)
+    const [newUnit, setNewUnit] = useState({
+        apartment_number: "",
+        floor_number: "",
+        unit_type: "",
+        maintenance_charges: "5000",
+    })
+
+    // Bulk import state
+    const [isBulkImportOpen, setIsBulkImportOpen] = useState(false)
 
     // Enrich units with computed data from pre-loaded profiles
     const enrichedUnits = useMemo(() => {
@@ -88,6 +115,63 @@ export default function UnitsPage() {
     const unitsWithComplaints = enrichedUnits.filter((u) => u.activeComplaints > 0).length
     const complianceRate = totalUnits > 0 ? Math.round((paidUnits / totalUnits) * 100) : 0
 
+    // Handle Add Unit submit
+    const handleAddUnit = async () => {
+        if (!newUnit.apartment_number.trim()) {
+            toast({
+                title: "Validation Error",
+                description: "Apartment number is required.",
+                variant: "destructive",
+            })
+            return
+        }
+
+        setIsSubmitting(true)
+        try {
+            const response = await fetch("/api/units", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    apartment_number: newUnit.apartment_number.trim(),
+                    floor_number: newUnit.floor_number.trim() || null,
+                    unit_type: newUnit.unit_type || null,
+                    maintenance_charges: parseFloat(newUnit.maintenance_charges) || 5000,
+                }),
+            })
+
+            if (response.status === 409) {
+                toast({
+                    title: "Duplicate Unit",
+                    description: "A unit with this apartment number already exists.",
+                    variant: "destructive",
+                })
+                return
+            }
+
+            if (!response.ok) {
+                throw new Error("Failed to create unit")
+            }
+
+            toast({
+                title: "Unit Created",
+                description: `Unit ${newUnit.apartment_number} has been added successfully.`,
+            })
+
+            setIsAddUnitOpen(false)
+            setNewUnit({ apartment_number: "", floor_number: "", unit_type: "", maintenance_charges: "5000" })
+            await fetchUnits()
+        } catch (error) {
+            console.error("Error creating unit:", error)
+            toast({
+                title: "Error",
+                description: "Failed to create unit. Please try again.",
+                variant: "destructive",
+            })
+        } finally {
+            setIsSubmitting(false)
+        }
+    }
+
     if (loading) {
         return (
             <div className="space-y-6">
@@ -114,6 +198,24 @@ export default function UnitsPage() {
                     <Building className="h-6 w-6 text-manzhil-teal" />
                     <h1 className="text-2xl font-medium text-manzhil-dark">Units</h1>
                     <Badge variant="outline" className="text-sm">{totalUnits} total</Badge>
+                </div>
+                <div className="flex items-center gap-2">
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setIsBulkImportOpen(true)}
+                    >
+                        <Upload className="h-4 w-4 mr-2" />
+                        Bulk Import
+                    </Button>
+                    <Button
+                        size="sm"
+                        className="bg-gradient-to-r from-manzhil-dark to-manzhil-teal hover:shadow-lg hover:shadow-manzhil-teal/30 transition-all"
+                        onClick={() => setIsAddUnitOpen(true)}
+                    >
+                        <Plus className="h-4 w-4 mr-2" />
+                        Add Unit
+                    </Button>
                 </div>
             </div>
 
@@ -271,6 +373,83 @@ export default function UnitsPage() {
                     ))}
                 </div>
             )}
+
+            {/* Add Unit Dialog */}
+            <Dialog open={isAddUnitOpen} onOpenChange={setIsAddUnitOpen}>
+                <DialogContent className="sm:max-w-[425px]">
+                    <DialogHeader>
+                        <DialogTitle>Add New Unit</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4 pt-2">
+                        <div className="space-y-2">
+                            <Label htmlFor="apartment_number">Apartment Number *</Label>
+                            <Input
+                                id="apartment_number"
+                                placeholder="e.g. A-101"
+                                value={newUnit.apartment_number}
+                                onChange={(e) => setNewUnit({ ...newUnit, apartment_number: e.target.value })}
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="floor_number">Floor Number</Label>
+                            <Input
+                                id="floor_number"
+                                placeholder="e.g. 1, Ground"
+                                value={newUnit.floor_number}
+                                onChange={(e) => setNewUnit({ ...newUnit, floor_number: e.target.value })}
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="unit_type">Unit Type</Label>
+                            <Select
+                                value={newUnit.unit_type}
+                                onValueChange={(v) => setNewUnit({ ...newUnit, unit_type: v })}
+                            >
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Select type" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="Studio">Studio</SelectItem>
+                                    <SelectItem value="1BHK">1BHK</SelectItem>
+                                    <SelectItem value="2BHK">2BHK</SelectItem>
+                                    <SelectItem value="3BHK">3BHK</SelectItem>
+                                    <SelectItem value="Penthouse">Penthouse</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="maintenance_charges">Maintenance Charges</Label>
+                            <Input
+                                id="maintenance_charges"
+                                type="number"
+                                placeholder="5000"
+                                value={newUnit.maintenance_charges}
+                                onChange={(e) => setNewUnit({ ...newUnit, maintenance_charges: e.target.value })}
+                            />
+                        </div>
+                        <div className="flex justify-end gap-2 pt-4">
+                            <Button variant="outline" onClick={() => setIsAddUnitOpen(false)}>
+                                Cancel
+                            </Button>
+                            <Button
+                                onClick={handleAddUnit}
+                                disabled={isSubmitting}
+                                className="bg-gradient-to-r from-manzhil-dark to-manzhil-teal hover:shadow-lg hover:shadow-manzhil-teal/30 transition-all"
+                            >
+                                {isSubmitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                                Add Unit
+                            </Button>
+                        </div>
+                    </div>
+                </DialogContent>
+            </Dialog>
+
+            {/* Bulk Import Modal */}
+            <BulkImportUnitsModal
+                open={isBulkImportOpen}
+                onOpenChange={setIsBulkImportOpen}
+                onImportComplete={() => fetchUnits()}
+            />
         </div>
     )
 }

@@ -35,6 +35,12 @@ export async function handleStaffFlow(
 ): Promise<string> {
   const choice = message.trim()
 
+  // Guard: profile must be linked to a unit
+  if (!profile.unit_id) {
+    clearState(phoneNumber)
+    return `Unable to manage staff. Your profile is not linked to a unit.\n\nPlease contact building management.\n\nReply *0* for menu`
+  }
+
   try {
     // Staff menu selection
     if (userState.step === "staff_menu") {
@@ -146,7 +152,7 @@ Format: 03001234567
     const { data: existingStaff } = await supabase
       .from("staff")
       .select("id")
-      .eq("profile_id", profile.id)
+      .eq("unit_id", profile.unit_id!)
       .eq("phone_number", phoneValidation.normalized!)
       .single()
 
@@ -251,7 +257,7 @@ async function createStaffMember(
 
     const { error } = await supabase.from("staff").insert([
       {
-        profile_id: profile.id,
+        unit_id: profile.unit_id,
         name: staff.name,
         cnic: staff.cnic,
         phone_number: staff.phone,
@@ -299,7 +305,7 @@ async function viewStaffList(profile: Profile, phoneNumber: string): Promise<str
     const { data: staffList, error } = await supabase
       .from("staff")
       .select("*")
-      .eq("profile_id", profile.id)
+      .eq("unit_id", profile.unit_id!)
       .order("created_at", { ascending: false })
 
     if (error) {
@@ -351,7 +357,7 @@ async function initializeDeleteStaff(profile: Profile, phoneNumber: string): Pro
     const { data: staffList, error } = await supabase
       .from("staff")
       .select("*")
-      .eq("profile_id", profile.id)
+      .eq("unit_id", profile.unit_id!)
       .order("created_at", { ascending: false })
 
     if (error || !staffList || staffList.length === 0) {
@@ -477,7 +483,7 @@ async function initializeEditStaff(profile: Profile, phoneNumber: string): Promi
     const { data: staffList, error } = await supabase
       .from("staff")
       .select("*")
-      .eq("profile_id", profile.id)
+      .eq("unit_id", profile.unit_id!)
       .order("created_at", { ascending: false })
 
     if (error || !staffList || staffList.length === 0) {

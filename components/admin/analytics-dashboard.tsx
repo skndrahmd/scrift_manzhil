@@ -35,7 +35,6 @@ import {
     TrendingUp,
     TrendingDown,
     MessageSquare,
-    Home,
     Wallet,
     Target,
     ArrowUpRight,
@@ -55,17 +54,17 @@ const CHART_COLORS = {
 type Period = 'week' | 'month' | 'quarter' | 'year'
 
 export function AnalyticsDashboard() {
-    const { complaints, bookings, profiles, feedback } = useAdmin()
+    const { complaints, bookings, profiles, feedback, units } = useAdmin()
     const [period, setPeriod] = useState<Period>('month')
 
     // ========== KPI Calculations ==========
     const kpiData = useMemo(() => {
-        const totalResidents = profiles.length
-        const activeResidents = profiles.filter(p => p.is_active).length
-        const occupancyRate = totalResidents > 0 ? Math.round((activeResidents / totalResidents) * 100) : 0
+        const totalUnitsCount = units.length
+        const occupiedUnits = units.filter(u => u.is_occupied).length
+        const occupancyRate = totalUnitsCount > 0 ? Math.round((occupiedUnits / totalUnitsCount) * 100) : 0
 
-        const paidResidents = profiles.filter(p => p.maintenance_paid).length
-        const collectionRate = totalResidents > 0 ? Math.round((paidResidents / totalResidents) * 100) : 0
+        const paidUnits = units.filter(u => u.maintenance_paid).length
+        const collectionRate = totalUnitsCount > 0 ? Math.round((paidUnits / totalUnitsCount) * 100) : 0
 
         // Calculate average resolution time (completed complaints)
         const completedComplaints = complaints.filter(c => c.status === 'completed')
@@ -94,12 +93,12 @@ export function AnalyticsDashboard() {
             collectionRate,
             avgResolutionDays,
             revenueThisMonth,
-            totalResidents,
-            activeResidents,
-            paidResidents,
+            occupiedUnits,
+            totalUnitsCount,
+            paidUnits,
             pendingComplaints: complaints.filter(c => c.status === 'pending').length,
         }
-    }, [complaints, bookings, profiles])
+    }, [complaints, bookings, profiles, units])
 
     // ========== Financial Analytics ==========
     const financialData = useMemo(() => {
@@ -108,9 +107,9 @@ export function AnalyticsDashboard() {
             .filter(b => b.payment_status === 'paid')
             .reduce((sum, b) => sum + (b.booking_charges || 0), 0)
 
-        const maintenanceRevenue = profiles
-            .filter(p => p.maintenance_paid)
-            .reduce((sum, p) => sum + (p.maintenance_charges || 0), 0)
+        const maintenanceRevenue = units
+            .filter(u => u.maintenance_paid)
+            .reduce((sum, u) => sum + (u.maintenance_charges || 0), 0)
 
         const revenueBreakdown = [
             { name: 'Booking Revenue', value: bookingRevenue, color: CHART_COLORS.primary },
@@ -118,21 +117,30 @@ export function AnalyticsDashboard() {
         ]
 
         // Collection by status
-        const paid = profiles.filter(p => p.maintenance_paid).length
-        const unpaid = profiles.filter(p => !p.maintenance_paid).length
+        const paid = units.filter(u => u.maintenance_paid).length
+        const unpaid = units.filter(u => !u.maintenance_paid).length
         const collectionStatus = [
             { status: 'Paid', count: paid, fill: CHART_COLORS.primary },
             { status: 'Unpaid', count: unpaid, fill: CHART_COLORS.warning },
         ]
 
-        // Outstanding dues list (top 10)
-        const outstandingResidents = profiles
-            .filter(p => !p.maintenance_paid && p.is_active)
-            .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
+        // Outstanding dues list (top 10) — show primary resident per unpaid unit
+        const outstandingResidents = units
+            .filter(u => !u.maintenance_paid)
+            .map(u => {
+                const primary = u.profiles?.find(p => p.is_primary_resident) || u.profiles?.[0]
+                return {
+                    id: u.id,
+                    apartment_number: u.apartment_number,
+                    name: primary?.name || 'Unoccupied',
+                    phone_number: primary?.phone_number || '',
+                    maintenance_charges: u.maintenance_charges,
+                }
+            })
             .slice(0, 10)
 
         return { revenueBreakdown, collectionStatus, outstandingResidents, bookingRevenue, maintenanceRevenue }
-    }, [bookings, profiles])
+    }, [bookings, units])
 
     // ========== Complaint Analytics ==========
     const complaintData = useMemo(() => {
@@ -284,14 +292,21 @@ export function AnalyticsDashboard() {
             .sort((a, b) => b.score - a.score)
             .slice(0, 10)
 
-        // At-risk residents (unpaid + complaints)
-        const atRisk = profiles
-            .filter(p => !p.maintenance_paid)
-            .map(p => {
-                const residentComplaints = complaints.filter(c => c.profile_id === p.id).length
-                return { ...p, complaintCount: residentComplaints }
+        // At-risk residents (unpaid unit + complaints)
+        const atRisk = units
+            .filter(u => !u.maintenance_paid)
+            .map(u => {
+                const primary = u.profiles?.find(p => p.is_primary_resident) || u.profiles?.[0]
+                const profileIds = u.profiles?.map(p => p.id) || []
+                const residentComplaints = complaints.filter(c => profileIds.includes(c.profile_id)).length
+                return {
+                    id: u.id,
+                    apartment_number: u.apartment_number,
+                    name: primary?.name || 'Unoccupied',
+                    complaintCount: residentComplaints,
+                }
             })
-            .filter(p => p.complaintCount > 0)
+            .filter(u => u.complaintCount > 0)
             .sort((a, b) => b.complaintCount - a.complaintCount)
             .slice(0, 10)
 
@@ -362,11 +377,11 @@ export function AnalyticsDashboard() {
                     </div>
                     <CardContent className="p-5 relative z-10">
                         <div className="flex justify-between items-start mb-4">
-                            <p className="text-sm font-medium text-white/90">Total Residents</p>
+                            <p className="text-sm font-medium text-white/90">Occupancy Rate</p>
                         </div>
                         <p className="text-4xl font-medium text-white mb-2">{kpiData.occupancyRate}%</p>
                         <p className="text-xs text-white/70 font-medium">
-                            {kpiData.activeResidents} active community members
+                            {kpiData.occupiedUnits} of {kpiData.totalUnitsCount} units occupied
                         </p>
                     </CardContent>
                 </Card>
@@ -396,7 +411,7 @@ export function AnalyticsDashboard() {
                         <div className="flex justify-between items-start mb-4">
                             <p className="text-sm font-medium text-white/90">Pending Payments</p>
                         </div>
-                        <p className="text-4xl font-medium text-white mb-2">{profiles.filter(p => !p.maintenance_paid).length}</p>
+                        <p className="text-4xl font-medium text-white mb-2">{units.filter(u => !u.maintenance_paid).length}</p>
                         <p className="text-xs text-white/70 font-medium">
                             Maintenance payments due
                         </p>
@@ -540,7 +555,7 @@ export function AnalyticsDashboard() {
                                     Outstanding Dues
                                 </span>
                                 <Badge className="bg-amber-100 text-amber-700">
-                                    {financialData.outstandingResidents.length} residents
+                                    {financialData.outstandingResidents.length} units
                                 </Badge>
                             </CardTitle>
                         </CardHeader>
@@ -548,24 +563,24 @@ export function AnalyticsDashboard() {
                             {financialData.outstandingResidents.length === 0 ? (
                                 <div className="text-center py-8 text-gray-500">
                                     <CheckCircle className="h-12 w-12 mx-auto mb-3 text-manzhil-teal" />
-                                    <p>All residents have paid!</p>
+                                    <p>All units have paid!</p>
                                 </div>
                             ) : (
                                 <div className="space-y-2">
-                                    {financialData.outstandingResidents.map((resident) => (
-                                        <div key={resident.id} className="flex items-center justify-between p-3 bg-manzhil-teal/5 hover:bg-manzhil-teal/10 rounded-lg transition-colors">
+                                    {financialData.outstandingResidents.map((unit) => (
+                                        <div key={unit.id} className="flex items-center justify-between p-3 bg-manzhil-teal/5 hover:bg-manzhil-teal/10 rounded-lg transition-colors">
                                             <div className="flex items-center gap-3">
                                                 <div className="h-10 w-10 rounded-full bg-amber-100 flex items-center justify-center text-amber-700 font-medium text-sm">
-                                                    {resident.apartment_number}
+                                                    {unit.apartment_number}
                                                 </div>
                                                 <div>
-                                                    <p className="font-medium text-gray-900">{resident.name}</p>
-                                                    <p className="text-xs text-gray-500">{resident.phone_number}</p>
+                                                    <p className="font-medium text-gray-900">{unit.name}</p>
+                                                    <p className="text-xs text-gray-500">{unit.phone_number}</p>
                                                 </div>
                                             </div>
                                             <div className="text-right">
                                                 <p className="font-semibold text-amber-600">
-                                                    {formatCurrency(resident.maintenance_charges || 0)}
+                                                    {formatCurrency(unit.maintenance_charges || 0)}
                                                 </p>
                                                 <p className="text-xs text-gray-500">outstanding</p>
                                             </div>

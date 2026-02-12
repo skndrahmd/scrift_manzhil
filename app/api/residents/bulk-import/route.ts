@@ -50,9 +50,50 @@ export async function POST(request: NextRequest) {
 
     const importedResidents: { name: string; phone_number: string; apartment_number: string }[] = []
 
+    // Cache for unit lookups to avoid repeated queries
+    const unitCache = new Map<string, string>()
+
     // Insert residents sequentially to handle errors gracefully
     for (const resident of residents) {
       const { rowNumber, ...residentData } = resident
+
+      // Find or create unit for this apartment_number
+      let unitId: string | null = null
+      if (residentData.apartment_number) {
+        const cachedUnitId = unitCache.get(residentData.apartment_number)
+        if (cachedUnitId) {
+          unitId = cachedUnitId
+        } else {
+          // Check if unit exists
+          const { data: existingUnit } = await supabaseAdmin
+            .from('units')
+            .select('id')
+            .eq('apartment_number', residentData.apartment_number)
+            .maybeSingle()
+
+          if (existingUnit) {
+            unitId = existingUnit.id
+          } else {
+            // Create the unit
+            const { data: newUnit } = await supabaseAdmin
+              .from('units')
+              .insert({
+                apartment_number: residentData.apartment_number,
+                maintenance_charges: residentData.maintenance_charges || 5000,
+                is_occupied: true,
+              })
+              .select('id')
+              .single()
+
+            if (newUnit) {
+              unitId = newUnit.id
+            }
+          }
+          if (unitId) {
+            unitCache.set(residentData.apartment_number, unitId)
+          }
+        }
+      }
 
       const { data, error } = await supabaseAdmin
         .from('profiles')
@@ -60,11 +101,10 @@ export async function POST(request: NextRequest) {
           name: residentData.name,
           phone_number: residentData.phone_number,
           apartment_number: residentData.apartment_number,
+          unit_id: unitId,
           cnic: residentData.cnic || null,
           building_block: residentData.building_block || null,
-          maintenance_charges: residentData.maintenance_charges || 5000,
           is_active: true,
-          maintenance_paid: false,
         })
         .select()
         .single()

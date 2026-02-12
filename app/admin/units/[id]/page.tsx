@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
 import { useAdmin } from "../../layout"
-import { supabase, type Profile, type MaintenancePayment, type Unit } from "@/lib/supabase"
+import { supabase, type Profile, type MaintenancePayment, type Unit, type Staff } from "@/lib/supabase"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -117,6 +117,10 @@ export default function UnitDetailPage({ params }: { params: { id: string } }) {
             .slice(0, 20)
     }, [allParcels, profileIds])
 
+    // Staff fetched by unit_id
+    const [staff, setStaff] = useState<Staff[]>([])
+    const [staffLoading, setStaffLoading] = useState(true)
+
     // Maintenance payments fetched by unit_id
     const [payments, setPayments] = useState<MaintenancePayment[]>([])
     const [paymentsLoading, setPaymentsLoading] = useState(true)
@@ -145,6 +149,23 @@ export default function UnitDetailPage({ params }: { params: { id: string } }) {
     const [editCharges, setEditCharges] = useState(0)
     const [savingCharges, setSavingCharges] = useState(false)
 
+    // Fetch staff by unit_id
+    async function loadStaff() {
+        if (!unit) {
+            setStaff([])
+            setStaffLoading(false)
+            return
+        }
+        setStaffLoading(true)
+        const { data } = await supabase
+            .from("staff")
+            .select("*")
+            .eq("unit_id", unit.id)
+            .order("created_at", { ascending: false })
+        setStaff((data as Staff[]) || [])
+        setStaffLoading(false)
+    }
+
     // Fetch maintenance payments by unit_id
     async function loadPayments() {
         if (!unit) {
@@ -169,8 +190,10 @@ export default function UnitDetailPage({ params }: { params: { id: string } }) {
     useEffect(() => {
         if (!contextLoading && unit) {
             loadPayments()
+            loadStaff()
         } else if (!contextLoading) {
             setPaymentsLoading(false)
+            setStaffLoading(false)
         }
     }, [unit, contextLoading])
 
@@ -263,6 +286,22 @@ export default function UnitDetailPage({ params }: { params: { id: string } }) {
             }
 
             toast({ title: "Added", description: `${newResident.name} has been added to Unit ${apartmentNumber}` })
+
+            // Send welcome message (fire-and-forget, don't block on failure)
+            try {
+                await fetch("/api/residents/welcome-message", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        name: newResident.name,
+                        phone_number: newResident.phone_number,
+                        apartment_number: unit.apartment_number,
+                    }),
+                })
+            } catch (e) {
+                console.error("Welcome message error:", e)
+            }
+
             setNewResident({ name: "", phone_number: "", cnic: "" })
             setIsAddResidentOpen(false)
             await fetchProfiles()
@@ -525,12 +564,12 @@ export default function UnitDetailPage({ params }: { params: { id: string } }) {
 
                 <Card className="border-0 shadow-lg shadow-manzhil-teal/10 bg-[#0F766E] text-white hover:shadow-xl hover:-translate-y-0.5 transition-all relative overflow-hidden group">
                     <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                        <Activity className="w-24 h-24 -mr-8 -mt-8 rotate-12" />
+                        <Users className="w-24 h-24 -mr-8 -mt-8 rotate-12" />
                     </div>
                     <CardContent className="p-5 relative z-10">
-                        <p className="text-sm font-medium text-white/90 mb-4">Activity</p>
-                        <p className="text-4xl font-medium text-white mb-2">{bookings.length}</p>
-                        <p className="text-xs text-white/70 font-medium">{visitors.length} visitors, {parcels.length} parcels</p>
+                        <p className="text-sm font-medium text-white/90 mb-4">Staff</p>
+                        <p className="text-4xl font-medium text-white mb-2">{staff.length}</p>
+                        <p className="text-xs text-white/70 font-medium">Registered members</p>
                     </CardContent>
                 </Card>
             </div>
@@ -553,6 +592,11 @@ export default function UnitDetailPage({ params }: { params: { id: string } }) {
                         <AlertTriangle className="h-4 w-4" />
                         Complaints
                         {activeComplaints > 0 && <span className="bg-amber-500 text-white text-xs rounded-full px-2 py-0.5">{activeComplaints}</span>}
+                    </TabsTrigger>
+                    <TabsTrigger value="staff" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-manzhil-dark data-[state=active]:to-manzhil-teal data-[state=active]:text-white rounded-lg text-sm px-4 py-2.5 transition-all flex items-center gap-2 flex-shrink-0">
+                        <Users className="h-4 w-4" />
+                        Staff
+                        <span className="bg-white/20 text-xs rounded-full px-2 py-0.5">{staff.length}</span>
                     </TabsTrigger>
                     <TabsTrigger value="activity" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-manzhil-dark data-[state=active]:to-manzhil-teal data-[state=active]:text-white rounded-lg text-sm px-4 py-2.5 transition-all flex items-center gap-2 flex-shrink-0">
                         <Activity className="h-4 w-4" />
@@ -922,6 +966,67 @@ export default function UnitDetailPage({ params }: { params: { id: string } }) {
                                     ))
                                 )}
                             </div>
+                        </CardContent>
+                    </Card>
+                </TabsContent>
+
+                {/* ==================== STAFF TAB ==================== */}
+                <TabsContent value="staff">
+                    <Card className="border-0 shadow-xl shadow-manzhil-teal/5">
+                        <CardHeader className="bg-white">
+                            <CardTitle className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                    <Users className="h-5 w-5 text-manzhil-teal" />
+                                    <span>Staff Members</span>
+                                </div>
+                                <Badge variant="outline" className="text-lg px-4 py-2">
+                                    {staff.length} Total
+                                </Badge>
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent className="p-0">
+                            {staff.length === 0 ? (
+                                <div className="flex flex-col items-center justify-center py-16 text-center">
+                                    <Users className="h-16 w-16 text-gray-300 mb-4" />
+                                    <h3 className="text-xl font-semibold text-gray-900 mb-2">No Staff Members</h3>
+                                    <p className="text-gray-500 max-w-md">
+                                        No staff members registered for this unit. Staff can be added via WhatsApp.
+                                    </p>
+                                </div>
+                            ) : (
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow className="bg-gradient-to-r from-manzhil-teal/5 to-transparent">
+                                            <TableHead>Name</TableHead>
+                                            <TableHead>CNIC</TableHead>
+                                            <TableHead>Phone Number</TableHead>
+                                            <TableHead>Role</TableHead>
+                                            <TableHead>Registered On</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {staff.map((member) => (
+                                            <TableRow key={member.id} className="hover:bg-manzhil-teal/5 transition-colors">
+                                                <TableCell className="font-medium text-gray-900">{member.name}</TableCell>
+                                                <TableCell className="font-mono text-gray-600">{member.cnic}</TableCell>
+                                                <TableCell className="text-gray-600">{member.phone_number}</TableCell>
+                                                <TableCell>
+                                                    <Badge variant="outline" className="bg-manzhil-teal/10 text-manzhil-dark border-manzhil-teal/30">
+                                                        {member.role}
+                                                    </Badge>
+                                                </TableCell>
+                                                <TableCell className="text-gray-600">
+                                                    {new Date(member.created_at).toLocaleDateString("en-GB", {
+                                                        day: "2-digit",
+                                                        month: "short",
+                                                        year: "numeric",
+                                                    })}
+                                                </TableCell>
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                </Table>
+                            )}
                         </CardContent>
                     </Card>
                 </TabsContent>

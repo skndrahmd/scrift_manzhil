@@ -20,7 +20,7 @@ export async function getProfile(phoneNumber: string): Promise<Profile | null> {
     const { data: profile, error } = await supabase
       .from("profiles")
       .select(
-        "id, phone_number, name, apartment_number, is_active, maintenance_paid, maintenance_charges, last_payment_date, cnic, building_block, created_at"
+        "id, phone_number, name, apartment_number, is_active, cnic, building_block, created_at, unit_id, units:units!profiles_unit_id_fkey(maintenance_paid, maintenance_charges, last_payment_date)"
       )
       .eq("phone_number", phoneNumber)
       .single()
@@ -34,7 +34,15 @@ export async function getProfile(phoneNumber: string): Promise<Profile | null> {
     }
 
     console.log("[Webhook] Profile found:", profile?.name)
-    return profile as Profile
+    // Flatten unit maintenance fields onto the profile object so downstream
+    // code (menu.ts etc.) can continue reading profile.maintenance_paid etc.
+    const unit = (profile as any).units
+    return {
+      ...profile,
+      maintenance_paid: unit?.maintenance_paid ?? false,
+      maintenance_charges: unit?.maintenance_charges ?? 0,
+      last_payment_date: unit?.last_payment_date ?? null,
+    } as Profile
   } catch (error) {
     console.error("[Webhook] Profile error:", error)
     return null
@@ -146,13 +154,13 @@ export async function getUserBookings(
 }
 
 /**
- * Get user's staff members
+ * Get user's staff members (by unit)
  */
-export async function getUserStaff(profileId: string): Promise<any[]> {
+export async function getUserStaff(unitId: string): Promise<any[]> {
   const { data, error } = await supabase
     .from("staff")
     .select("*")
-    .eq("profile_id", profileId)
+    .eq("unit_id", unitId)
     .order("created_at", { ascending: false })
 
   if (error) {

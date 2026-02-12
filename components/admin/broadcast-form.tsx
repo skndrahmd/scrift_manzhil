@@ -55,8 +55,8 @@ import {
     AlertTriangle,
     Info,
     Timer,
+    Building,
 } from "lucide-react"
-import type { Profile } from "@/lib/supabase"
 
 interface BroadcastResult {
     recipientId: string
@@ -91,7 +91,7 @@ interface UsageStats {
 }
 
 export function BroadcastForm() {
-    const { profiles } = useAdmin()
+    const { units } = useAdmin()
     const { toast } = useToast()
 
     // Message variables (matches template: {{1}} = Title, {{2}} = Body)
@@ -101,12 +101,12 @@ export function BroadcastForm() {
     })
 
     // Filters
-    const [blockFilter, setBlockFilter] = useState<string>("all")
+    const [floorFilter, setFloorFilter] = useState<string>("all")
     const [maintenanceFilter, setMaintenanceFilter] = useState<string>("all")
     const [searchQuery, setSearchQuery] = useState("")
 
-    // Selection
-    const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+    // Selection (unit IDs)
+    const [selectedUnitIds, setSelectedUnitIds] = useState<Set<string>>(new Set())
 
     // Usage stats
     const [usage, setUsage] = useState<UsageStats | null>(null)
@@ -166,53 +166,63 @@ export function BroadcastForm() {
         return () => clearInterval(timer)
     }, [cooldownSeconds, fetchUsage])
 
-    // Get unique blocks from profiles
-    const blocks = useMemo(() => {
-        const uniqueBlocks = new Set<string>()
-        profiles.forEach(p => {
-            if (p.building_block) {
-                uniqueBlocks.add(p.building_block)
+    // Get unique floors from units
+    const floors = useMemo(() => {
+        const uniqueFloors = new Set<string>()
+        units.forEach(u => {
+            if (u.floor_number) {
+                uniqueFloors.add(u.floor_number)
             }
         })
-        return Array.from(uniqueBlocks).sort()
-    }, [profiles])
+        return Array.from(uniqueFloors).sort()
+    }, [units])
 
-    // Filter profiles
-    const filteredProfiles = useMemo(() => {
-        return profiles.filter(p => {
-            // Only active profiles
-            if (!p.is_active) return false
-
-            // Block filter
-            if (blockFilter !== "all" && p.building_block !== blockFilter) {
+    // Filter units
+    const filteredUnits = useMemo(() => {
+        return units.filter(u => {
+            // Floor filter
+            if (floorFilter !== "all" && u.floor_number !== floorFilter) {
                 return false
             }
 
             // Maintenance filter
-            if (maintenanceFilter === "paid" && !p.maintenance_paid) {
+            if (maintenanceFilter === "paid" && !u.maintenance_paid) {
                 return false
             }
-            if (maintenanceFilter === "unpaid" && p.maintenance_paid) {
+            if (maintenanceFilter === "unpaid" && u.maintenance_paid) {
                 return false
             }
 
-            // Search filter
+            // Search filter (apartment number or resident name)
             if (searchQuery) {
                 const query = searchQuery.toLowerCase()
-                return (
-                    p.name.toLowerCase().includes(query) ||
-                    p.apartment_number.toLowerCase().includes(query) ||
-                    p.phone_number.includes(query)
+                const matchesApartment = u.apartment_number.toLowerCase().includes(query)
+                const matchesResident = u.profiles?.some(p =>
+                    p.is_active && p.name.toLowerCase().includes(query)
                 )
+                return matchesApartment || matchesResident
             }
 
             return true
         })
-    }, [profiles, blockFilter, maintenanceFilter, searchQuery])
+    }, [units, floorFilter, maintenanceFilter, searchQuery])
+
+    // Expand selected unit IDs to active profile IDs
+    const selectedRecipientIds = useMemo(() => {
+        const ids = new Set<string>()
+        units.forEach(u => {
+            if (selectedUnitIds.has(u.id)) {
+                u.profiles?.forEach(p => {
+                    if (p.is_active) ids.add(p.id)
+                })
+            }
+        })
+        return ids
+    }, [units, selectedUnitIds])
 
     // Calculate estimated send time
     const estimatedSendTime = useMemo(() => {
-        const count = selectedIds.size
+        const count = selectedRecipientIds.size
         if (count === 0) return null
 
         // Calculate time based on rate limiting
@@ -227,11 +237,11 @@ export function BroadcastForm() {
             const minutes = Math.ceil(totalSeconds / 60)
             return `~${minutes} minute${minutes > 1 ? 's' : ''}`
         }
-    }, [selectedIds.size])
+    }, [selectedRecipientIds.size])
 
     // Check warnings
     const recipientWarning = useMemo(() => {
-        const count = selectedIds.size
+        const count = selectedRecipientIds.size
         if (count === 0) return null
 
         if (usage && count > usage.remaining) {
@@ -256,26 +266,26 @@ export function BroadcastForm() {
         }
 
         return null
-    }, [selectedIds.size, usage, estimatedSendTime])
+    }, [selectedRecipientIds.size, usage, estimatedSendTime])
 
-    // Selection handlers
-    const toggleSelect = (id: string) => {
-        const newSelected = new Set(selectedIds)
-        if (newSelected.has(id)) {
-            newSelected.delete(id)
+    // Selection handlers (unit-based)
+    const toggleSelect = (unitId: string) => {
+        const newSelected = new Set(selectedUnitIds)
+        if (newSelected.has(unitId)) {
+            newSelected.delete(unitId)
         } else {
-            newSelected.add(id)
+            newSelected.add(unitId)
         }
-        setSelectedIds(newSelected)
+        setSelectedUnitIds(newSelected)
     }
 
     const selectAll = () => {
-        const newSelected = new Set(filteredProfiles.map(p => p.id))
-        setSelectedIds(newSelected)
+        const newSelected = new Set(filteredUnits.map(u => u.id))
+        setSelectedUnitIds(newSelected)
     }
 
     const clearSelection = () => {
-        setSelectedIds(new Set())
+        setSelectedUnitIds(new Set())
     }
 
     // Check if message is valid
@@ -283,18 +293,18 @@ export function BroadcastForm() {
 
     // Check if can send
     const canSend = useMemo(() => {
-        if (selectedIds.size === 0) return false
+        if (selectedRecipientIds.size === 0) return false
         if (!isMessageValid) return false
         if (cooldownSeconds > 0) return false
-        if (usage && selectedIds.size > usage.remaining) return false
+        if (usage && selectedRecipientIds.size > usage.remaining) return false
         return true
-    }, [selectedIds.size, isMessageValid, cooldownSeconds, usage])
+    }, [selectedRecipientIds.size, isMessageValid, cooldownSeconds, usage])
 
     // Handle send broadcast
     const handleSend = async () => {
         setShowConfirmation(false)
 
-        const recipientIds = Array.from(selectedIds)
+        const recipientIds = Array.from(selectedRecipientIds)
 
         setSendingState({
             isOpen: true,
@@ -441,11 +451,11 @@ export function BroadcastForm() {
                                 </Alert>
                             )}
 
-                            {selectedIds.size > 0 && (
+                            {selectedUnitIds.size > 0 && (
                                 <div className="bg-gray-50 rounded-lg p-3 text-sm space-y-1">
                                     <div className="flex items-center gap-2 text-gray-600">
-                                        <Users className="h-4 w-4" />
-                                        <span>Selected: {selectedIds.size} recipients</span>
+                                        <Building className="h-4 w-4" />
+                                        <span>{selectedUnitIds.size} units ({selectedRecipientIds.size} recipients)</span>
                                     </div>
                                     {estimatedSendTime && (
                                         <div className="flex items-center gap-2 text-gray-600">
@@ -453,7 +463,7 @@ export function BroadcastForm() {
                                             <span>Estimated time: {estimatedSendTime}</span>
                                         </div>
                                     )}
-                                    {usage.remaining >= selectedIds.size ? (
+                                    {usage.remaining >= selectedRecipientIds.size ? (
                                         <div className="flex items-center gap-2 text-green-600">
                                             <CheckCircle2 className="h-4 w-4" />
                                             <span>Within daily limit</span>
@@ -515,21 +525,21 @@ export function BroadcastForm() {
                         Recipients
                     </CardTitle>
                     <CardDescription>
-                        Filter and select residents to receive the broadcast
+                        Filter and select units to broadcast to all active residents
                     </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                     {/* Filters */}
                     <div className="flex flex-wrap gap-3">
-                        <Select value={blockFilter} onValueChange={setBlockFilter}>
+                        <Select value={floorFilter} onValueChange={setFloorFilter}>
                             <SelectTrigger className="w-[150px]">
-                                <SelectValue placeholder="All Blocks" />
+                                <SelectValue placeholder="All Floors" />
                             </SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="all">All Blocks</SelectItem>
-                                {blocks.map(block => (
-                                    <SelectItem key={block} value={block}>
-                                        {block}
+                                <SelectItem value="all">All Floors</SelectItem>
+                                {floors.map(floor => (
+                                    <SelectItem key={floor} value={floor}>
+                                        Floor {floor}
                                     </SelectItem>
                                 ))}
                             </SelectContent>
@@ -549,7 +559,7 @@ export function BroadcastForm() {
                         <div className="relative flex-1 min-w-[200px]">
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                             <Input
-                                placeholder="Search by name, apartment, phone..."
+                                placeholder="Search by apartment or resident name..."
                                 className="pl-9"
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
@@ -566,7 +576,7 @@ export function BroadcastForm() {
                                 onClick={selectAll}
                                 className="border-manzhil-teal/20 text-manzhil-teal hover:bg-manzhil-teal/5"
                             >
-                                Select All ({filteredProfiles.length})
+                                Select All ({filteredUnits.length})
                             </Button>
                             <Button
                                 variant="outline"
@@ -578,7 +588,7 @@ export function BroadcastForm() {
                             </Button>
                         </div>
                         <Badge variant="secondary" className="bg-manzhil-teal/10 text-manzhil-dark">
-                            {selectedIds.size} of {filteredProfiles.length} selected
+                            {selectedUnitIds.size} units ({selectedRecipientIds.size} recipients)
                         </Badge>
                     </div>
 
@@ -601,14 +611,14 @@ export function BroadcastForm() {
                         </Alert>
                     )}
 
-                    {/* Recipients Table */}
+                    {/* Units Table */}
                     <ScrollArea className="h-[300px] border rounded-lg">
                         <Table>
                             <TableHeader className="sticky top-0 bg-white z-10">
                                 <TableRow>
                                     <TableHead className="w-[50px]">
                                         <Checkbox
-                                            checked={selectedIds.size === filteredProfiles.length && filteredProfiles.length > 0}
+                                            checked={selectedUnitIds.size === filteredUnits.length && filteredUnits.length > 0}
                                             onCheckedChange={(checked) => {
                                                 if (checked) {
                                                     selectAll()
@@ -618,48 +628,53 @@ export function BroadcastForm() {
                                             }}
                                         />
                                     </TableHead>
-                                    <TableHead>Name</TableHead>
                                     <TableHead>Apartment</TableHead>
-                                    <TableHead>Block</TableHead>
+                                    <TableHead>Floor</TableHead>
+                                    <TableHead>Residents</TableHead>
                                     <TableHead>Status</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {filteredProfiles.length === 0 ? (
+                                {filteredUnits.length === 0 ? (
                                     <TableRow>
                                         <TableCell colSpan={5} className="text-center py-8 text-gray-500">
-                                            No residents found matching your filters
+                                            No units found matching your filters
                                         </TableCell>
                                     </TableRow>
                                 ) : (
-                                    filteredProfiles.map((profile) => (
-                                        <TableRow
-                                            key={profile.id}
-                                            className="cursor-pointer hover:bg-manzhil-teal/5"
-                                            onClick={() => toggleSelect(profile.id)}
-                                        >
-                                            <TableCell onClick={(e) => e.stopPropagation()}>
-                                                <Checkbox
-                                                    checked={selectedIds.has(profile.id)}
-                                                    onCheckedChange={() => toggleSelect(profile.id)}
-                                                />
-                                            </TableCell>
-                                            <TableCell className="font-medium">{profile.name}</TableCell>
-                                            <TableCell>{profile.apartment_number}</TableCell>
-                                            <TableCell>{profile.building_block || "-"}</TableCell>
-                                            <TableCell>
-                                                {profile.maintenance_paid ? (
-                                                    <Badge variant="secondary" className="bg-green-100 text-green-700">
-                                                        Paid
-                                                    </Badge>
-                                                ) : (
-                                                    <Badge variant="secondary" className="bg-red-100 text-red-700">
-                                                        Unpaid
-                                                    </Badge>
-                                                )}
-                                            </TableCell>
-                                        </TableRow>
-                                    ))
+                                    filteredUnits.map((unit) => {
+                                        const activeResidents = unit.profiles?.filter(p => p.is_active) || []
+                                        return (
+                                            <TableRow
+                                                key={unit.id}
+                                                className="cursor-pointer hover:bg-manzhil-teal/5"
+                                                onClick={() => toggleSelect(unit.id)}
+                                            >
+                                                <TableCell onClick={(e) => e.stopPropagation()}>
+                                                    <Checkbox
+                                                        checked={selectedUnitIds.has(unit.id)}
+                                                        onCheckedChange={() => toggleSelect(unit.id)}
+                                                    />
+                                                </TableCell>
+                                                <TableCell className="font-medium">{unit.apartment_number}</TableCell>
+                                                <TableCell>{unit.floor_number || "-"}</TableCell>
+                                                <TableCell>
+                                                    <span className="text-gray-600">{activeResidents.length}</span>
+                                                </TableCell>
+                                                <TableCell>
+                                                    {unit.maintenance_paid ? (
+                                                        <Badge variant="secondary" className="bg-green-100 text-green-700">
+                                                            Paid
+                                                        </Badge>
+                                                    ) : (
+                                                        <Badge variant="secondary" className="bg-red-100 text-red-700">
+                                                            Unpaid
+                                                        </Badge>
+                                                    )}
+                                                </TableCell>
+                                            </TableRow>
+                                        )
+                                    })
                                 )}
                             </TableBody>
                         </Table>
@@ -684,11 +699,11 @@ export function BroadcastForm() {
                         ) : (
                             <>
                                 <Send className="h-5 w-5 mr-2" />
-                                Send Broadcast ({selectedIds.size})
+                                Send Broadcast ({selectedRecipientIds.size} recipients)
                             </>
                         )}
                     </Button>
-                    {!isMessageValid && selectedIds.size > 0 && (
+                    {!isMessageValid && selectedUnitIds.size > 0 && (
                         <p className="text-center text-sm text-amber-600 mt-2 flex items-center justify-center gap-1">
                             <AlertCircle className="h-4 w-4" />
                             Please fill in at least one placeholder value
@@ -706,7 +721,7 @@ export function BroadcastForm() {
                             Confirm Broadcast
                         </DialogTitle>
                         <DialogDescription>
-                            You are about to send a broadcast message to {selectedIds.size} recipients.
+                            You are about to send a broadcast to {selectedUnitIds.size} units ({selectedRecipientIds.size} residents).
                             This action cannot be undone.
                         </DialogDescription>
                     </DialogHeader>
@@ -716,12 +731,12 @@ export function BroadcastForm() {
                             <p><strong>Body:</strong> {variables["2"] || "(empty)"}</p>
                         </div>
 
-                        {selectedIds.size > BROADCAST_LIMITS.HARD_RECIPIENT_LIMIT && (
+                        {selectedRecipientIds.size > BROADCAST_LIMITS.HARD_RECIPIENT_LIMIT && (
                             <Alert variant="default" className="border-amber-500 bg-amber-50 text-amber-900">
                                 <AlertTriangle className="h-4 w-4" />
                                 <AlertTitle>Large Broadcast</AlertTitle>
                                 <AlertDescription>
-                                    Sending to {selectedIds.size} recipients will take approximately {estimatedSendTime}.
+                                    Sending to {selectedRecipientIds.size} recipients will take approximately {estimatedSendTime}.
                                     Messages are rate-limited to protect your WhatsApp account.
                                 </AlertDescription>
                             </Alert>
@@ -736,7 +751,7 @@ export function BroadcastForm() {
                             onClick={handleSend}
                         >
                             <Send className="h-4 w-4 mr-2" />
-                            Send to {selectedIds.size} Recipients
+                            Send to {selectedRecipientIds.size} Recipients
                         </Button>
                     </DialogFooter>
                 </DialogContent>

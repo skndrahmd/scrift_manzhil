@@ -24,40 +24,6 @@ export function yyyymmCompare(a: { year: number; month: number }, b: { year: num
   return a.month - b.month
 }
 
-export async function getActiveProfiles(): Promise<Profile[]> {
-  const { data } = await supabase.from("profiles").select("*").eq("is_active", true)
-  return data || []
-}
-
-export async function ensureCurrentMonthRows(profiles: Profile[]) {
-  const now = new Date()
-  const year = now.getFullYear()
-  const month = now.getMonth() + 1
-
-  // Fetch existing rows for current month
-  const { data: existing } = await supabase
-    .from("maintenance_payments")
-    .select("profile_id, year, month")
-    .eq("year", year)
-    .eq("month", month)
-
-  const existingKey = new Set((existing || []).map((r) => `${r.profile_id}-${r.year}-${r.month}`))
-
-  const payload = profiles
-    .filter((p) => !existingKey.has(`${p.id}-${year}-${month}`))
-    .map((p) => ({
-      profile_id: p.id,
-      year,
-      month,
-      amount: p.maintenance_charges ?? 0,
-      status: "unpaid",
-    }))
-
-  if (payload.length > 0) {
-    await supabase.from("maintenance_payments").insert(payload)
-  }
-}
-
 export async function markOverduePastMonths() {
   const now = new Date()
   const currentYear = now.getFullYear()
