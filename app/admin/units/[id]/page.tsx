@@ -34,6 +34,7 @@ import {
     Ticket,
     Loader2,
     Pencil,
+    Bell,
 } from "lucide-react"
 
 function formatMonth(year: number, month: number) {
@@ -405,6 +406,31 @@ export default function UnitDetailPage({ params }: { params: { id: string } }) {
             await fetchUnits()
         } catch (error: any) {
             toast({ title: "Error", description: error?.message || "Failed to update", variant: "destructive" })
+        }
+    }
+
+    // Send maintenance reminder state
+    const [sendingReminderId, setSendingReminderId] = useState<string | null>(null)
+
+    async function sendMaintenanceReminder(paymentId: string) {
+        setSendingReminderId(paymentId)
+        try {
+            const res = await fetch("/api/maintenance/bulk-reminder", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ unitIds: [unitId] }),
+            })
+            const result = await res.json()
+            if (!res.ok) throw new Error(result.error || "Failed to send reminder")
+            if (result.sent > 0) {
+                toast({ title: "Reminder Sent", description: `Reminder sent to ${primaryResident?.name || "resident"}` })
+            } else {
+                toast({ title: "Failed", description: result.errors?.[0] || "Could not send reminder", variant: "destructive" })
+            }
+        } catch (error: any) {
+            toast({ title: "Error", description: error?.message || "Failed to send reminder", variant: "destructive" })
+        } finally {
+            setSendingReminderId(null)
         }
     }
 
@@ -845,15 +871,33 @@ export default function UnitDetailPage({ params }: { params: { id: string } }) {
                                                 </TableCell>
                                                 <TableCell>{row.paid_date ? new Date(row.paid_date + "T00:00:00").toLocaleDateString("en-GB") : "—"}</TableCell>
                                                 <TableCell className="text-right">
-                                                    {row.status === "paid" ? (
-                                                        <Button variant="outline" size="sm" onClick={() => markPayment(row, false)} className="text-red-600 hover:bg-red-50">
-                                                            <XCircle className="h-4 w-4 mr-1" /> Unpaid
-                                                        </Button>
-                                                    ) : (
-                                                        <Button variant="outline" size="sm" onClick={() => markPayment(row, true)} className="text-manzhil-teal hover:bg-manzhil-teal/10">
-                                                            <CheckCircle className="h-4 w-4 mr-1" /> Paid
-                                                        </Button>
-                                                    )}
+                                                    <div className="flex gap-2 justify-end">
+                                                        {row.status === "paid" ? (
+                                                            <Button variant="outline" size="sm" onClick={() => markPayment(row, false)} className="text-red-600 hover:bg-red-50">
+                                                                <XCircle className="h-4 w-4 mr-1" /> Unpaid
+                                                            </Button>
+                                                        ) : (
+                                                            <>
+                                                                <Button
+                                                                    variant="outline"
+                                                                    size="sm"
+                                                                    onClick={() => sendMaintenanceReminder(row.id)}
+                                                                    disabled={sendingReminderId === row.id}
+                                                                    className="text-amber-600 hover:bg-amber-50 border-amber-200"
+                                                                    title="Send payment reminder"
+                                                                >
+                                                                    {sendingReminderId === row.id ? (
+                                                                        <Loader2 className="h-4 w-4 animate-spin" />
+                                                                    ) : (
+                                                                        <Bell className="h-4 w-4" />
+                                                                    )}
+                                                                </Button>
+                                                                <Button variant="outline" size="sm" onClick={() => markPayment(row, true)} className="text-manzhil-teal hover:bg-manzhil-teal/10">
+                                                                    <CheckCircle className="h-4 w-4 mr-1" /> Paid
+                                                                </Button>
+                                                            </>
+                                                        )}
+                                                    </div>
                                                 </TableCell>
                                             </TableRow>
                                         ))}
@@ -881,15 +925,31 @@ export default function UnitDetailPage({ params }: { params: { id: string } }) {
                                                     </div>
                                                     <Badge variant={row.status === "paid" ? "default" : "secondary"}>{row.status}</Badge>
                                                 </div>
-                                                <div className="pt-2 border-t border-gray-100">
+                                                <div className="pt-2 border-t border-gray-100 flex gap-2">
                                                     {row.status === "paid" ? (
                                                         <Button variant="outline" size="sm" onClick={() => markPayment(row, false)} className="w-full text-red-600">
                                                             <XCircle className="h-4 w-4 mr-2" /> Mark Unpaid
                                                         </Button>
                                                     ) : (
-                                                        <Button variant="outline" size="sm" onClick={() => markPayment(row, true)} className="w-full text-manzhil-teal">
-                                                            <CheckCircle className="h-4 w-4 mr-2" /> Mark Paid
-                                                        </Button>
+                                                        <>
+                                                            <Button
+                                                                variant="outline"
+                                                                size="sm"
+                                                                onClick={() => sendMaintenanceReminder(row.id)}
+                                                                disabled={sendingReminderId === row.id}
+                                                                className="text-amber-600 border-amber-200"
+                                                                title="Send reminder"
+                                                            >
+                                                                {sendingReminderId === row.id ? (
+                                                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                                                ) : (
+                                                                    <Bell className="h-4 w-4" />
+                                                                )}
+                                                            </Button>
+                                                            <Button variant="outline" size="sm" onClick={() => markPayment(row, true)} className="flex-1 text-manzhil-teal">
+                                                                <CheckCircle className="h-4 w-4 mr-2" /> Mark Paid
+                                                            </Button>
+                                                        </>
                                                     )}
                                                 </div>
                                             </CardContent>

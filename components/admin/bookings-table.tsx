@@ -16,6 +16,8 @@ import {
     Clock,
     X,
     Eye,
+    Bell,
+    Loader2,
 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -42,6 +44,8 @@ export function BookingsTable() {
     const [bookingsPeriod, setBookingsPeriod] = useState<Period>("all")
     const [currentPage, setCurrentPage] = useState(1)
     const [updatingPaymentId, setUpdatingPaymentId] = useState<string | null>(null)
+    const [sendingReminderId, setSendingReminderId] = useState<string | null>(null)
+    const [sendingBulkReminder, setSendingBulkReminder] = useState(false)
 
     const itemsPerPage = 10
 
@@ -185,6 +189,58 @@ export function BookingsTable() {
         }
     }
 
+    const unpaidBookings = useMemo(
+        () => bookings.filter((b) => b.status === "confirmed" && b.payment_status === "pending"),
+        [bookings],
+    )
+
+    const sendBookingReminder = async (bookingId: string) => {
+        setSendingReminderId(bookingId)
+        try {
+            const res = await fetch("/api/bookings/send-reminder", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ bookingIds: [bookingId] }),
+            })
+            const result = await res.json()
+            if (!res.ok) throw new Error(result.error || "Failed to send reminder")
+            if (result.sent > 0) {
+                const booking = bookings.find((b) => b.id === bookingId)
+                toast({ title: "Reminder Sent", description: `Reminder sent to ${booking?.profiles?.name || "resident"}` })
+            } else {
+                toast({ title: "Failed", description: result.errors?.[0] || "Could not send reminder", variant: "destructive" })
+            }
+        } catch (error: any) {
+            toast({ title: "Error", description: error?.message || "Failed to send reminder", variant: "destructive" })
+        } finally {
+            setSendingReminderId(null)
+        }
+    }
+
+    const handleBulkBookingReminder = async () => {
+        const ids = unpaidBookings.map((b) => b.id)
+        if (ids.length === 0) return
+
+        setSendingBulkReminder(true)
+        try {
+            const res = await fetch("/api/bookings/send-reminder", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ bookingIds: ids }),
+            })
+            const result = await res.json()
+            if (!res.ok) throw new Error(result.error || "Failed to send reminders")
+            toast({
+                title: "Reminders Sent",
+                description: `Sent: ${result.sent}, Failed: ${result.failed} out of ${result.total} bookings`,
+            })
+        } catch (error: any) {
+            toast({ title: "Error", description: error?.message || "Failed to send reminders", variant: "destructive" })
+        } finally {
+            setSendingBulkReminder(false)
+        }
+    }
+
     return (
         <Card className="border-0 shadow-lg shadow-manzhil-teal/10">
             <CardHeader className="pb-4">
@@ -240,6 +296,18 @@ export function BookingsTable() {
                                 <SelectItem value="monthly">This Month</SelectItem>
                             </SelectContent>
                         </Select>
+
+                        {/* Remind All Unpaid */}
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={handleBulkBookingReminder}
+                            disabled={sendingBulkReminder || unpaidBookings.length === 0}
+                            className="border-amber-300 text-amber-700 hover:bg-amber-50"
+                        >
+                            {sendingBulkReminder ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Bell className="h-4 w-4 mr-2" />}
+                            Remind All Unpaid{unpaidBookings.length > 0 ? ` (${unpaidBookings.length})` : ""}
+                        </Button>
 
                         {/* Export PDF */}
                         <Button
@@ -328,6 +396,22 @@ export function BookingsTable() {
                                         </TableCell>
                                         <TableCell className="text-right">
                                             <div className="flex gap-2 justify-end">
+                                                {booking.payment_status === "pending" && booking.status === "confirmed" && (
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        onClick={() => sendBookingReminder(booking.id)}
+                                                        disabled={sendingReminderId === booking.id}
+                                                        className="text-amber-600 hover:bg-amber-50 border-amber-200"
+                                                        title="Send payment reminder"
+                                                    >
+                                                        {sendingReminderId === booking.id ? (
+                                                            <Loader2 className="h-4 w-4 animate-spin" />
+                                                        ) : (
+                                                            <Bell className="h-4 w-4" />
+                                                        )}
+                                                    </Button>
+                                                )}
                                                 {booking.payment_status === "pending" && (
                                                     <Button
                                                         variant="outline"
@@ -422,6 +506,22 @@ export function BookingsTable() {
                                         </Badge>
 
                                         <div className="flex gap-2">
+                                            {booking.payment_status === "pending" && booking.status === "confirmed" && (
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    onClick={() => sendBookingReminder(booking.id)}
+                                                    disabled={sendingReminderId === booking.id}
+                                                    className="h-8 text-amber-600 border-amber-200 hover:bg-amber-50"
+                                                    title="Send reminder"
+                                                >
+                                                    {sendingReminderId === booking.id ? (
+                                                        <Loader2 className="h-3 w-3 animate-spin" />
+                                                    ) : (
+                                                        <Bell className="h-3 w-3" />
+                                                    )}
+                                                </Button>
+                                            )}
                                             {booking.payment_status === "pending" && (
                                                 <Button
                                                     variant="outline"

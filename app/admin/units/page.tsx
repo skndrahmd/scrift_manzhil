@@ -25,6 +25,7 @@ import {
     Plus,
     Upload,
     Loader2,
+    Bell,
 } from "lucide-react"
 import Link from "next/link"
 import { useMemo, useState } from "react"
@@ -50,6 +51,9 @@ export default function UnitsPage() {
 
     // Bulk import state
     const [isBulkImportOpen, setIsBulkImportOpen] = useState(false)
+
+    // Bulk reminder state
+    const [sendingBulk, setSendingBulk] = useState(false)
 
     // Enrich units with computed data from pre-loaded profiles
     const enrichedUnits = useMemo(() => {
@@ -172,6 +176,31 @@ export default function UnitsPage() {
         }
     }
 
+    // Bulk reminder handler
+    const handleBulkReminder = async () => {
+        const unpaidUnitIds = enrichedUnits.filter((u) => !u.maintenance_paid).map((u) => u.id)
+        if (unpaidUnitIds.length === 0) return
+
+        setSendingBulk(true)
+        try {
+            const res = await fetch("/api/maintenance/bulk-reminder", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ unitIds: unpaidUnitIds }),
+            })
+            const result = await res.json()
+            if (!res.ok) throw new Error(result.error || "Failed to send reminders")
+            toast({
+                title: "Reminders Sent",
+                description: `Sent: ${result.sent}, Failed: ${result.failed} out of ${result.total} units`,
+            })
+        } catch (error: any) {
+            toast({ title: "Error", description: error?.message || "Failed to send reminders", variant: "destructive" })
+        } finally {
+            setSendingBulk(false)
+        }
+    }
+
     if (loading) {
         return (
             <div className="space-y-6">
@@ -200,6 +229,15 @@ export default function UnitsPage() {
                     <Badge variant="outline" className="text-sm">{totalUnits} total</Badge>
                 </div>
                 <div className="flex items-center gap-2">
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleBulkReminder}
+                        disabled={sendingBulk || unpaidUnits === 0}
+                    >
+                        {sendingBulk ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Bell className="h-4 w-4 mr-2" />}
+                        Remind All Unpaid
+                    </Button>
                     <Button
                         variant="outline"
                         size="sm"
