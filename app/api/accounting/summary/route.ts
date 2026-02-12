@@ -28,7 +28,13 @@ export async function GET(request: NextRequest) {
 
         if (bookingsError) throw bookingsError
 
+        console.log("=== ACCOUNTING DEBUG ===")
+        console.log("Date range:", startDate, "to", endDate)
+        console.log("Bookings query result:", JSON.stringify(bookings))
+        console.log("Bookings count:", bookings?.length)
+
         const bookingRevenue = bookings?.reduce((sum, b) => sum + (b.booking_charges || 0), 0) || 0
+        console.log("Booking revenue calculated:", bookingRevenue)
 
         // Fetch maintenance revenue (paid maintenance)
         const { data: maintenance, error: maintenanceError } = await supabaseAdmin
