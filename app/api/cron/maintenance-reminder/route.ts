@@ -12,7 +12,7 @@ import {
 const CRON_KEY = process.env.CRON_SECRET
 const APP_BASE_URL = (process.env.NEXT_PUBLIC_APP_URL || "https://your-app-url.com").replace(/\/$/, "")
 
-export async function POST(request: NextRequest) {
+async function handleMaintenanceReminder(request: NextRequest) {
   const provided = request.headers.get("x-cron-key")
   if (CRON_KEY && provided !== CRON_KEY) return new Response("Unauthorized", { status: 401 })
 
@@ -91,6 +91,25 @@ export async function POST(request: NextRequest) {
             dueDate,
             invoiceUrl: invoiceLink,
           })
+
+          // Check for old unpaid invoices and send a reminder alongside the new invoice
+          const oldUnpaid = rows
+            .filter((r) => r.status !== "paid" && r.id !== inserted.id)
+            .sort((a, b) => (a.year === b.year ? a.month - b.month : a.year - b.year))
+
+          if (oldUnpaid.length > 0) {
+            const totalDue = oldUnpaid.reduce((sum, r) => sum + Number(r.amount || 0), 0)
+            const monthsList = oldUnpaid.map((r) => formatMonthYear(r.year, r.month)).join(", ")
+            const oldInvoiceLink = `${APP_BASE_URL}/maintenance-invoice/${oldUnpaid[0].id}?snapshot=unpaid`
+
+            await sendMaintenanceReminder({
+              phone: primaryResident.phone_number,
+              name: primaryResident.name || "Resident",
+              monthsList,
+              totalAmount: totalDue,
+              invoiceUrl: oldInvoiceLink,
+            })
+          }
         }
       }
       // From 3rd onwards, send reminders for unpaid invoices
@@ -157,6 +176,10 @@ export async function POST(request: NextRequest) {
   }
 }
 
-export async function GET() {
-  return new Response("Use POST", { status: 200 })
+export async function GET(request: NextRequest) {
+  return handleMaintenanceReminder(request)
+}
+
+export async function POST(request: NextRequest) {
+  return handleMaintenanceReminder(request)
 }
