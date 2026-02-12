@@ -1,5 +1,5 @@
 import type { NextRequest } from "next/server"
-import { supabase } from "@/lib/supabase"
+import { supabaseAdmin } from "@/lib/supabase"
 import { getPakistanISOString } from "@/lib/dateUtils"
 import {
   sendMaintenanceInvoice,
@@ -23,13 +23,13 @@ export async function POST(request: NextRequest) {
     const currentMonth = today.getMonth() + 1
 
     // Fetch all units with their primary residents for contact info
-    const { data: units, error: uErr } = await supabase
+    const { data: units, error: uErr } = await supabaseAdmin
       .from("units")
       .select("id, apartment_number, maintenance_charges, profiles(id, name, phone_number, is_primary_resident, is_active)")
     if (uErr || !units) return new Response("Units fetch error", { status: 500 })
 
     // Fetch all ledgers for context
-    const { data: ledgers } = await supabase
+    const { data: ledgers } = await supabaseAdmin
       .from("maintenance_payments")
       .select("*")
       .gte("year", currentYear - 1)
@@ -61,7 +61,7 @@ export async function POST(request: NextRequest) {
 
       // If it's the 1st of the month and no invoice exists, create it and send notification
       if (dayOfMonth === 1 && !hasCurrent) {
-        const { data: inserted } = await supabase
+        const { data: inserted } = await supabaseAdmin
           .from("maintenance_payments")
           .insert({
             unit_id: unit.id,
@@ -97,7 +97,7 @@ export async function POST(request: NextRequest) {
       else if (dayOfMonth >= 3) {
         // Ensure current month invoice exists (create if not - safety check)
         if (!hasCurrent) {
-          const { data: inserted } = await supabase
+          const { data: inserted } = await supabaseAdmin
             .from("maintenance_payments")
             .insert({
               unit_id: unit.id,
@@ -143,7 +143,7 @@ export async function POST(request: NextRequest) {
 
         // Update reminder timestamp for all unpaid invoices
         const ids = unpaid.map((u) => u.id)
-        await supabase
+        await supabaseAdmin
           .from("maintenance_payments")
           .update({ reminder_last_sent_at: getPakistanISOString() })
           .in("id", ids)

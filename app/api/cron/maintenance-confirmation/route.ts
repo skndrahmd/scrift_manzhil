@@ -1,5 +1,5 @@
 import type { NextRequest } from "next/server"
-import { supabase } from "@/lib/supabase"
+import { supabaseAdmin } from "@/lib/supabase"
 import { getPakistanISOString } from "@/lib/dateUtils"
 import { sendMaintenancePaymentConfirmed, formatMonthYear } from "@/lib/twilio"
 
@@ -10,7 +10,7 @@ export async function POST(request: NextRequest) {
   const provided = request.headers.get("x-cron-key")
   if (CRON_KEY && provided !== CRON_KEY) return new Response("Unauthorized", { status: 401 })
   try {
-    const { data: rows } = await supabase
+    const { data: rows } = await supabaseAdmin
       .from("maintenance_payments")
       .select("*, profiles:profiles!maintenance_payments_profile_id_fkey (name, phone_number)")
       .eq("status", "paid")
@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
         receiptUrl: invoiceLink,
       })
 
-      await supabase
+      await supabaseAdmin
         .from("maintenance_payments")
         .update({
           confirmation_sent: true,

@@ -1,5 +1,5 @@
 import type { NextRequest } from "next/server"
-import { supabase, supabaseAdmin } from "@/lib/supabase"
+import { supabaseAdmin } from "@/lib/supabase"
 import jsPDF from "jspdf"
 import autoTable from "jspdf-autotable"
 import { sendTemplate, sendMessage } from "@/lib/twilio"
@@ -34,20 +34,20 @@ export async function POST(request: NextRequest) {
     const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000)
 
     // Fetch last 24 hours data
-    const { data: recentComplaints } = await supabase
+    const { data: recentComplaints } = await supabaseAdmin
       .from("complaints")
       .select("*, profiles(name, apartment_number)")
       .gte("created_at", yesterday.toISOString())
       .order("created_at", { ascending: false })
 
-    const { data: recentBookings } = await supabase
+    const { data: recentBookings } = await supabaseAdmin
       .from("bookings")
       .select("*, profiles(name, apartment_number)")
       .gte("created_at", yesterday.toISOString())
       .order("created_at", { ascending: false })
 
     // Fetch all open complaints
-    const { data: openComplaints } = await supabase
+    const { data: openComplaints } = await supabaseAdmin
       .from("complaints")
       .select("*, profiles(name, apartment_number)")
       .in("status", ["pending", "in-progress"])

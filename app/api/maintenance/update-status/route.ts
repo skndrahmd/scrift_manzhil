@@ -1,5 +1,5 @@
 import type { NextRequest } from "next/server"
-import { supabase } from "@/lib/supabase"
+import { supabaseAdmin } from "@/lib/supabase"
 import { getPakistanISOString } from "@/lib/dateUtils"
 import { sendMaintenancePaymentConfirmed, formatMonthYear } from "@/lib/twilio"
 
@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    const { data: payment, error: fetchError } = await supabase
+    const { data: payment, error: fetchError } = await supabaseAdmin
       .from("maintenance_payments")
       .select(
         `
@@ -61,7 +61,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Optimistic locking: only update if record hasn't changed since we read it
-    const { data: updateResult, error: updateError } = await supabase
+    const { data: updateResult, error: updateError } = await supabaseAdmin
       .from("maintenance_payments")
       .update(updates)
       .eq("id", paymentId)
@@ -86,7 +86,7 @@ export async function POST(request: NextRequest) {
     // Update the units table to keep maintenance_paid in sync
     const unitId = (payment as any).unit_id
     if (unitId) {
-      const { error: unitUpdateError } = await supabase
+      const { error: unitUpdateError } = await supabaseAdmin
         .from("units")
         .update({
           maintenance_paid: isPaid,
@@ -119,7 +119,7 @@ export async function POST(request: NextRequest) {
       // Create transaction record for accounting
       try {
         const monthName = new Date(payment.year, payment.month - 1, 1).toLocaleString("en-US", { month: "long" })
-        await supabase.from("transactions").insert({
+        await supabaseAdmin.from("transactions").insert({
           transaction_type: "maintenance_income",
           reference_id: payment.id,
           profile_id: payment.profiles?.id || (payment as any).profile_id,

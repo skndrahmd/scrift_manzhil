@@ -1,5 +1,5 @@
 import type { NextRequest } from "next/server"
-import { supabase } from "@/lib/supabase"
+import { supabaseAdmin } from "@/lib/supabase"
 import { sendMessage, formatCurrency } from "@/lib/twilio"
 
 export async function POST(request: NextRequest) {
@@ -17,7 +17,7 @@ export async function POST(request: NextRequest) {
     console.log(`[BULK MAINTENANCE REMINDER] Sending reminders for ${unitIds.length} units`)
 
     // Fetch units with their primary residents
-    const { data: units, error: unitError } = await supabase
+    const { data: units, error: unitError } = await supabaseAdmin
       .from("units")
       .select("id, apartment_number, maintenance_charges, last_payment_date, maintenance_paid, profiles(id, name, phone_number, is_primary_resident, is_active)")
       .in("id", unitIds)

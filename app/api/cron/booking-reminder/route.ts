@@ -24,7 +24,8 @@ export async function POST(request: NextRequest) {
   if (CRON_KEY && provided !== CRON_KEY) return new Response("Unauthorized", { status: 401 })
 
   try {
-    const { data: bookings } = await supabaseAdmin
+    console.log("[BOOKING REMINDER] Starting booking reminder check...")
+    const { data: bookings, error: fetchError } = await supabaseAdmin
       .from("bookings")
       .select(
         `
@@ -46,9 +47,7 @@ export async function POST(request: NextRequest) {
       const daysSince = daysSinceCreation(b.created_at)
 
       // Day 0 (same day as creation): Don't send reminder
-      if (daysSince === 0) {
-        continue
-      }
+      if (daysSince === 0) continue
 
       // Day 3+: Cancel the booking
       if (daysSince >= 3) {
@@ -91,9 +90,10 @@ export async function POST(request: NextRequest) {
         .eq("id", b.id)
     }
 
+    console.log("[BOOKING REMINDER] Done processing all bookings")
     return new Response("Booking reminders processed", { status: 200 })
   } catch (e) {
-    console.error("booking-reminder error:", e)
+    console.error("[BOOKING REMINDER] Error:", e)
     return new Response("Error", { status: 500 })
   }
 }

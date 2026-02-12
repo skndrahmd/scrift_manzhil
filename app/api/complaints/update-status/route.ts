@@ -1,5 +1,5 @@
 import type { NextRequest } from "next/server"
-import { supabase } from "@/lib/supabase"
+import { supabaseAdmin } from "@/lib/supabase"
 import { getPakistanISOString } from "@/lib/dateUtils"
 import {
   sendComplaintInProgress,
@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Fetch complaint data
-    const { data: complaint, error: fetchError } = await supabase
+    const { data: complaint, error: fetchError } = await supabaseAdmin
       .from("complaints")
       .select(
         `
@@ -56,7 +56,7 @@ export async function POST(request: NextRequest) {
     const originalUpdatedAt = complaint.updated_at
 
     // Fetch profile separately (more reliable than join)
-    const { data: profile, error: profileError } = await supabase
+    const { data: profile, error: profileError } = await supabaseAdmin
       .from("profiles")
       .select("name, phone_number")
       .eq("id", complaint.profile_id)
@@ -67,7 +67,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Optimistic locking: only update if record hasn't changed since we read it
-    const { data: updateResult, error: updateError } = await supabase
+    const { data: updateResult, error: updateError } = await supabaseAdmin
       .from("complaints")
       .update({ status, updated_at: getPakistanISOString() })
       .eq("id", complaintId)

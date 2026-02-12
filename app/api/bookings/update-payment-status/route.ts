@@ -1,5 +1,5 @@
 import type { NextRequest } from "next/server"
-import { supabase } from "@/lib/supabase"
+import { supabaseAdmin } from "@/lib/supabase"
 import { getPakistanISOString } from "@/lib/dateUtils"
 import { sendBookingConfirmation, formatDate, formatTime } from "@/lib/twilio"
 
@@ -39,7 +39,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Fetch the booking with profile information
-    const { data: booking, error: fetchError } = await supabase
+    const { data: booking, error: fetchError } = await supabaseAdmin
       .from("bookings")
       .select(
         `
@@ -71,7 +71,7 @@ export async function POST(request: NextRequest) {
     console.log("Found booking:", booking)
 
     // Optimistic locking: only update if record hasn't changed since we read it
-    const { data: updatedBooking, error: updateError } = await supabase
+    const { data: updatedBooking, error: updateError } = await supabaseAdmin
       .from("bookings")
       .update({
         payment_status: paymentStatus,
@@ -126,7 +126,7 @@ export async function POST(request: NextRequest) {
 
       // Create transaction record for accounting
       try {
-        await supabase.from("transactions").insert({
+        await supabaseAdmin.from("transactions").insert({
           transaction_type: "booking_income",
           reference_id: booking.id,
           profile_id: booking.profile_id,

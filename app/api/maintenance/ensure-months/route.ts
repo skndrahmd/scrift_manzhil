@@ -1,5 +1,5 @@
 import type { NextRequest } from "next/server"
-import { supabase } from "@/lib/supabase"
+import { supabaseAdmin } from "@/lib/supabase"
 
 export async function POST(request: NextRequest) {
   try {
@@ -8,7 +8,7 @@ export async function POST(request: NextRequest) {
     if (!unitId) return new Response("unitId required", { status: 400 })
 
     // Fetch maintenance_charges from units table
-    const { data: unit } = await supabase
+    const { data: unit } = await supabaseAdmin
       .from("units")
       .select("maintenance_charges")
       .eq("id", unitId)
@@ -30,7 +30,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Fetch all existing payments at once by unit_id
-    const { data: existingPayments } = await supabase
+    const { data: existingPayments } = await supabaseAdmin
       .from("maintenance_payments")
       .select("year, month")
       .eq("unit_id", unitId)
@@ -50,7 +50,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (toInsert.length > 0) {
-      await supabase.from("maintenance_payments").insert(toInsert)
+      await supabaseAdmin.from("maintenance_payments").insert(toInsert)
     }
 
     return new Response("ok", { status: 200 })
