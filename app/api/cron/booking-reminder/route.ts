@@ -1,5 +1,5 @@
 import type { NextRequest } from "next/server"
-import { supabase } from "@/lib/supabase"
+import { supabaseAdmin } from "@/lib/supabase"
 import { getPakistanISOString } from "@/lib/dateUtils"
 import {
   sendBookingReminder,
@@ -24,7 +24,7 @@ export async function POST(request: NextRequest) {
   if (CRON_KEY && provided !== CRON_KEY) return new Response("Unauthorized", { status: 401 })
 
   try {
-    const { data: bookings } = await supabase
+    const { data: bookings } = await supabaseAdmin
       .from("bookings")
       .select(
         `
@@ -52,7 +52,7 @@ export async function POST(request: NextRequest) {
 
       // Day 3+: Cancel the booking
       if (daysSince >= 3) {
-        await supabase
+        await supabaseAdmin
           .from("bookings")
           .update({ status: "cancelled", updated_at: getPakistanISOString() })
           .eq("id", b.id)
@@ -85,7 +85,7 @@ export async function POST(request: NextRequest) {
         })
       }
 
-      await supabase
+      await supabaseAdmin
         .from("bookings")
         .update({ reminder_last_sent_at: getPakistanISOString(), updated_at: getPakistanISOString() })
         .eq("id", b.id)
@@ -98,6 +98,6 @@ export async function POST(request: NextRequest) {
   }
 }
 
-export async function GET() {
-  return new Response("Use POST", { status: 200 })
+export async function GET(request: NextRequest) {
+  return POST(request)
 }
