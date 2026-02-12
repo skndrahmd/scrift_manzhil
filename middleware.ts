@@ -91,7 +91,16 @@ export async function middleware(request: NextRequest) {
   // Redirect to login if no authenticated user
   if (userError || !user) {
     const loginUrl = new URL("/login", request.url)
-    return NextResponse.redirect(loginUrl)
+    const loginRedirect = NextResponse.redirect(loginUrl)
+    // Clear the admin permission cache so re-login gets fresh permissions
+    loginRedirect.cookies.set(ADMIN_CACHE_COOKIE, "", {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      path: "/",
+      maxAge: 0,
+    })
+    return loginRedirect
   }
 
   // Use service role client to check admin status (bypasses RLS)
@@ -196,6 +205,48 @@ export async function middleware(request: NextRequest) {
 
   // Settings is super_admin only, or staff lacks permission for current page
   if (pageKey === "settings" || !permittedKeySet.has(pageKey)) {
+    // Before redirecting, re-verify permissions from DB in case cache is stale
+    // (e.g. super admin just granted this staff member a new permission)
+    if (pageKey !== "settings") {
+      const supabaseAdmin = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        serviceRoleKey,
+        {
+          auth: {
+            autoRefreshToken: false,
+            persistSession: false,
+          },
+        }
+      )
+
+      const { data: freshPerms } = await supabaseAdmin
+        .from("admin_permissions")
+        .select("page_key")
+        .eq("admin_user_id", adminId)
+        .eq("can_access", true)
+
+      const freshKeys = freshPerms?.map(p => p.page_key) ?? []
+
+      if (freshKeys.includes(pageKey)) {
+        // Permission was granted since cache was built — allow access and refresh cache
+        const freshCookieValue = await encodeAdminCache(
+          user.id, adminRole, isActive, adminId, freshKeys, serviceRoleKey
+        )
+        response.cookies.set(ADMIN_CACHE_COOKIE, freshCookieValue, {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === "production",
+          sameSite: "lax",
+          path: "/",
+          maxAge: 300,
+        })
+        return response
+      }
+
+      // Update permittedKeySet with fresh data for redirect logic below
+      permittedKeySet.clear()
+      freshKeys.forEach(k => permittedKeySet.add(k))
+    }
+
     // Find first permitted page to redirect to
     const PAGE_ORDER = ["dashboard", "residents", "bookings", "complaints", "visitors", "parcels", "analytics", "feedback", "accounting"]
     const PAGE_KEY_TO_ROUTE: Record<string, string> = {
