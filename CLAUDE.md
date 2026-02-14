@@ -4,25 +4,28 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is **Manzhil V2 by Scrift**, a comprehensive Building Management System (BMS) for apartment complexes. It manages residents, hall bookings, maintenance payments, complaints, visitor passes, parcel tracking, and accounting operations. The system integrates with Twilio for WhatsApp notifications and Supabase for data management.
+This is **Manzhil by Scrift**, a comprehensive Building Management System (BMS) for apartment complexes. It manages units, residents, hall bookings, maintenance payments, complaints, visitor passes, parcel tracking, and accounting operations. The system integrates with Twilio for WhatsApp notifications (including a conversational webhook bot) and Supabase for data management.
 
-**Key V2 Features:**
+**Key Features:**
+- **Unit-centric data model** — units are first-class entities; residents link to units via `unit_id`
 - Admin RBAC (Role-Based Access Control) with granular permissions
+- WhatsApp conversational bot (webhook-driven resident self-service)
 - Broadcast messaging system with rate limiting
 - Visitor pass management with CNIC verification
 - Parcel & delivery tracking with image uploads
-- Bulk resident import via CSV
-- Enhanced analytics dashboard
-- Configurable daily report recipients
+- Bulk import for both units and residents via CSV
+- Enhanced analytics dashboard with PDF & CSV reports
+- Configurable per-admin notification preferences
 
 **Tech Stack:**
 - **Framework:** Next.js 14 (App Router, SSR)
 - **Language:** TypeScript
 - **Database:** Supabase (PostgreSQL with RLS)
-- **UI:** React + Radix UI + Tailwind CSS
+- **UI:** React + Radix UI + Tailwind CSS + Recharts
 - **Messaging:** Twilio WhatsApp Business API
 - **PDF Generation:** jsPDF + jspdf-autotable
-- **Deployment:** Hostinger VPS + Docker
+- **CSV Parsing:** PapaParse
+- **Deployment:** Vercel (primary) or Hostinger VPS + Docker
 
 ## Development Commands
 
@@ -50,10 +53,11 @@ curl http://localhost:3000/api/ping
 curl http://localhost:3000/api/test-twilio
 
 # Manually trigger cron jobs (for testing)
-curl -X POST http://localhost:3000/api/cron/booking-reminder
+curl -X POST http://localhost:3000/api/cron/daily-reports
 curl -X POST http://localhost:3000/api/cron/maintenance-reminder
 curl -X POST http://localhost:3000/api/cron/pending-complaints
-curl -X POST http://localhost:3000/api/cron/daily-reports
+curl -X POST http://localhost:3000/api/cron/booking-confirmation
+curl -X POST http://localhost:3000/api/cron/maintenance-confirmation
 ```
 
 ## Architecture Overview
@@ -61,179 +65,292 @@ curl -X POST http://localhost:3000/api/cron/daily-reports
 ### Application Structure
 ```
 app/
-├── admin/              # Admin dashboard pages
-│   ├── dashboard/      # Main dashboard
-│   ├── bookings/       # Hall booking management
-│   ├── complaints/     # Complaint management
-│   ├── visitors/       # Visitor pass management (V2)
-│   ├── parcels/        # Parcel tracking (V2)
-│   ├── broadcast/      # Broadcast messaging (V2)
-│   ├── analytics/      # Analytics dashboard (V2)
-│   ├── accounting/     # Financial management
-│   ├── feedback/       # Resident feedback
-│   ├── settings/       # Admin settings & RBAC (V2)
-│   └── unauthorized/   # Access denied page (V2)
-├── api/                # API routes
-│   ├── accounting/     # Financial APIs
-│   ├── admin/          # Admin management APIs (V2)
-│   │   └── staff/      # Staff CRUD & permissions
-│   ├── bookings/       # Hall booking APIs
-│   ├── broadcast/      # Broadcast messaging APIs (V2)
-│   ├── complaints/     # Complaint management APIs
-│   ├── cron/           # Scheduled job endpoints
-│   ├── maintenance/    # Maintenance payment APIs
-│   ├── parcels/        # Parcel tracking APIs (V2)
-│   ├── residents/      # Resident management APIs
-│   │   └── bulk-import # Bulk import endpoint (V2)
-│   ├── twilio/         # WhatsApp webhook handlers
-│   └── visitors/       # Visitor management APIs (V2)
-├── login/              # Authentication page
-└── [invoice pages]     # Public PDF generation pages
+├── admin/                  # Admin dashboard pages
+│   ├── layout.tsx          # Admin layout with sidebar
+│   ├── loading.tsx         # Loading skeleton
+│   ├── page.tsx            # Residents management (root admin page)
+│   ├── dashboard/          # Main dashboard
+│   ├── units/              # Unit management (V3)
+│   │   ├── page.tsx        # Units listing
+│   │   └── [id]/page.tsx   # Unit detail page
+│   ├── residents/
+│   │   └── [id]/page.tsx   # Resident detail page
+│   ├── bookings/           # Hall booking management
+│   ├── complaints/         # Complaint management
+│   ├── visitors/           # Visitor pass management
+│   ├── parcels/            # Parcel tracking
+│   ├── broadcast/          # Broadcast messaging
+│   ├── analytics/          # Analytics dashboard
+│   ├── accounting/         # Financial management
+│   ├── feedback/           # Resident feedback
+│   ├── settings/           # Admin settings & RBAC (super_admin only)
+│   └── unauthorized/       # Access denied page
+├── api/
+│   ├── auth/               # OTP authentication
+│   │   ├── send-otp/       # Send OTP to resident phone
+│   │   └── verify-otp/     # Verify OTP code
+│   ├── units/              # Unit management APIs (V3)
+│   │   ├── route.ts        # CRUD operations
+│   │   ├── bulk-import/    # Bulk import units from CSV
+│   │   ├── check-duplicates/ # Duplicate unit detection
+│   │   └── toggle-primary/ # Toggle primary resident flag
+│   ├── residents/          # Resident management APIs
+│   │   ├── bulk-import/    # Bulk import residents from CSV
+│   │   ├── check-duplicates/ # Duplicate phone detection
+│   │   └── welcome-message/ # Send welcome WhatsApp
+│   ├── admin/staff/        # Staff CRUD & permissions
+│   │   ├── route.ts
+│   │   └── [id]/
+│   │       ├── route.ts
+│   │       └── permissions/route.ts
+│   ├── bookings/           # Booking APIs
+│   │   ├── send-reminder/
+│   │   └── update-payment-status/
+│   ├── broadcast/          # Broadcast messaging APIs
+│   │   ├── send/
+│   │   └── usage/
+│   ├── complaints/         # Complaint APIs
+│   │   └── update-status/
+│   ├── maintenance/        # Maintenance payment APIs
+│   │   ├── update-status/
+│   │   ├── bulk-reminder/
+│   │   └── ensure-months/
+│   ├── accounting/         # Financial APIs
+│   │   ├── categories/
+│   │   ├── expenses/
+│   │   ├── summary/
+│   │   └── transactions/
+│   ├── parcels/            # Parcel tracking APIs
+│   │   ├── list/
+│   │   ├── upload/
+│   │   ├── notify/
+│   │   └── update-status/
+│   ├── visitors/           # Visitor APIs
+│   │   └── notify-arrival/
+│   ├── cron/               # Scheduled job endpoints
+│   │   ├── daily-reports/
+│   │   ├── maintenance-reminder/
+│   │   ├── pending-complaints/
+│   │   ├── booking-reminder/
+│   │   ├── booking-confirmation/
+│   │   ├── maintenance-confirmation/
+│   │   └── utils.ts
+│   ├── webhook/route.ts    # WhatsApp conversational bot endpoint
+│   ├── twilio/             # WhatsApp template sender
+│   │   └── send-template/
+│   ├── ping/route.ts       # Health check
+│   └── test-twilio/        # Template testing
+├── booking-invoice/[id]/   # Public booking invoice PDF
+├── maintenance-invoice/[id]/ # Public maintenance invoice PDF
+├── daily-report/[id]/      # Public daily report PDF
+├── login/                  # Authentication page
+└── policies/               # Privacy/terms route
 
 lib/
-├── supabase.ts         # Database client, types & constants
-├── api-auth.ts         # API authentication helpers (V2)
-├── twilio.ts           # WhatsApp notification functions
-├── twilio/             # Organized notification modules
-│   └── notifications/  # Category-specific notifications
-├── invoice.ts          # PDF generation utilities
-├── accounting-reports.ts  # Financial report generation
-├── dateUtils.ts        # Date/time formatting utilities
-└── auth-*.ts           # Authentication helpers
+├── supabase.ts             # Database clients, types & constants
+├── api-auth.ts             # API route authentication helpers
+├── auth-server.ts          # Server-side auth utilities
+├── auth-client.ts          # Client-side auth utilities
+├── auth-context.tsx        # Auth React context provider
+├── middleware-cache.ts     # HMAC-signed permission cookie cache
+├── twilio/                 # Twilio WhatsApp integration
+│   ├── client.ts           # Twilio client singleton
+│   ├── send.ts             # Message sending logic
+│   ├── templates.ts        # Template SID registry
+│   ├── formatters.ts       # Message formatting
+│   ├── types.ts            # Twilio-specific types
+│   ├── index.ts            # Re-exports
+│   └── notifications/      # Category-specific notification modules
+│       ├── account.ts      # Welcome, block, reactivate
+│       ├── booking.ts      # Booking confirmations & reminders
+│       ├── broadcast.ts    # Broadcast announcements
+│       ├── complaint.ts    # Complaint status updates
+│       ├── maintenance.ts  # Invoice & payment confirmations
+│       ├── parcel.ts       # Parcel arrival notifications
+│       ├── visitor.ts      # Visitor arrival notifications
+│       └── index.ts        # Re-exports
+├── webhook/                # WhatsApp conversational bot system
+│   ├── index.ts            # Module re-exports
+│   ├── router.ts           # Message routing logic
+│   ├── state.ts            # Conversation state management
+│   ├── menu.ts             # Menu display builders
+│   ├── profile.ts          # Profile lookup & data queries
+│   ├── config.ts           # Bot configuration & constants
+│   ├── types.ts            # Webhook-specific types
+│   ├── utils.ts            # Formatting & validation helpers
+│   └── handlers/           # Conversation flow handlers
+│       ├── index.ts
+│       ├── booking.ts      # Hall booking flow
+│       ├── complaint.ts    # Complaint registration flow
+│       ├── feedback.ts     # Feedback submission flow
+│       ├── hall.ts         # Hall info & availability
+│       ├── staff.ts        # Staff management flow
+│       ├── status.ts       # Status check flow
+│       └── visitor.ts      # Visitor pass flow
+├── admin/
+│   └── notifications.ts    # Dynamic admin notification recipients
+├── bulk-import/            # Resident CSV import logic
+│   ├── index.ts
+│   ├── parser.ts
+│   └── validation.ts
+├── bulk-import-units/      # Unit CSV import logic
+│   ├── index.ts
+│   ├── parser.ts
+│   └── validation.ts
+├── accounting-reports.ts   # PDF report generation (5 report types)
+├── csv-export.ts           # CSV export for all report types
+├── reporting.ts            # Period filtering (all, daily, weekly, monthly, yearly)
+├── pdf-theme.ts            # Shared PDF styling & helpers
+├── pdf.ts                  # PDF utility functions
+├── invoice.ts              # Invoice PDF generation
+├── dateUtils.ts            # Date/time formatting (Pakistan timezone)
+├── time-utils.ts           # Additional time utilities
+└── utils.ts                # General utility functions
 
 components/
-├── ui/                 # Radix UI components (50+ components)
-├── admin/              # Admin-specific components (V2)
-│   ├── staff-management.tsx    # Staff RBAC management
-│   └── bulk-import-modal.tsx   # CSV bulk import
-└── accounting/         # Financial dashboard components
+├── ui/                     # Radix UI components (50+ components)
+├── admin/                  # Admin-specific components
+│   ├── sidebar.tsx
+│   ├── analytics-dashboard.tsx
+│   ├── bookings-table.tsx
+│   ├── broadcast-form.tsx
+│   ├── bulk-import-modal.tsx         # Resident CSV import modal
+│   ├── bulk-import-units-modal.tsx   # Unit CSV import modal
+│   ├── complaints-table.tsx
+│   ├── feedback-list.tsx
+│   ├── parcels-table.tsx
+│   ├── residents-table.tsx
+│   ├── settings-form.tsx
+│   ├── staff-management.tsx
+│   └── visitors-table.tsx
+├── accounting/             # Financial dashboard components
+│   ├── accounting-tab.tsx
+│   ├── expenses-manager.tsx
+│   ├── financial-summary-cards.tsx
+│   ├── revenue-charts.tsx
+│   ├── transactions-table.tsx
+│   └── index.ts
+├── auth-provider.tsx
+├── mobile-nav.tsx
+├── settings-dialog.tsx
+├── theme-provider.tsx
+└── user-menu.tsx
 
-middleware.ts           # Authentication & route protection
+middleware.ts               # Authentication & RBAC route protection
 ```
 
 ### Key Architectural Patterns
 
-**1. Authentication Flow**
-- Uses Supabase Auth with email authentication (admins) and phone authentication (residents)
-- Middleware (`middleware.ts`) protects all routes except public endpoints
-- Public routes: `/login`, `/api/*`, invoice pages, `/policies`
-- **V2 Security:** Uses `getUser()` instead of `getSession()` for secure server-side authentication
+**1. Units as First-Class Entities**
+- The `units` table represents apartments; `profiles` (residents) link via `unit_id`
+- Multiple residents per unit with `is_primary_resident` flag
+- `maintenance_payments` also link to `unit_id`
+- Admin pages: `/admin/units` (listing) and `/admin/units/[id]` (detail)
+- API routes: `/api/units/` (CRUD, bulk-import, check-duplicates, toggle-primary)
+- Page key `"units"` added to RBAC system
 
-**2. Admin RBAC (V2)**
+**2. Authentication Flow**
+- Uses Supabase Auth with email authentication (admins) and phone/OTP authentication (residents)
+- OTP routes: `/api/auth/send-otp` and `/api/auth/verify-otp`
+- Middleware (`middleware.ts`) protects all routes except public endpoints
+- Public routes: `/login`, `/api/*`, invoice pages, `/policies`, `/admin/unauthorized`
+- Uses `getUser()` (not `getSession()`) for secure server-side authentication
+
+**3. Admin RBAC**
 - Two roles: `super_admin` (full access) and `staff` (permission-based)
 - Permissions stored in `admin_permissions` table per page
 - API routes use `verifyAdminAccess(pageKey)` from `lib/api-auth.ts`
-- Page keys: `dashboard`, `residents`, `bookings`, `complaints`, `visitors`, `parcels`, `analytics`, `feedback`, `accounting`, `broadcast`, `settings`
+- Page keys (12 total):
+  ```typescript
+  PageKey = "dashboard" | "residents" | "units" | "bookings" | "complaints" |
+            "visitors" | "parcels" | "analytics" | "feedback" | "accounting" |
+            "broadcast" | "settings"
+  ```
 - Settings page restricted to super admins only
 
-**3. Database Architecture**
-- **Row Level Security (RLS)** enabled on all tables
-- Service role client (`lib/supabase.ts`) bypasses RLS for admin operations
-- Regular client for user-facing operations
-- Primary tables: `profiles`, `bookings`, `complaints`, `maintenance_payments`, `transactions`, `expenses`
-- **V2 tables:** `admin_users`, `admin_permissions`, `visitor_passes`, `parcels`, `broadcast_logs`
+**4. Middleware Permission Caching**
+- Permission results are cached in an HMAC-signed cookie (`x-admin-cache`) with 5-minute TTL
+- Uses Web Crypto API (Edge Runtime compatible)
+- Cookie payload: `{ userId, role, isActive, adminId, permissionKeys, expiresAt }`
+- Signed with `SUPABASE_SERVICE_ROLE_KEY` as HMAC secret
+- On cache miss or expiry, middleware queries DB and sets a fresh cookie
+- On permission denial, middleware re-verifies from DB before redirecting (handles stale cache)
 
-**4. WhatsApp Integration**
-- Uses Twilio Content Templates (HX SIDs stored in env vars)
-- Template variables must match Twilio template structure exactly
-- All notifications go through `lib/twilio/` modules
+**5. Database Architecture**
+- **Row Level Security (RLS)** enabled on all tables
+- Service role client (`supabaseAdmin` from `lib/supabase.ts`) bypasses RLS for admin operations
+- Regular client (`supabase`) for user-facing operations
+
+**6. WhatsApp Integration**
+- **Outbound notifications:** Uses Twilio Content Templates (HX SIDs stored in env vars) via `lib/twilio/` modules
+- **Inbound webhook bot:** `lib/webhook/` handles resident conversations via WhatsApp
+  - Menu-driven interaction (reply 1-10 for main menu options)
+  - Conversation state management with flow handlers for complaints, bookings, visitors, parcels, feedback, staff
+  - Processes incoming messages at `/api/webhook/` route
 - Template SIDs configured in `.env` (see `.env.example` for full list)
 - **Important:** All fallback messages use this format: "Hello, this is Manzhil by Scrift.\n\nHi {Resident Name}, your..." (system introduces itself in 3rd person, then addresses user in 2nd person)
 
-**5. Broadcast Messaging System (V2)**
+**7. Broadcast Messaging System**
 - Located in `app/api/broadcast/`
-- Rate limiting constants in `lib/supabase.ts`:
+- Rate limiting constants in `BROADCAST_LIMITS` object in `lib/supabase.ts`:
   - `DAILY_MESSAGE_LIMIT`: 250 messages/day
   - `MESSAGE_DELAY_MS`: 3 seconds between messages
   - `BATCH_SIZE`: 20 messages per batch
   - `BATCH_DELAY_MS`: 30 seconds between batches
-  - `MIN_BROADCAST_INTERVAL_MS`: 15 minutes cooldown
+  - `MIN_BROADCAST_INTERVAL_MS`: 0 (cooldown disabled)
+  - `SOFT_RECIPIENT_LIMIT`: 50 (show warning above this)
+  - `HARD_RECIPIENT_LIMIT`: 100 (require confirmation above this)
 - Usage tracked in `broadcast_logs` table
 - Supports recipient selection (all, by block, individual)
 
-**6. Cron Jobs (Automated Tasks)**
+**8. Cron Jobs (Automated Tasks)**
 - Located in `app/api/cron/`
-- Configured for both Vercel Cron (`vercel.json`) and VPS system cron
-- **Vercel Cron Schedule** (see `vercel.json`):
-  - `booking-reminder` - Daily at 7 AM (sends reminders for upcoming bookings)
-  - `maintenance-reminder` - Daily at 7 AM (sends payment reminders for overdue maintenance)
-  - `daily-reports` - Daily at 5 AM (generates 24-hour and open complaints reports)
-  - `pending-complaints` - Every 6 hours (notifies admins of pending complaints)
-  - `ping` - Every 5 minutes (health check)
-- **V2:** Daily reports sent only to admins with `receive_daily_reports = true`
-- **VPS Setup:** Use `setup-cron.sh` script (archived in `docs-archive/`)
+- **Vercel Cron Schedule** (from `vercel.json`):
+  - `daily-reports` — Daily at 5 AM (`0 5 * * *`)
+  - `maintenance-reminder` — Daily at 2 AM (`0 2 * * *`); on 1st of month creates invoices
+  - `pending-complaints` — Every 6 hours (`0 */6 * * *`)
+  - `ping` — Every 5 minutes (`*/5 * * * *`)
+- **Additional cron routes** (exist but triggered ad-hoc, not in `vercel.json`):
+  - `booking-confirmation` — Sends booking payment confirmations
+  - `maintenance-confirmation` — Sends maintenance payment confirmations
+  - `booking-reminder` — Sends booking reminders (endpoint exists, not scheduled)
+- Daily reports sent only to admins with `receive_daily_reports = true`
 
-**7. PDF Generation**
-- Uses jsPDF for server-side PDF rendering
+**9. Dynamic Admin Notification Recipients**
+- `lib/admin/notifications.ts` provides three fetcher functions:
+  - `getComplaintNotificationRecipients()` — admins with `receive_complaint_notifications = true`
+  - `getReminderRecipients()` — admins with `receive_reminder_notifications = true`
+  - `getAllNotificationRecipients()` — union of both above
+- All functions query `admin_users` for active admins with non-null phone numbers
+- Returns empty array if no recipients are configured
+
+**10. PDF Generation & Reports**
+- Uses jsPDF for server-side PDF rendering with shared theme (`lib/pdf-theme.ts`)
+- `lib/accounting-reports.ts` — 5 PDF report types:
+  - Income Statement
+  - Collection Report
+  - Expense Report
+  - Outstanding Dues Report
+  - Annual Summary
+- `lib/csv-export.ts` — CSV export for all report types
+- `lib/reporting.ts` — Period filtering: `"all" | "daily" | "weekly" | "monthly" | "yearly"`
 - Invoice generation: `lib/invoice.ts`
 - Daily reports: `app/api/cron/daily-reports/`
 - Public routes for PDF access (no auth required)
 
-**8. Accounting Module**
+**11. Accounting Module**
 - Unified transaction tracking system
-- Types: booking income, maintenance income, expenses, refunds
+- Types: booking income, maintenance income, other income, expenses, refunds
 - Financial summaries and reports in `lib/accounting-reports.ts`
 - Expense categories with icons and colors
-- **V2:** CSV export functionality, multiple report types
+- CSV export functionality for all report types
 
-## V2 Feature Details
-
-### Broadcast Messaging
-- **Admin Page:** `app/admin/broadcast/page.tsx`
-- **API Routes:** `/api/broadcast/send`, `/api/broadcast/usage`
-- **Database:** `broadcast_logs` table tracks all broadcasts
-- **Features:**
-  - Select recipients: all residents, by building block, or individual
-  - Two template variables (title and body)
-  - Real-time usage tracking and limits display
-  - Automatic rate limiting to prevent WhatsApp bans
-
-### Admin RBAC
-- **Component:** `components/admin/staff-management.tsx`
-- **API Routes:** `/api/admin/staff`, `/api/admin/staff/[id]`, `/api/admin/staff/[id]/permissions`
-- **Database:** `admin_users` (admin profiles), `admin_permissions` (page access)
-- **Features:**
-  - Create/edit/deactivate staff accounts
-  - Granular page-level permissions
-  - Notification preferences per admin
-  - Super admin management restricted to super admins
-
-### Bulk Resident Import
-- **Component:** `components/admin/bulk-import-modal.tsx`
-- **API Routes:** `/api/residents/bulk-import`, `/api/residents/check-duplicates`
-- **Features:**
-  - CSV file upload with validation
-  - Duplicate phone number detection
-  - Optional welcome message sending
-  - Import summary with success/skip/fail counts
-
-### Visitor Pass Management
-- **Admin Page:** `app/admin/visitors/page.tsx`
-- **API Routes:** `/api/visitors/notify-arrival`
-- **Database:** `visitor_passes` table
-- **Features:**
-  - Create visitor passes with expected date
-  - CNIC image upload to Supabase storage
-  - Mark arrival and notify resident via WhatsApp
-  - Status tracking: pending, arrived, expired
-
-### Parcel & Delivery Tracking
-- **Admin Page:** `app/admin/parcels/page.tsx`
-- **API Routes:** `/api/parcels/list`, `/api/parcels/upload`, `/api/parcels/notify`, `/api/parcels/update-status`
-- **Database:** `parcels` table
-- **Features:**
-  - Log incoming parcels with sender/courier info
-  - Image upload for parcel photos
-  - WhatsApp notification to resident
-  - Status tracking: pending, notified, collected
-
-### Analytics Dashboard
-- **Admin Page:** `app/admin/analytics/page.tsx`
-- **Features:**
-  - Visual charts and graphs
-  - Trend analysis
-  - Real-time data visualization
-  - Key metrics overview
+**12. Realtime Features**
+- Supabase Realtime configured for:
+  - Complaints dashboard (live status updates)
+  - Booking availability (live slot updates)
+  - Resident profile changes
+- Configuration in `lib/supabase.ts`: `eventsPerSecond: 10`
 
 ## Important Development Guidelines
 
@@ -262,7 +379,7 @@ if (error) {
 }
 ```
 
-### API Route Authentication (V2)
+### API Route Authentication
 
 **For protected admin routes:**
 ```typescript
@@ -287,9 +404,9 @@ export async function GET() {
 
 ### WhatsApp Template Guidelines
 
-1. **Template SIDs must be in env vars** - Never hardcode them
-2. **Variable names are case-sensitive** - Must match Twilio template exactly
-3. **Use the helper functions** in `lib/twilio/` - Don't call Twilio API directly
+1. **Template SIDs must be in env vars** — Never hardcode them
+2. **Variable names are case-sensitive** — Must match Twilio template exactly
+3. **Use the helper functions** in `lib/twilio/` — Don't call Twilio API directly
 4. **Test templates** at `/api/test-twilio` before deploying
 
 Common template variables:
@@ -308,22 +425,6 @@ Common template variables:
 - Database stores timestamps in UTC, convert for Pakistan timezone when displaying
 - Booking slots calculated in local time (`lib/dateUtils.ts:generateTimeSlots()`)
 
-### Realtime Features
-
-Supabase Realtime is configured for:
-- Complaints dashboard (live status updates)
-- Booking availability (live slot updates)
-- Resident profile changes
-
-Configuration in `lib/supabase.ts`:
-```typescript
-realtime: {
-  params: {
-    eventsPerSecond: 10,
-  },
-}
-```
-
 ## Environment Variables
 
 Required variables (see `.env.example` for complete list):
@@ -337,8 +438,10 @@ Required variables (see `.env.example` for complete list):
 - `TWILIO_ACCOUNT_SID`
 - `TWILIO_AUTH_TOKEN`
 - `TWILIO_WHATSAPP_NUMBER`
-- 15+ template SIDs (see `.env.example`)
-- `TWILIO_BROADCAST_SID` (V2 - for broadcast messages)
+- 20+ template SIDs (see `.env.example`)
+- `TWILIO_BROADCAST_ANNOUNCEMENT_TEMPLATE_SID`
+- `TWILIO_OTP_TEMPLATE_SID`
+- `TWILIO_STAFF_INVITATION_TEMPLATE_SID`
 
 **App:**
 - `NEXT_PUBLIC_APP_URL` (used for generating public links)
@@ -346,86 +449,92 @@ Required variables (see `.env.example` for complete list):
 
 ## Database Schema
 
-Complete schema in `database-complete-schema.sql`. Key tables:
+Main schema in `database-complete-schema.sql` (covers core tables only). V2/V3 tables are defined in `migrations/` directory.
 
 **Core Tables:**
-- `profiles` - Resident information with maintenance tracking
-- `maintenance_payments` - Monthly maintenance fee records
-- `bookings` - Hall booking records with payment tracking
-- `complaints` - Complaint tracking with grouping support
-- `staff` - Building staff records
+- `units` — Apartment units with maintenance tracking
+- `profiles` — Residents linked to units via `unit_id`, with `is_primary_resident` flag
+- `maintenance_payments` — Monthly maintenance fee records (linked to both `profile_id` and `unit_id`)
+- `bookings` — Hall booking records with payment tracking
+- `booking_settings` — Hall configuration (timings, slots, charges)
+- `complaints` — Complaint tracking with grouping support
+- `feedback` — Resident feedback collection
+- `staff` — Building staff records (linked to units)
+- `daily_reports` — Generated PDF reports (stored as base64)
 
-**V2 Admin Tables:**
-- `admin_users` - Admin accounts with roles and notification preferences
-- `admin_permissions` - Page-level access control per admin
+**Admin Tables:**
+- `admin_users` — Admin accounts with roles (`super_admin`/`staff`) and notification preferences
+- `admin_permissions` — Page-level access control per admin
 
-**V2 Feature Tables:**
-- `visitor_passes` - Visitor tracking with CNIC storage
-- `parcels` - Parcel/delivery tracking with images
-- `broadcast_logs` - Broadcast message history and usage tracking
+**Feature Tables:**
+- `visitor_passes` — Visitor tracking with CNIC storage
+- `parcels` — Parcel/delivery tracking with images
+- `broadcast_logs` — Broadcast message history and usage tracking
 
 **Accounting Tables:**
-- `transactions` - Unified income/expense tracking
-- `expenses` - Detailed expense records
-- `expense_categories` - Category definitions with icons
+- `transactions` — Unified income/expense tracking
+- `expenses` — Detailed expense records
+- `expense_categories` — Category definitions with icons
 
-**System Tables:**
-- `booking_settings` - Hall configuration (timings, slots)
-- `daily_reports` - Generated PDF reports (stored as base64)
-- `feedback` - Resident feedback collection
+**Key Migrations:**
+- `migrations/create_units_table.sql` — Units table
+- `migrations/add_is_primary_resident.sql` — Primary resident flag on profiles
+- `migrations/001_admin_rbac.sql` — Admin RBAC tables
+- `migrations/001_visitor_passes.sql` — Visitor passes
+- `migrations/002_parcels.sql` — Parcel tracking
+- `migrations/otp-auth-migration.sql` — OTP authentication
+- `migrations/staff-to-unit.sql` — Staff linked to units
+- `sql-archive/database-broadcast-logs.sql` — Broadcast logs
 
 ## Deployment
 
-The application supports **two deployment options:**
-
-**Option 1: Vercel (Serverless)**
-- Cron jobs configured in `vercel.json` (Vercel Cron)
+**Primary: Vercel (Serverless)**
+- Cron jobs configured in `vercel.json`
 - Automatic deployments from git push
-- Zero server management
 - See `vercel.json` for cron schedules
 
-**Option 2: Hostinger VPS + Docker**
-- Deployment guide: `DEPLOYMENT.md` (comprehensive)
-- Quick start: `QUICKSTART.md` (30-minute setup)
-- GitHub Actions CI/CD configured (`.github/workflows/deploy.yml`)
-- SSL via Let's Encrypt
-- Cron jobs via system crontab (use `setup-cron.sh`)
-
-**Docker:**
-```bash
-# Build and run (see docker-compose.yml in docs-archive/)
-docker-compose up -d --build
-
-# View logs
-docker-compose logs -f app
-
-# Restart
-docker-compose restart
-```
+**Alternative: Hostinger VPS + Docker**
+- Docker compose file archived at `docs-archive/docker-compose.yml`
+- Nginx config: `docs-archive/nginx.conf`
+- Cron setup script: `docs-archive/setup-cron.sh`
+- Setup guides in `docs-archive/setup-guides/`
 
 ## Common Tasks
 
+### Adding a New Unit
+1. Create unit in database via admin panel (`/admin/units`)
+2. Add residents to the unit (link via `unit_id`)
+3. Set one resident as `is_primary_resident`
+4. Maintenance charges are tracked on the unit
+
+### Bulk Import Units
+1. Prepare CSV with columns: `apartment_number`, `floor_number` (optional), `unit_type` (optional), `maintenance_charges` (optional)
+2. Use the bulk import button on the units page
+3. Upload CSV and preview data
+4. Confirm import — duplicates are skipped automatically
+
 ### Adding a New Resident
 1. Create profile in database via admin panel
-2. System automatically generates maintenance payment records
-3. Welcome WhatsApp message sent via `lib/twilio/notifications/account.ts`
+2. Link to a unit via `unit_id`
+3. System automatically generates maintenance payment records
+4. Welcome WhatsApp message sent via `lib/twilio/notifications/account.ts`
 
-### Bulk Import Residents (V2)
+### Bulk Import Residents
 1. Prepare CSV with columns: `name`, `phone_number`, `apartment_number`, `cnic` (optional), `building_block` (optional), `maintenance_charges` (optional)
-2. Use the bulk import button in admin residents page
+2. Use the bulk import button on the residents page
 3. Upload CSV and preview data
 4. Toggle welcome messages on/off
-5. Confirm import - duplicates are skipped automatically
+5. Confirm import — duplicates are skipped automatically
 
-### Sending Broadcast Messages (V2)
+### Sending Broadcast Messages
 1. Navigate to Admin > Broadcast
 2. Check daily usage limit (250 messages/day)
 3. Select recipients (all, by block, or individual)
 4. Enter title and body text
-5. Send - messages are rate-limited automatically
+5. Send — messages are rate-limited automatically
 6. View results summary after completion
 
-### Managing Staff Permissions (V2)
+### Managing Staff Permissions
 1. Navigate to Admin > Settings (super admin only)
 2. Add new staff member with email/password
 3. Set role: `super_admin` or `staff`
@@ -437,13 +546,6 @@ docker-compose restart
 2. Copy HX SID to `.env`
 3. Add function in appropriate `lib/twilio/notifications/` module
 4. Test at `/api/test-twilio`
-
-### Generating Financial Reports
-```typescript
-import { generateMonthlyReport } from '@/lib/accounting-reports'
-
-const report = await generateMonthlyReport(year, month)
-```
 
 ### Modifying Booking Slots
 1. Update `booking_settings` table in database
@@ -459,21 +561,21 @@ import { Button } from '@/components/ui/button'
 
 ## Known Issues & Considerations
 
-1. **Dual deployment setup** - Configured for both Vercel (with Vercel Cron in `vercel.json`) and VPS (with system cron)
-2. **WhatsApp template approval** - Templates must be approved by Meta before use
-3. **RLS policies** - Be careful when modifying, test thoroughly with both clients
-4. **Timezone handling** - Always use utility functions, never `new Date()` directly for display
-5. **PDF generation** - Memory-intensive, may need optimization for large reports
-6. **Broadcast rate limits** - 250 messages/day, 15-min cooldown between broadcasts
-7. **RBAC cache** - Permission changes take effect on next login/page refresh
-8. **Supabase storage** - CNIC and parcel images stored in Supabase Storage buckets
+1. **WhatsApp template approval** — Templates must be approved by Meta before use
+2. **RLS policies** — Be careful when modifying, test thoroughly with both clients
+3. **Timezone handling** — Always use utility functions, never `new Date()` directly for display
+4. **PDF generation** — Memory-intensive, may need optimization for large reports
+5. **Broadcast rate limits** — 250 messages/day, soft limit at 50 recipients, hard limit at 100
+6. **Permission cache** — HMAC-signed cookie with 5-min TTL; on denial, middleware re-verifies from DB
+7. **Supabase storage** — CNIC and parcel images stored in Supabase Storage buckets
+8. **Schema completeness** — `database-complete-schema.sql` covers core tables only; V2/V3 tables are in `migrations/`
 
 ## Additional Documentation
 
-- `DEPLOYMENT.md` - Full deployment guide with Dockploy
-- `QUICKSTART.md` - 30-minute deployment quick start
-- `docs-archive/` - Setup guides, troubleshooting, template examples
-- `database-complete-schema.sql` - Complete database setup
+- `docs-archive/` — Setup guides, troubleshooting, Docker configs, template examples
+- `database-complete-schema.sql` — Core database setup
+- `migrations/` — V2/V3 table migrations
+- `sql-archive/` — Additional SQL scripts
 
 ## Common Pitfalls
 
@@ -486,6 +588,7 @@ import { Button } from '@/components/ui/button'
 - Use `getSession()` for server-side auth (use `getUser()` instead)
 - Exceed broadcast rate limits (can result in WhatsApp bans)
 - Skip permission checks in admin API routes
+- Forget to add `unit_id` when creating maintenance payments or profiles
 
 **Do:**
 - Use `supabaseAdmin` for operations that need to bypass RLS
@@ -494,5 +597,6 @@ import { Button } from '@/components/ui/button'
 - Always check `error` response from Supabase queries
 - Test RLS policies with both authenticated and unauthenticated requests
 - Use `verifyAdminAccess(pageKey)` for all protected admin API routes
-- Respect broadcast rate limits and cooldown periods
+- Respect broadcast rate limits and recipient limits
 - Test permission-based access with both super_admin and staff roles
+- Link new residents and maintenance payments to their unit via `unit_id`
