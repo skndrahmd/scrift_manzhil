@@ -14,6 +14,7 @@ import { encodeAdminCache, decodeAdminCache, ADMIN_CACHE_COOKIE } from "@/lib/au
 const ROUTE_TO_PAGE_KEY: Record<string, string> = {
   "/admin/dashboard": "dashboard",
   "/admin": "residents",
+  "/admin/units": "units",
   "/admin/bookings": "bookings",
   "/admin/complaints": "complaints",
   "/admin/visitors": "visitors",
@@ -21,6 +22,7 @@ const ROUTE_TO_PAGE_KEY: Record<string, string> = {
   "/admin/analytics": "analytics",
   "/admin/feedback": "feedback",
   "/admin/accounting": "accounting",
+  "/admin/broadcast": "broadcast",
   "/admin/settings": "settings",
 }
 
@@ -262,10 +264,11 @@ export async function middleware(request: NextRequest) {
     }
 
     // Find first permitted page to redirect to
-    const PAGE_ORDER = ["dashboard", "residents", "bookings", "complaints", "visitors", "parcels", "analytics", "feedback", "accounting"]
+    const PAGE_ORDER = ["dashboard", "residents", "units", "bookings", "complaints", "visitors", "parcels", "analytics", "feedback", "accounting", "broadcast"]
     const PAGE_KEY_TO_ROUTE: Record<string, string> = {
       dashboard: "/admin/dashboard",
       residents: "/admin",
+      units: "/admin/units",
       bookings: "/admin/bookings",
       complaints: "/admin/complaints",
       visitors: "/admin/visitors",
@@ -273,6 +276,7 @@ export async function middleware(request: NextRequest) {
       analytics: "/admin/analytics",
       feedback: "/admin/feedback",
       accounting: "/admin/accounting",
+      broadcast: "/admin/broadcast",
     }
 
     const firstPermittedKey = PAGE_ORDER.find(key => permittedKeySet.has(key))
