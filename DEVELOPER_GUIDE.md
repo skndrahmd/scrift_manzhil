@@ -262,8 +262,7 @@ All API routes are in `app/api/`. Protected admin routes use `verifyAdminAccess(
 | Route | Method | What It Does | Tables |
 |-------|--------|-------------|--------|
 | `/api/bookings/update-payment-status` | POST | Update booking payment status and send WhatsApp confirmation | `bookings`, `transactions` |
-| `/api/bookings/send-reminder` | POST | Send a booking payment reminder via WhatsApp | `bookings`, `profiles` |
-| `/api/bookings/reminder` | POST | Alternative booking reminder endpoint | `bookings`, `profiles` |
+| `/api/bookings/send-reminder` | POST | Send booking payment reminders (single or bulk "Remind All Unpaid") | `bookings`, `profiles` |
 
 #### Maintenance
 
