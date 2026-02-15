@@ -1,6 +1,7 @@
 /**
- * Twilio Template SIDs
- * Centralized configuration for all WhatsApp message templates
+ * @module lib/twilio/templates
+ * Centralized registry of Twilio Content Template SIDs.
+ * Maps template types to environment-configured HX SIDs.
  */
 
 import type { TemplateType } from "./types"
@@ -40,22 +41,26 @@ export const TEMPLATE_SIDS: Record<TemplateType, string | undefined> = {
 }
 
 /**
- * Get template SID by type
- * Returns undefined if template is not configured
+ * Retrieves the Twilio Content Template SID for a given template type.
+ * @param type - Template type key (e.g. "welcome_message", "maintenance_invoice")
+ * @returns HX-prefixed SID string, or undefined if not configured
  */
 export function getTemplateSid(type: TemplateType): string | undefined {
   return TEMPLATE_SIDS[type]
 }
 
 /**
- * Check if a template is configured
+ * Checks whether a template SID is set in environment variables.
+ * @param type - Template type key to check
+ * @returns True if the template SID is defined and non-empty
  */
 export function isTemplateConfigured(type: TemplateType): boolean {
   return !!TEMPLATE_SIDS[type]
 }
 
 /**
- * Get all configured templates (for debugging)
+ * Returns all template types that have a SID configured (useful for debugging).
+ * @returns Array of TemplateType keys with non-empty SIDs
  */
 export function getConfiguredTemplates(): TemplateType[] {
   return (Object.keys(TEMPLATE_SIDS) as TemplateType[]).filter(

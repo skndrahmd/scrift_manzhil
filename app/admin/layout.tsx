@@ -29,7 +29,7 @@ import {
     type AdminUser,
     type PageKey,
 } from "@/lib/supabase"
-import { AuthProvider, useAuth } from "@/lib/auth-context"
+import { AuthProvider, useAuth } from "@/lib/auth/context"
 
 // Admin context for shared state across all admin pages
 interface AdminContextType {

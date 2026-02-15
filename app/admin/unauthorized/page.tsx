@@ -5,7 +5,7 @@ import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { ShieldX, ArrowLeft, LogOut } from "lucide-react"
-import { createClient } from "@/lib/auth-client"
+import { createClient } from "@/lib/auth/client"
 
 export default function UnauthorizedPage() {
   const router = useRouter()

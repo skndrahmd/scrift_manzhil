@@ -1,6 +1,7 @@
 /**
- * Twilio Client Initialization
- * Singleton pattern for Twilio client with environment validation
+ * @module lib/twilio/client
+ * Twilio client singleton with environment validation.
+ * Provides the shared Twilio instance and phone number formatting helpers.
  */
 
 import twilio from "twilio"
@@ -15,8 +16,8 @@ const TWILIO_WHATSAPP_NUMBER = process.env.TWILIO_WHATSAPP_NUMBER
 let clientInstance: Twilio | null = null
 
 /**
- * Get or create Twilio client instance
- * Returns null if credentials are not configured
+ * Gets or creates the singleton Twilio client instance.
+ * @returns Twilio client, or null if credentials are not configured
  */
 export function getClient(): Twilio | null {
   if (clientInstance) return clientInstance
@@ -36,7 +37,8 @@ export function getClient(): Twilio | null {
 }
 
 /**
- * Get the configured WhatsApp number with proper formatting
+ * Gets the configured WhatsApp sender number with "whatsapp:" prefix.
+ * @returns Formatted sender number, or null if not configured
  */
 export function getFromNumber(): string | null {
   if (!TWILIO_WHATSAPP_NUMBER) {
@@ -50,15 +52,17 @@ export function getFromNumber(): string | null {
 }
 
 /**
- * Format phone number for WhatsApp
- * Ensures the number has the whatsapp: prefix
+ * Ensures a phone number has the "whatsapp:" prefix for Twilio messaging.
+ * @param phone - Phone number in E.164 format (e.g. "+923001234567")
+ * @returns Phone number prefixed with "whatsapp:"
  */
 export function formatPhoneNumber(phone: string): string {
   return phone.startsWith("whatsapp:") ? phone : `whatsapp:${phone}`
 }
 
 /**
- * Check if Twilio is properly configured
+ * Checks whether all required Twilio environment variables are set.
+ * @returns True if account SID, auth token, and WhatsApp number are present
  */
 export function isConfigured(): boolean {
   return !!(TWILIO_ACCOUNT_SID && TWILIO_AUTH_TOKEN && TWILIO_WHATSAPP_NUMBER)

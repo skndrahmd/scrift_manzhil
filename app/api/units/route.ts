@@ -1,6 +1,6 @@
 import type { NextRequest } from "next/server"
 import { supabaseAdmin } from "@/lib/supabase"
-import { getPakistanISOString } from "@/lib/dateUtils"
+import { getPakistanISOString } from "@/lib/date"
 
 export async function POST(request: NextRequest) {
     try {

@@ -13,7 +13,7 @@ import { useToast } from "@/hooks/use-toast"
 import { exportToPdf, filterByPeriod, periodLabel, type Period } from "@/lib/pdf"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { formatDateForDisplay } from "@/lib/time-utils"
+import { formatDate as formatDateForDisplay } from "@/lib/date"
 
 function formatTime(timeString: string) {
   const [hours, minutes] = timeString.split(":")

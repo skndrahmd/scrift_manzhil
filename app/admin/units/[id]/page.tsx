@@ -14,7 +14,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import Loader from "@/components/ui/loader"
 import { useToast } from "@/hooks/use-toast"
-import { formatDateForDisplay } from "@/lib/time-utils"
+import { formatDate as formatDateForDisplay } from "@/lib/date"
 import {
     ChevronLeft,
     Users,

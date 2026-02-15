@@ -1,5 +1,5 @@
 import { supabaseAdmin } from "@/lib/supabase"
-import { getPakistanISOString } from "@/lib/dateUtils"
+import { getPakistanISOString } from "@/lib/date"
 
 export function todayISODate(): string {
   const now = new Date(getPakistanISOString())

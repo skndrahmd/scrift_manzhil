@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@supabase/supabase-js"
-import { verifyAdminAccess, isSuperAdmin } from "@/lib/api-auth"
+import { verifyAdminAccess, isSuperAdmin } from "@/lib/auth/api-auth"
 import { PAGE_KEYS } from "@/lib/supabase"
-import { ADMIN_CACHE_COOKIE } from "@/lib/middleware-cache"
+import { ADMIN_CACHE_COOKIE } from "@/lib/auth/cache"
 
 // GET - Get single staff member
 export async function GET(

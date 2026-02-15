@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import crypto from "crypto"
 import { createClient } from "@supabase/supabase-js"
-import { verifyAdminAccess, isSuperAdmin } from "@/lib/api-auth"
+import { verifyAdminAccess, isSuperAdmin } from "@/lib/auth/api-auth"
 import { PAGE_KEYS } from "@/lib/supabase"
 import { sendStaffInvitation } from "@/lib/twilio/notifications"
 

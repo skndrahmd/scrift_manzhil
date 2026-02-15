@@ -3,7 +3,7 @@
 import type React from "react"
 
 import { useEffect, useState } from "react"
-import { createClient } from "@/lib/auth-client"
+import { createClient } from "@/lib/auth/client"
 import { useRouter, usePathname } from "next/navigation"
 
 import Loader from "@/components/ui/loader"

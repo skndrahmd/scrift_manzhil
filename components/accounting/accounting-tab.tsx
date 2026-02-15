@@ -17,14 +17,14 @@ import {
     generateExpenseReportPdf,
     generateOutstandingDuesPdf,
     generateAnnualSummaryPdf,
-} from "@/lib/accounting-reports"
+} from "@/lib/pdf/reports"
 import {
     generateIncomeStatementCsv,
     generateCollectionReportCsv,
     generateExpenseReportCsv,
     generateOutstandingDuesCsv,
     generateAnnualSummaryCsv,
-} from "@/lib/csv-export"
+} from "@/lib/pdf/csv-export"
 import type { FinancialSummary, Transaction, Expense, ExpenseCategory } from "@/lib/supabase"
 
 export function AccountingTab() {

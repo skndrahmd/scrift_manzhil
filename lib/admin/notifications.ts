@@ -1,8 +1,15 @@
+/**
+ * @module lib/admin/notifications
+ * Dynamic admin notification recipient fetching.
+ * Queries active admins by notification preference toggles for
+ * complaints, reminders, and combined recipient lists.
+ */
+
 import { supabaseAdmin } from "@/lib/supabase"
 
 /**
- * Get phone numbers of admins who should receive complaint notifications
- * Returns empty array if no recipients are configured - admins control this via toggles
+ * Fetches phone numbers of active admins opted-in to complaint notifications.
+ * @returns Array of E.164 phone numbers, or empty array if none configured
  */
 export async function getComplaintNotificationRecipients(): Promise<string[]> {
   try {
@@ -36,9 +43,8 @@ export async function getComplaintNotificationRecipients(): Promise<string[]> {
 }
 
 /**
- * Get phone numbers of admins who should receive reminder notifications
- * (e.g., pending complaint reminders)
- * Returns empty array if no recipients are configured - admins control this via toggles
+ * Fetches phone numbers of active admins opted-in to reminder notifications.
+ * @returns Array of E.164 phone numbers, or empty array if none configured
  */
 export async function getReminderRecipients(): Promise<string[]> {
   try {
@@ -72,8 +78,8 @@ export async function getReminderRecipients(): Promise<string[]> {
 }
 
 /**
- * Get all notification recipients (union of complaint and reminder recipients)
- * Returns empty array if no recipients are configured - admins control this via toggles
+ * Fetches the deduplicated union of complaint and reminder notification recipients.
+ * @returns Array of unique E.164 phone numbers, or empty array if none configured
  */
 export async function getAllNotificationRecipients(): Promise<string[]> {
   try {

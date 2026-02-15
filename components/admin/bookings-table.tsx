@@ -30,7 +30,7 @@ import {
     PaginationNext,
     PaginationPrevious,
 } from "@/components/ui/pagination"
-import { formatDateForDisplay } from "@/lib/time-utils"
+import { formatDate as formatDateForDisplay } from "@/lib/date"
 import { exportToPdf, filterByPeriod, periodLabel, type Period } from "@/lib/pdf"
 
 export function BookingsTable() {

@@ -1,6 +1,7 @@
 /**
- * Webhook Router
- * Main message processing and routing logic
+ * @module lib/webhook/router
+ * WhatsApp webhook message router. Dispatches incoming resident messages
+ * to the appropriate conversational flow handler based on menu selection and state.
  */
 
 import type { Profile, MediaInfo } from "./types"
@@ -33,7 +34,12 @@ import {
 } from "./handlers"
 
 /**
- * Process incoming message and route to appropriate handler
+ * Processes an incoming WhatsApp message and routes it to the correct handler.
+ * @param message - Raw message text from the resident
+ * @param profile - Authenticated resident profile
+ * @param phoneNumber - Sender's phone number (used as state key)
+ * @param mediaInfo - Optional media attachment info (e.g. CNIC image)
+ * @returns Response message string to send back via WhatsApp
  */
 export async function processMessage(
   message: string,

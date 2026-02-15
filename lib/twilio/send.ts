@@ -1,14 +1,17 @@
 /**
- * Core Twilio Send Functions
- * Low-level functions for sending WhatsApp messages
+ * @module lib/twilio/send
+ * Core WhatsApp message sending logic via the Twilio API.
+ * Supports freeform messages, content templates, and automatic fallback.
  */
 
 import { getClient, getFromNumber, formatPhoneNumber } from "./client"
 import type { TwilioResult } from "./types"
 
 /**
- * Send a freeform WhatsApp message
- * Use this for fallback messages when templates are not configured
+ * Sends a freeform WhatsApp message (non-template).
+ * @param to - Recipient phone number in E.164 format
+ * @param body - Plain-text message body
+ * @returns Result with ok status and message SID, or error details
  */
 export async function sendMessage(to: string, body: string): Promise<TwilioResult> {
   const client = getClient()
@@ -81,8 +84,12 @@ export async function sendTemplate(
 }
 
 /**
- * Send a template with automatic fallback to freeform message
- * Tries template first, falls back to freeform if template fails or is not configured
+ * Sends a template message with automatic fallback to a freeform message.
+ * @param to - Recipient phone number in E.164 format
+ * @param templateSid - Twilio Content Template SID (may be undefined)
+ * @param templateVariables - Variable mapping for the template
+ * @param fallbackMessage - Plain-text message used if template fails or is missing
+ * @returns Result with ok status and message SID, or error details
  */
 export async function sendWithFallback(
   to: string,

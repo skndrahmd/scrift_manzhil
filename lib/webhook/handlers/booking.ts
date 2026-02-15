@@ -4,7 +4,7 @@
  */
 
 import { supabase } from "@/lib/supabase"
-import { isDateFormat, parseDate, isWorkingDay, getDayName } from "@/lib/dateUtils"
+import { isDateFormat, parseDate, isWorkingDay, getDayName } from "@/lib/date"
 import type { Profile, UserState } from "../types"
 import { getState, setState, clearState } from "../state"
 import { getCachedSettings } from "../profile"

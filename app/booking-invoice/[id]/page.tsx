@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import { useParams, useSearchParams } from "next/navigation"
 import { supabase } from "@/lib/supabase"
-import { generateBookingInvoicePdf } from "@/lib/invoice"
+import { generateBookingInvoicePdf } from "@/lib/pdf/invoice"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"

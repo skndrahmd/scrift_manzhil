@@ -4,7 +4,7 @@
  */
 
 import { supabase } from "@/lib/supabase"
-import { getPakistanISOString } from "@/lib/dateUtils"
+import { getPakistanISOString } from "@/lib/date"
 import type { Profile, UserState } from "../types"
 import { getState, setState, clearState } from "../state"
 import { validateName, validatePhoneNumber, validateCNIC, isYesResponse, isNoResponse } from "../utils"

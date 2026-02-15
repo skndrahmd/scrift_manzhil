@@ -1,7 +1,14 @@
+/**
+ * @module middleware
+ * Next.js Edge Middleware for authentication and RBAC route protection.
+ * Validates Supabase sessions, checks admin permissions with HMAC-signed
+ * cookie caching, and redirects unauthorized users.
+ */
+
 import { type NextRequest, NextResponse } from "next/server"
 import { createServerClient } from "@supabase/ssr"
 import { createClient } from "@supabase/supabase-js"
-import { encodeAdminCache, decodeAdminCache, ADMIN_CACHE_COOKIE } from "@/lib/middleware-cache"
+import { encodeAdminCache, decodeAdminCache, ADMIN_CACHE_COOKIE } from "@/lib/auth/cache"
 
 // Page key mapping for route -> permission check
 const ROUTE_TO_PAGE_KEY: Record<string, string> = {
@@ -38,6 +45,13 @@ function getPageKeyFromPath(pathname: string): string | null {
   return null
 }
 
+/**
+ * Next.js middleware that authenticates requests and enforces RBAC.
+ * Checks Supabase auth, resolves admin role/permissions (with HMAC cookie cache),
+ * and redirects unauthorized users to login or the first permitted page.
+ * @param request - Incoming Next.js request
+ * @returns NextResponse (pass-through, redirect, or with updated cache cookie)
+ */
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 

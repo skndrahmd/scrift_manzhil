@@ -4,7 +4,7 @@
  */
 
 import { supabaseAdmin } from "@/lib/supabase"
-import { isDateFormat, parseDate } from "@/lib/dateUtils"
+import { isDateFormat, parseDate } from "@/lib/date"
 import type { Profile, UserState, VisitorData } from "../types"
 import { setState, clearState } from "../state"
 import { formatDate } from "../utils"
