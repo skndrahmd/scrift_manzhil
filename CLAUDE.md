@@ -449,7 +449,7 @@ Required variables (see `.env.example` for complete list):
 
 ## Database Schema
 
-Main schema in `database-complete-schema.sql` (covers core tables only). V2/V3 tables are defined in `migrations/` directory.
+Complete schema in `database-complete-schema.sql` — all 18 tables, RLS policies, indexes, triggers, and default data. Run once in Supabase SQL Editor for a fresh instance.
 
 **Core Tables:**
 - `units` — Apartment units with maintenance tracking
@@ -476,15 +476,8 @@ Main schema in `database-complete-schema.sql` (covers core tables only). V2/V3 t
 - `expenses` — Detailed expense records
 - `expense_categories` — Category definitions with icons
 
-**Key Migrations:**
-- `migrations/create_units_table.sql` — Units table
-- `migrations/add_is_primary_resident.sql` — Primary resident flag on profiles
-- `migrations/001_admin_rbac.sql` — Admin RBAC tables
-- `migrations/001_visitor_passes.sql` — Visitor passes
-- `migrations/002_parcels.sql` — Parcel tracking
-- `migrations/otp-auth-migration.sql` — OTP authentication
-- `migrations/staff-to-unit.sql` — Staff linked to units
-- `sql-archive/database-broadcast-logs.sql` — Broadcast logs
+**Additional Tables:**
+- `admin_otp` — WhatsApp OTP codes for admin authentication
 
 ## Deployment
 
@@ -568,14 +561,12 @@ import { Button } from '@/components/ui/button'
 5. **Broadcast rate limits** — 250 messages/day, soft limit at 50 recipients, hard limit at 100
 6. **Permission cache** — HMAC-signed cookie with 5-min TTL; on denial, middleware re-verifies from DB
 7. **Supabase storage** — CNIC and parcel images stored in Supabase Storage buckets
-8. **Schema completeness** — `database-complete-schema.sql` covers core tables only; V2/V3 tables are in `migrations/`
+8. **Schema completeness** — `database-complete-schema.sql` contains all 18 tables for a fresh install
 
 ## Additional Documentation
 
 - `docs-archive/` — Setup guides, troubleshooting, Docker configs, template examples
-- `database-complete-schema.sql` — Core database setup
-- `migrations/` — V2/V3 table migrations
-- `sql-archive/` — Additional SQL scripts
+- `database-complete-schema.sql` — Complete database setup (all 18 tables)
 
 ## Common Pitfalls
 
