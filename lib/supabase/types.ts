@@ -269,3 +269,17 @@ export type AdminPermission = {
   can_access: boolean
   created_at: string
 }
+
+export type PageKey =
+  | "dashboard"
+  | "residents"
+  | "units"
+  | "bookings"
+  | "complaints"
+  | "visitors"
+  | "parcels"
+  | "analytics"
+  | "feedback"
+  | "accounting"
+  | "broadcast"
+  | "settings"

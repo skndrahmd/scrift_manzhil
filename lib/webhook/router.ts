@@ -86,7 +86,7 @@ export async function processMessage(
       case "cancel":
         return await handleCancelFlow(trimmedMessage, profile, phoneNumber, userState)
       case "visitor":
-        return await handleVisitorFlow(trimmedMessage, profile, phoneNumber, userState, mediaInfo)
+        return await handleVisitorFlow(trimmedMessage, profile, phoneNumber, userState)
       default:
         return getMainMenu(profile.name)
     }

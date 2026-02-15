@@ -329,10 +329,6 @@ All API routes are in `app/api/`. Protected admin routes use `verifyAdminAccess(
 | `/api/cron/pending-complaints` | Every 6 hours | Notify admins about unresolved complaints | `complaints`, `admin_users` |
 | `/api/ping` | Every 5 min | Health check to keep Vercel warm | — |
 
-Additional cron routes exist but are triggered manually (not scheduled in `vercel.json`):
-- `/api/cron/booking-confirmation` — Send booking payment confirmations
-- `/api/cron/maintenance-confirmation` — Send maintenance payment confirmations
-
 #### WhatsApp Webhook
 
 | Route | Method | What It Does |
@@ -360,7 +356,7 @@ This is the foundation module. Everything that talks to the database imports fro
   - `supabase` — uses the anon key, respects Row Level Security. Use for user-facing operations.
   - `supabaseAdmin` — uses the service role key, bypasses RLS. Use for admin operations.
 - **`types.ts`** — Full TypeScript type definitions generated from the database schema.
-- **`constants.ts`** — Exports `PAGE_KEYS` (the 12 admin page definitions with routes), `BROADCAST_LIMITS` (rate limiting constants), and the `PageKey` type.
+- **`constants.ts`** — Exports `PAGE_KEYS` (the 12 admin page definitions with routes), `BROADCAST_LIMITS` (rate limiting constants).
 - **`index.ts`** — Re-exports everything for convenient imports.
 
 ```typescript

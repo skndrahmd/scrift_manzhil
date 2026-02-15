@@ -5,8 +5,6 @@
  */
 import type { PageKey } from "./types"
 
-export type { PageKey }
-
 export const PAGE_KEYS: { key: PageKey; label: string; route: string }[] = [
   { key: "dashboard", label: "Dashboard", route: "/admin/dashboard" },
   { key: "residents", label: "Residents", route: "/admin" },
