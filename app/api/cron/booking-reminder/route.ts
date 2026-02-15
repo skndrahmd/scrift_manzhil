@@ -1,6 +1,6 @@
 import type { NextRequest } from "next/server"
 import { supabase } from "@/lib/supabase"
-import { getPakistanISOString } from "@/lib/dateUtils"
+import { getPakistanISOString } from "@/lib/date"
 import {
   sendBookingReminder,
   sendBookingCancelled,
