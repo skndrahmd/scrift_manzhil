@@ -165,7 +165,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Send WhatsApp invitation to the new staff member
-    const loginUrl = `${process.env.NEXT_PUBLIC_APP_URL || "https://manzhil.scrift.com"}/login`
+    const loginUrl = `${process.env.NEXT_PUBLIC_APP_URL || ""}/login`
     const formattedPhone = phone_number.startsWith("+") ? phone_number : `+${phone_number}`
     sendStaffInvitation({ phone: formattedPhone, name, loginUrl }).catch(err => {
       console.error("Failed to send staff invitation:", err)

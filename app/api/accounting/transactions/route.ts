@@ -1,10 +1,16 @@
 import { NextRequest, NextResponse } from "next/server"
 import { supabaseAdmin } from "@/lib/supabase"
+import { verifyAdminAccess } from "@/lib/auth/api-auth"
 
 export const dynamic = 'force-dynamic'
 
 // GET /api/accounting/transactions - Fetch transactions with filters
 export async function GET(request: NextRequest) {
+    const { authenticated, error: authError } = await verifyAdminAccess("accounting")
+    if (!authenticated) {
+        return NextResponse.json({ error: authError }, { status: 401 })
+    }
+
     try {
         const { searchParams } = new URL(request.url)
         const type = searchParams.get("type")
@@ -63,6 +69,11 @@ export async function GET(request: NextRequest) {
 
 // POST /api/accounting/transactions - Create a new transaction
 export async function POST(request: NextRequest) {
+    const { authenticated, error: authError } = await verifyAdminAccess("accounting")
+    if (!authenticated) {
+        return NextResponse.json({ error: authError }, { status: 401 })
+    }
+
     try {
         const body = await request.json()
 
@@ -115,6 +126,11 @@ export async function POST(request: NextRequest) {
 
 // DELETE /api/accounting/transactions - Delete a transaction
 export async function DELETE(request: NextRequest) {
+    const { authenticated, error: authError } = await verifyAdminAccess("accounting")
+    if (!authenticated) {
+        return NextResponse.json({ error: authError }, { status: 401 })
+    }
+
     try {
         const { searchParams } = new URL(request.url)
         const id = searchParams.get("id")

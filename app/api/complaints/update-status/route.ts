@@ -1,7 +1,14 @@
 import type { NextRequest } from "next/server"
+import { NextResponse } from "next/server"
 import { updateComplaintStatus, ServiceError } from "@/lib/services/complaint"
+import { verifyAdminAccess } from "@/lib/auth/api-auth"
 
 export async function POST(request: NextRequest) {
+  const { authenticated, error: authError } = await verifyAdminAccess("complaints")
+  if (!authenticated) {
+    return NextResponse.json({ error: authError }, { status: 401 })
+  }
+
   try {
     const body = await request.json()
     const result = await updateComplaintStatus(body?.complaintId, body?.status)

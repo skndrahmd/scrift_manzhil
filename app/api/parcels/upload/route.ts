@@ -1,8 +1,14 @@
 import { NextResponse } from "next/server"
 import { supabaseAdmin } from "@/lib/supabase"
 import { sendParcelArrivalNotification } from "@/lib/twilio/notifications/parcel"
+import { verifyAdminAccess } from "@/lib/auth/api-auth"
 
 export async function POST(request: Request) {
+    const { authenticated, error: authError } = await verifyAdminAccess("parcels")
+    if (!authenticated) {
+        return NextResponse.json({ error: authError }, { status: 401 })
+    }
+
     try {
         const formData = await request.formData()
 

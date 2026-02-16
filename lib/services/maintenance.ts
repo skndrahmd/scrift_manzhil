@@ -8,7 +8,7 @@ import { getPakistanISOString } from "@/lib/date"
 import { sendMaintenancePaymentConfirmed, formatMonthYear } from "@/lib/twilio"
 import { ServiceError } from "./complaint"
 
-const APP_BASE_URL = (process.env.NEXT_PUBLIC_APP_URL || "https://your-app-url.com").replace(/\/$/, "")
+const APP_BASE_URL = (process.env.NEXT_PUBLIC_APP_URL || "").replace(/\/$/, "")
 
 /**
  * Updates a maintenance payment status (paid/unpaid), syncs the unit record,

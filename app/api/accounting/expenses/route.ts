@@ -1,10 +1,16 @@
 import { NextRequest, NextResponse } from "next/server"
 import { supabaseAdmin } from "@/lib/supabase"
+import { verifyAdminAccess } from "@/lib/auth/api-auth"
 
 export const dynamic = 'force-dynamic'
 
 // GET /api/accounting/expenses - Fetch expenses with filters
 export async function GET(request: NextRequest) {
+    const { authenticated, error: authError } = await verifyAdminAccess("accounting")
+    if (!authenticated) {
+        return NextResponse.json({ error: authError }, { status: 401 })
+    }
+
     try {
         const { searchParams } = new URL(request.url)
         const categoryId = searchParams.get("categoryId")
@@ -64,6 +70,11 @@ export async function GET(request: NextRequest) {
 
 // POST /api/accounting/expenses - Create a new expense
 export async function POST(request: NextRequest) {
+    const { authenticated, error: authError } = await verifyAdminAccess("accounting")
+    if (!authenticated) {
+        return NextResponse.json({ error: authError }, { status: 401 })
+    }
+
     try {
         const body = await request.json()
 
@@ -143,6 +154,11 @@ export async function POST(request: NextRequest) {
 
 // PUT /api/accounting/expenses - Update an expense
 export async function PUT(request: NextRequest) {
+    const { authenticated, error: authError } = await verifyAdminAccess("accounting")
+    if (!authenticated) {
+        return NextResponse.json({ error: authError }, { status: 401 })
+    }
+
     try {
         const body = await request.json()
         const { id, ...updateData } = body
@@ -178,6 +194,11 @@ export async function PUT(request: NextRequest) {
 
 // DELETE /api/accounting/expenses - Delete an expense
 export async function DELETE(request: NextRequest) {
+    const { authenticated, error: authError } = await verifyAdminAccess("accounting")
+    if (!authenticated) {
+        return NextResponse.json({ error: authError }, { status: 401 })
+    }
+
     try {
         const { searchParams } = new URL(request.url)
         const id = searchParams.get("id")

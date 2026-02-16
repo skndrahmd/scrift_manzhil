@@ -268,7 +268,7 @@ async function sendNewComplaintNotification(
   profile: Profile
 ): Promise<void> {
   try {
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://com3-bms.vercel.app"
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || ""
 
     // Get dynamic complaint notification recipients from database
     const complaintRecipients = await getComplaintRecipients()

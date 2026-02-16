@@ -4,7 +4,7 @@
  */
 
 import { supabase } from "@/lib/supabase"
-import { isDateFormat, parseDate, isWorkingDay, getDayName } from "@/lib/date"
+import { isDateFormat, parseDate, isWorkingDay, getDayName, getPakistanTime } from "@/lib/date"
 import type { Profile, UserState } from "../types"
 import { getState, setState, clearState } from "../state"
 import { getCachedSettings } from "../profile"
@@ -61,7 +61,7 @@ async function handleDateInput(
     }
 
     // Check if the date is in the past
-    const today = new Date()
+    const today = getPakistanTime()
     const todayString =
       today.getFullYear() +
       "-" +
@@ -99,7 +99,7 @@ async function handleDateInput(
     setState(phoneNumber, userState)
 
     const bookingCharges = settings?.booking_charges || 500
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://com3-bms.vercel.app"
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || ""
     const policiesLink = `${baseUrl}/policies`
 
     return await getMessage(MSG.BOOKING_POLICIES, {
@@ -169,7 +169,7 @@ async function handlePoliciesAcceptance(
 
       clearState(phoneNumber)
 
-      const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
+      const baseUrl = process.env.NEXT_PUBLIC_APP_URL || ""
       const invoiceUrl = `${baseUrl}/booking-invoice/${booking.id}?payment=pending&booking=confirmed`
 
       return await getMessage(MSG.BOOKING_CONFIRMED, {

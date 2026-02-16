@@ -4,7 +4,7 @@
  */
 
 import { supabase } from "@/lib/supabase"
-import { isDateFormat, parseDate, isWorkingDay, getDayName, getPakistanISOString } from "@/lib/date"
+import { isDateFormat, parseDate, isWorkingDay, getDayName, getPakistanISOString, getPakistanTime } from "@/lib/date"
 import type { Profile, UserState } from "../types"
 import { getState, setState, clearState } from "../state"
 import { getCachedSettings, getUserBookings } from "../profile"
@@ -121,8 +121,13 @@ async function handleNewBookingDate(
   }
 
   // Check if date is in the past
-  const today = new Date()
-  const todayString = today.toISOString().split("T")[0]
+  const today = getPakistanTime()
+  const todayString =
+    today.getFullYear() +
+    "-" +
+    String(today.getMonth() + 1).padStart(2, "0") +
+    "-" +
+    String(today.getDate()).padStart(2, "0")
 
   if (parsedDate < todayString) {
     return await getMessage(MSG.HALL_DATE_PAST)
@@ -152,7 +157,7 @@ async function handleNewBookingDate(
   setState(phoneNumber, userState)
 
   const bookingCharges = settings?.booking_charges || 500
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://com3-bms.vercel.app"
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || ""
   const policiesLink = `${baseUrl}/policies`
 
   return await getMessage(MSG.HALL_POLICIES, {
@@ -203,7 +208,7 @@ async function handleBookingPolicies(
 
     clearState(phoneNumber)
 
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || ""
     const invoiceUrl = `${baseUrl}/booking-invoice/${booking.id}?payment=pending&booking=confirmed`
 
     return await getMessage(MSG.HALL_BOOKING_CONFIRMED, {
@@ -396,7 +401,13 @@ async function handleEditDate(
   }
 
   // Check if date is in the past
-  const today = new Date().toISOString().split("T")[0]
+  const todayPk = getPakistanTime()
+  const today =
+    todayPk.getFullYear() +
+    "-" +
+    String(todayPk.getMonth() + 1).padStart(2, "0") +
+    "-" +
+    String(todayPk.getDate()).padStart(2, "0")
   if (parsedDate < today) {
     return await getMessage(MSG.HALL_EDIT_DATE_PAST)
   }

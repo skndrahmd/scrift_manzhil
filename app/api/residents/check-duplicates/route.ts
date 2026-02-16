@@ -1,7 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
+import { verifyAdminAccess } from '@/lib/auth/api-auth'
 
 export async function POST(request: NextRequest) {
+  const { authenticated, error: authError } = await verifyAdminAccess("residents")
+  if (!authenticated) {
+    return NextResponse.json({ error: authError }, { status: 401 })
+  }
+
   try {
     const { phoneNumbers } = await request.json()
 

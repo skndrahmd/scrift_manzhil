@@ -1,9 +1,15 @@
 import { NextResponse } from "next/server"
 import { supabaseAdmin, BROADCAST_LIMITS } from "@/lib/supabase"
+import { verifyAdminAccess } from "@/lib/auth/api-auth"
 
 export const dynamic = "force-dynamic"
 
 export async function GET() {
+  const { authenticated, error: authError } = await verifyAdminAccess("broadcast")
+  if (!authenticated) {
+    return NextResponse.json({ error: authError }, { status: 401 })
+  }
+
   try {
     // Get start of current day in UTC
     const now = new Date()

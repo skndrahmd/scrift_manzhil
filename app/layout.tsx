@@ -14,8 +14,7 @@ const dmSans = DM_Sans({
 
 export const metadata: Metadata = {
   title: "Manzhil by Scrift",
-  description: "Admin panel for managing WhatsApp booking bot",
-    generator: 'v0.dev'
+  description: "Comprehensive Building Management System for apartment complexes",
 }
 
 export default function RootLayout({

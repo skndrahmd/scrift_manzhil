@@ -1,10 +1,16 @@
 import { NextRequest, NextResponse } from "next/server"
 import { supabaseAdmin } from "@/lib/supabase"
+import { verifyAdminAccess } from "@/lib/auth/api-auth"
 
 export const dynamic = 'force-dynamic'
 
 // GET /api/accounting/summary - Get financial summary
 export async function GET(request: NextRequest) {
+    const { authenticated, error: authError } = await verifyAdminAccess("accounting")
+    if (!authenticated) {
+        return NextResponse.json({ error: authError }, { status: 401 })
+    }
+
     try {
         const { searchParams } = new URL(request.url)
         const year = parseInt(searchParams.get("year") || new Date().getFullYear().toString())

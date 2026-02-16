@@ -1,6 +1,8 @@
 import type { NextRequest } from "next/server"
+import { NextResponse } from "next/server"
 import { sendTemplate, TEMPLATE_SIDS } from "@/lib/twilio"
 import type { TemplateType } from "@/lib/twilio"
+import { verifyAdminAccess } from "@/lib/auth/api-auth"
 
 interface SendTemplateRequest {
   to: string
@@ -9,6 +11,11 @@ interface SendTemplateRequest {
 }
 
 export async function POST(request: NextRequest) {
+  const { authenticated, error: authError } = await verifyAdminAccess("settings")
+  if (!authenticated) {
+    return NextResponse.json({ error: authError }, { status: 401 })
+  }
+
   try {
     const body = await request.json() as SendTemplateRequest
     const { to, templateType, variables } = body

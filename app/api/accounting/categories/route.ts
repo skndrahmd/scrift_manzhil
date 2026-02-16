@@ -1,10 +1,16 @@
 import { NextRequest, NextResponse } from "next/server"
 import { supabaseAdmin } from "@/lib/supabase"
+import { verifyAdminAccess } from "@/lib/auth/api-auth"
 
 export const dynamic = 'force-dynamic'
 
 // GET /api/accounting/categories - Fetch all expense categories
 export async function GET() {
+    const { authenticated, error: authError } = await verifyAdminAccess("accounting")
+    if (!authenticated) {
+        return NextResponse.json({ error: authError }, { status: 401 })
+    }
+
     try {
         const { data, error } = await supabaseAdmin
             .from("expense_categories")
@@ -26,6 +32,11 @@ export async function GET() {
 
 // POST /api/accounting/categories - Create a new category
 export async function POST(request: NextRequest) {
+    const { authenticated, error: authError } = await verifyAdminAccess("accounting")
+    if (!authenticated) {
+        return NextResponse.json({ error: authError }, { status: 401 })
+    }
+
     try {
         const body = await request.json()
         const { name, description, icon, color } = body
@@ -62,6 +73,11 @@ export async function POST(request: NextRequest) {
 
 // PUT /api/accounting/categories - Update a category
 export async function PUT(request: NextRequest) {
+    const { authenticated, error: authError } = await verifyAdminAccess("accounting")
+    if (!authenticated) {
+        return NextResponse.json({ error: authError }, { status: 401 })
+    }
+
     try {
         const body = await request.json()
         const { id, ...updateData } = body
@@ -94,6 +110,11 @@ export async function PUT(request: NextRequest) {
 
 // DELETE /api/accounting/categories - Soft delete (deactivate) a category
 export async function DELETE(request: NextRequest) {
+    const { authenticated, error: authError } = await verifyAdminAccess("accounting")
+    if (!authenticated) {
+        return NextResponse.json({ error: authError }, { status: 401 })
+    }
+
     try {
         const { searchParams } = new URL(request.url)
         const id = searchParams.get("id")

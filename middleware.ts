@@ -122,8 +122,8 @@ export async function middleware(request: NextRequest) {
   // Use service role client to check admin status (bypasses RLS)
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
   if (!serviceRoleKey) {
-    console.warn("[MIDDLEWARE] No service role key, skipping RBAC check")
-    return response
+    console.error("[MIDDLEWARE] SUPABASE_SERVICE_ROLE_KEY is required for RBAC")
+    return NextResponse.redirect(new URL("/admin/unauthorized", request.url))
   }
 
   // Try to read admin cache cookie
@@ -264,7 +264,7 @@ export async function middleware(request: NextRequest) {
     }
 
     // Find first permitted page to redirect to
-    const PAGE_ORDER = ["dashboard", "residents", "units", "bookings", "complaints", "visitors", "parcels", "analytics", "feedback", "accounting", "broadcast"]
+    const PAGE_ORDER = ["dashboard", "residents", "units", "bookings", "complaints", "visitors", "parcels", "analytics", "feedback", "accounting", "broadcast", "settings"]
     const PAGE_KEY_TO_ROUTE: Record<string, string> = {
       dashboard: "/admin/dashboard",
       residents: "/admin",
@@ -277,6 +277,7 @@ export async function middleware(request: NextRequest) {
       feedback: "/admin/feedback",
       accounting: "/admin/accounting",
       broadcast: "/admin/broadcast",
+      settings: "/admin/settings",
     }
 
     const firstPermittedKey = PAGE_ORDER.find(key => permittedKeySet.has(key))

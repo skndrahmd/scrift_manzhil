@@ -76,9 +76,9 @@ export function AuthProvider({
       if (adminData.role === "super_admin") {
         const allPermissions = new Map<PageKey, boolean>()
         const pageKeys: PageKey[] = [
-          "dashboard", "residents", "bookings", "complaints",
+          "dashboard", "residents", "units", "bookings", "complaints",
           "visitors", "parcels", "analytics", "feedback",
-          "accounting", "settings"
+          "accounting", "broadcast", "settings"
         ]
         pageKeys.forEach(key => allPermissions.set(key, true))
         setPermissions(allPermissions)

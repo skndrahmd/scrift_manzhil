@@ -4,7 +4,7 @@
  */
 
 import { supabaseAdmin } from "@/lib/supabase"
-import { isDateFormat, parseDate } from "@/lib/date"
+import { isDateFormat, parseDate, getPakistanTime } from "@/lib/date"
 import type { Profile, UserState, VisitorData } from "../types"
 import { setState, clearState } from "../state"
 import { formatDate } from "../utils"
@@ -124,14 +124,14 @@ async function handleDateInputAndSave(
     const parsedDate = new Date(parsedDateStr)
 
     // Check if date is in the past
-    const today = new Date()
+    const today = getPakistanTime()
     today.setHours(0, 0, 0, 0)
     if (parsedDate < today) {
         return await getMessage(MSG.VISITOR_DATE_PAST)
     }
 
     // Check if date is too far in the future (30 days)
-    const maxDate = new Date()
+    const maxDate = getPakistanTime()
     maxDate.setDate(maxDate.getDate() + 30)
     if (parsedDate > maxDate) {
         return await getMessage(MSG.VISITOR_DATE_TOO_FAR)

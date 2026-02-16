@@ -10,7 +10,7 @@ import {
 } from "@/lib/twilio"
 
 const CRON_KEY = process.env.CRON_SECRET
-const APP_BASE_URL = (process.env.NEXT_PUBLIC_APP_URL || "https://your-app-url.com").replace(/\/$/, "")
+const APP_BASE_URL = (process.env.NEXT_PUBLIC_APP_URL || "").replace(/\/$/, "")
 
 async function handleMaintenanceReminder(request: NextRequest) {
   const provided = request.headers.get("x-cron-key")

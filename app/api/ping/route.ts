@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server"
 
 export async function GET(request: NextRequest) {
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://your-app.vercel.app"
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || ""
   
   // Ping critical endpoints to keep them warm
   const endpoints = [

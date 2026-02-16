@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
+import { verifyAdminAccess } from '@/lib/auth/api-auth'
 
 interface UnitToImport {
   apartment_number: string
@@ -16,6 +17,11 @@ interface ImportResult {
 }
 
 export async function POST(request: NextRequest) {
+  const { authenticated, error: authError } = await verifyAdminAccess("units")
+  if (!authenticated) {
+    return NextResponse.json({ error: authError }, { status: 401 })
+  }
+
   try {
     const { units }: {
       units: (UnitToImport & { rowNumber: number })[]

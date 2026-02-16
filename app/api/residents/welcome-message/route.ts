@@ -1,7 +1,14 @@
 import type { NextRequest } from "next/server"
+import { NextResponse } from "next/server"
 import { sendWelcomeMessage, isConfigured } from "@/lib/twilio"
+import { verifyAdminAccess } from "@/lib/auth/api-auth"
 
 export async function POST(request: NextRequest) {
+  const { authenticated, error: authError } = await verifyAdminAccess("residents")
+  if (!authenticated) {
+    return NextResponse.json({ error: authError }, { status: 401 })
+  }
+
   try {
     const body = await request.json()
     const { name, phone_number, apartment_number } = body

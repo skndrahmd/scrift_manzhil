@@ -4,6 +4,8 @@
  * Supports formats like "today", "tomorrow", "25 Dec", "DD/MM/YYYY", and bare day numbers.
  */
 
+import { getPakistanTime } from "./formatting"
+
 /**
  * Tests whether a message string looks like a date input.
  * @param message - Raw user message text to test
@@ -35,7 +37,7 @@ export function isDateFormat(message: string): boolean {
 export function parseDate(dateString: string): string | null {
   try {
     const trimmed = dateString.trim().toLowerCase()
-    const currentDate = new Date()
+    const currentDate = getPakistanTime()
     const currentYear = currentDate.getFullYear()
     const currentMonth = currentDate.getMonth()
     const currentDay = currentDate.getDate()
