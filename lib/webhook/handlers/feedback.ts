@@ -7,21 +7,19 @@ import { supabase } from "@/lib/supabase"
 import { getPakistanISOString } from "@/lib/date"
 import type { Profile, UserState } from "../types"
 import { setState, clearState } from "../state"
+import { getMessage } from "../messages"
+import { MSG } from "../message-keys"
 
 /**
  * Initialize feedback flow
  */
-export function initializeFeedbackFlow(phoneNumber: string): string {
+export async function initializeFeedbackFlow(phoneNumber: string): Promise<string> {
   setState(phoneNumber, {
     step: "feedback_input",
     type: "feedback",
   })
 
-  return `💬 *Share Your Feedback*
-
-We value your input! Share suggestions or thoughts about our services.
-
-Type your message, or *0* for menu`
+  return await getMessage(MSG.FEEDBACK_PROMPT)
 }
 
 /**
@@ -48,36 +46,18 @@ export async function handleFeedbackFlow(
 
       if (error) {
         console.error("[Feedback] Creation error:", error)
-        return `❌ *Unable to Save Feedback*
-
-Please try again.
-
-Reply *0* for menu`
+        return await getMessage(MSG.FEEDBACK_ERROR)
       }
 
       // Clear state
       clearState(phoneNumber)
 
-      return `✅ *Feedback Received*
-
-Thank you! Your feedback has been forwarded to management.
-
-💡 For urgent issues, register a complaint from the main menu.
-
-Reply *0* for menu`
+      return await getMessage(MSG.FEEDBACK_RECEIVED)
     }
 
-    return `❌ *Something Went Wrong*
-
-Please try again.
-
-Reply *0* for menu`
+    return await getMessage(MSG.ERROR_SOMETHING_WRONG)
   } catch (error) {
     console.error("[Feedback] Flow error:", error)
-    return `❌ *Unable to Process*
-
-Please try again shortly.
-
-Reply *0* for menu`
+    return await getMessage(MSG.ERROR_GENERIC)
   }
 }

@@ -13,6 +13,8 @@ import {
   getProfile,
   createXmlResponse,
 } from "@/lib/webhook"
+import { getMessage } from "@/lib/webhook/messages"
+import { MSG } from "@/lib/webhook/message-keys"
 
 export async function POST(request: NextRequest) {
   try {
@@ -37,22 +39,16 @@ export async function POST(request: NextRequest) {
     const profile = await getProfile(phoneNumber)
 
     if (!profile) {
-      return createXmlResponse(`👋 Hello! This is Manzhil.
-
-❌ This number is not registered. Please contact administration to register.
-
-📞 Contact Admin`)
+      const msg = await getMessage(MSG.WELCOME_UNREGISTERED)
+      return createXmlResponse(msg)
     }
 
     if (!profile.is_active) {
-      return createXmlResponse(`⚠️ *Account Inactive*
-
-Please contact administration if this is an error.
-
-📞 Contact Admin`)
+      const msg = await getMessage(MSG.ACCOUNT_INACTIVE)
+      return createXmlResponse(msg)
     }
 
-    // Handle media messages  
+    // Handle media messages
     if (numMedia && parseInt(numMedia) > 0 && mediaUrl) {
       // Check if it's an image
       if (mediaContentType && mediaContentType.startsWith("image/")) {
@@ -82,11 +78,7 @@ Please contact administration if this is an error.
         return createXmlResponse()
       } else {
         // Non-image media (voice notes, videos, documents, etc.)
-        const errorMessage = `❌ *Unsupported File*
-
-Please send an *image* or text message.
-
-Type *0* for menu.`
+        const errorMessage = await getMessage(MSG.ERROR_UNSUPPORTED_FILE)
 
         try {
           await sendWhatsAppMessage(phoneNumber, errorMessage)
@@ -100,9 +92,7 @@ Type *0* for menu.`
 
     // Check if message body is empty
     if (!messageBody || messageBody.trim() === "") {
-      const errorMessage = `❌ *Empty Message*
-
-Please send a text message, or type *0* for menu.`
+      const errorMessage = await getMessage(MSG.ERROR_EMPTY_MESSAGE)
 
       try {
         await sendWhatsAppMessage(phoneNumber, errorMessage)
@@ -131,7 +121,8 @@ Please send a text message, or type *0* for menu.`
     return createXmlResponse()
   } catch (error) {
     console.error("[Webhook] Unexpected error:", error)
-    return createXmlResponse(`❌ An error occurred. Try again or type *0* for menu.`)
+    const msg = await getMessage(MSG.ERROR_UNEXPECTED)
+    return createXmlResponse(msg)
   }
 }
 

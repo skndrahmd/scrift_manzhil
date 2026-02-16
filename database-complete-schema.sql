@@ -4,9 +4,9 @@
 -- This is the master SQL file containing ALL database setup commands.
 -- Run this in your Supabase SQL Editor for a fresh installation.
 --
--- Last Updated: 2026-02-15
+-- Last Updated: 2026-02-16
 --
--- Tables (18):
+-- Tables (19):
 --   1.  units                - Apartment unit entities (first-class)
 --   2.  profiles             - Resident/user information (FK → units)
 --   3.  maintenance_payments - Monthly maintenance fee tracking (FK → profiles, units)
@@ -25,6 +25,7 @@
 --  16.  visitor_passes       - Visitor entry tracking (FK → profiles)
 --  17.  parcels              - Parcel/delivery tracking (FK → profiles)
 --  18.  broadcast_logs       - Broadcast rate limiting & history
+--  19.  bot_messages         - Customizable WhatsApp bot messages
 --
 -- ============================================
 
@@ -971,8 +972,56 @@ WHERE schemaname = 'public'
   )
 ORDER BY tablename;
 
+-- ============================================
+-- 19. bot_messages - Customizable WhatsApp Bot Messages
+-- ============================================
+
+CREATE TABLE IF NOT EXISTS bot_messages (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  message_key VARCHAR(100) NOT NULL UNIQUE,
+  flow_group VARCHAR(50) NOT NULL,
+  label VARCHAR(200) NOT NULL,
+  description TEXT,
+  default_text TEXT NOT NULL,
+  custom_text TEXT,
+  variables JSONB DEFAULT '[]'::jsonb,
+  sort_order INTEGER NOT NULL DEFAULT 0,
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_by UUID REFERENCES admin_users(id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_bot_messages_key ON bot_messages(message_key);
+CREATE INDEX IF NOT EXISTS idx_bot_messages_group ON bot_messages(flow_group);
+
+ALTER TABLE bot_messages ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Service role full access on bot_messages"
+  ON bot_messages FOR ALL
+  USING (true)
+  WITH CHECK (true);
+
+-- ============================================
+-- Verification Queries
+-- ============================================
+
+-- Verify RLS status
+SELECT
+  schemaname,
+  tablename,
+  rowsecurity as rls_enabled
+FROM pg_tables
+WHERE schemaname = 'public'
+  AND tablename IN (
+    'units', 'profiles', 'maintenance_payments', 'booking_settings',
+    'bookings', 'complaints', 'feedback', 'staff',
+    'daily_reports', 'transactions', 'expense_categories', 'expenses',
+    'admin_users', 'admin_permissions', 'admin_otp',
+    'visitor_passes', 'parcels', 'broadcast_logs', 'bot_messages'
+  )
+ORDER BY tablename;
+
 -- Final status
 SELECT
   'Manzhil by Scrift - Database setup complete!' as status,
-  '18 tables created with RLS enabled' as summary,
+  '19 tables created with RLS enabled' as summary,
   NOW() as completed_at;

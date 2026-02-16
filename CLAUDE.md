@@ -84,6 +84,7 @@ app/
 │   ├── accounting/         # Financial management
 │   ├── feedback/           # Resident feedback
 │   ├── settings/           # Admin settings & RBAC (super_admin only)
+│   │   └── bot-messages/   # Bot message customization editor page
 │   └── unauthorized/       # Access denied page
 ├── api/
 │   ├── auth/               # OTP authentication
@@ -135,6 +136,9 @@ app/
 │   │   ├── booking-confirmation/
 │   │   ├── maintenance-confirmation/
 │   │   └── utils.ts
+│   ├── bot-messages/        # Bot message customization API
+│   │   ├── route.ts         # GET all messages (super_admin)
+│   │   └── [key]/route.ts   # PATCH update custom_text
 │   ├── webhook/route.ts    # WhatsApp conversational bot endpoint
 │   ├── twilio/             # WhatsApp template sender
 │   │   └── send-template/
@@ -178,6 +182,9 @@ lib/
 │   ├── config.ts           # Bot configuration & constants
 │   ├── types.ts            # Webhook-specific types
 │   ├── utils.ts            # Formatting & validation helpers
+│   ├── messages.ts         # DB-backed message loader with 5-min cache
+│   ├── message-keys.ts     # TypeScript constants for all ~115 message keys
+│   ├── message-defaults.ts # Hardcoded fallback defaults for all messages
 │   └── handlers/           # Conversation flow handlers
 │       ├── index.ts
 │       ├── booking.ts      # Hall booking flow
@@ -222,7 +229,8 @@ components/
 │   ├── residents-table.tsx
 │   ├── settings-form.tsx
 │   ├── staff-management.tsx
-│   └── visitors-table.tsx
+│   ├── visitors-table.tsx
+│   └── bot-messages-editor.tsx  # Bot message customization editor
 ├── accounting/             # Financial dashboard components
 │   ├── accounting-tab.tsx
 │   ├── expenses-manager.tsx
@@ -352,6 +360,18 @@ middleware.ts               # Authentication & RBAC route protection
   - Resident profile changes
 - Configuration in `lib/supabase.ts`: `eventsPerSecond: 10`
 
+**13. Bot Message Customization**
+- All ~115 WhatsApp bot messages are stored in the `bot_messages` database table
+- Admin UI at `/admin/settings/bot-messages` (super_admin only) allows editing all messages without code changes
+- Core module: `lib/webhook/messages.ts` with `getMessage(key, variables?)` function
+- Messages use `{variable}` interpolation syntax (e.g., `{name}`, `{date}`, `{options}`)
+- 5-minute in-memory cache (matches `SETTINGS_CACHE_DURATION`), cleared on admin save
+- Falls back to hardcoded defaults in `lib/webhook/message-defaults.ts` if DB is unavailable
+- Message keys defined as TypeScript constants in `lib/webhook/message-keys.ts` (`MSG.MAIN_MENU`, `MSG.HALL_BOOKING_DATE`, etc.)
+- Flow groups (tabs in admin UI): `main_menu`, `complaint`, `booking`, `hall`, `staff`, `visitor`, `feedback`, `status`, `errors`, `navigation`
+- API routes: `GET /api/bot-messages` (list all), `PATCH /api/bot-messages/[key]` (update/reset)
+- Seed data: `database-seed-bot-messages.sql` (idempotent, uses `ON CONFLICT DO NOTHING`)
+
 ## Important Development Guidelines
 
 ### Working with Supabase
@@ -449,7 +469,7 @@ Required variables (see `.env.example` for complete list):
 
 ## Database Schema
 
-Complete schema in `database-complete-schema.sql` — all 18 tables, RLS policies, indexes, triggers, and default data. Run once in Supabase SQL Editor for a fresh instance.
+Complete schema in `database-complete-schema.sql` — all 19 tables, RLS policies, indexes, triggers, and default data. Run once in Supabase SQL Editor for a fresh instance.
 
 **Core Tables:**
 - `units` — Apartment units with maintenance tracking
@@ -475,6 +495,9 @@ Complete schema in `database-complete-schema.sql` — all 18 tables, RLS policie
 - `transactions` — Unified income/expense tracking
 - `expenses` — Detailed expense records
 - `expense_categories` — Category definitions with icons
+
+**Bot Customization Tables:**
+- `bot_messages` — Customizable WhatsApp bot messages with default/custom text, variables, and flow grouping
 
 **Additional Tables:**
 - `admin_otp` — WhatsApp OTP codes for admin authentication
@@ -540,6 +563,15 @@ Complete schema in `database-complete-schema.sql` — all 18 tables, RLS policie
 3. Add function in appropriate `lib/twilio/notifications/` module
 4. Test at `/api/test-twilio`
 
+### Customizing Bot Messages
+1. Navigate to Admin > Settings > Bot Messages (super admin only)
+2. Messages are organized in tabs by flow group (Main Menu, Complaints, Bookings, etc.)
+3. Edit the text in any message card — variables like `{name}` and `{date}` are shown as clickable chips
+4. Click "Save" to persist — the 5-minute message cache is automatically cleared
+5. Click "Reset to Default" to revert a customized message to the original text
+6. Seed data: Run `database-seed-bot-messages.sql` in Supabase SQL Editor for a fresh instance
+7. To add a new message key: add to `message-keys.ts`, `message-defaults.ts`, seed SQL, and use `getMessage(MSG.KEY)` in handlers
+
 ### Modifying Booking Slots
 1. Update `booking_settings` table in database
 2. Slot calculations automatically update (see `lib/dateUtils.ts:generateTimeSlots()`)
@@ -561,12 +593,14 @@ import { Button } from '@/components/ui/button'
 5. **Broadcast rate limits** — 250 messages/day, soft limit at 50 recipients, hard limit at 100
 6. **Permission cache** — HMAC-signed cookie with 5-min TTL; on denial, middleware re-verifies from DB
 7. **Supabase storage** — CNIC and parcel images stored in Supabase Storage buckets
-8. **Schema completeness** — `database-complete-schema.sql` contains all 18 tables for a fresh install
+8. **Schema completeness** — `database-complete-schema.sql` contains all 19 tables for a fresh install
+9. **Bot message cache** — 5-min in-memory cache; call `clearMessageCache()` after admin updates; falls back to hardcoded defaults if DB fails
 
 ## Additional Documentation
 
 - `docs-archive/` — Setup guides, troubleshooting, Docker configs, template examples
-- `database-complete-schema.sql` — Complete database setup (all 18 tables)
+- `database-complete-schema.sql` — Complete database setup (all 19 tables)
+- `database-seed-bot-messages.sql` — Seed data for all ~115 bot messages
 
 ## Common Pitfalls
 
@@ -580,6 +614,7 @@ import { Button } from '@/components/ui/button'
 - Exceed broadcast rate limits (can result in WhatsApp bans)
 - Skip permission checks in admin API routes
 - Forget to add `unit_id` when creating maintenance payments or profiles
+- Hardcode WhatsApp bot response strings — use `getMessage()` from `lib/webhook/messages.ts`
 
 **Do:**
 - Use `supabaseAdmin` for operations that need to bypass RLS
@@ -591,3 +626,4 @@ import { Button } from '@/components/ui/button'
 - Respect broadcast rate limits and recipient limits
 - Test permission-based access with both super_admin and staff roles
 - Link new residents and maintenance payments to their unit via `unit_id`
+- Use `getMessage(MSG.KEY, variables)` for all WhatsApp bot response strings (never hardcode)

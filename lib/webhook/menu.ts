@@ -13,75 +13,61 @@ import {
   STAFF_ROLES,
 } from "./config"
 import { formatDate, formatCurrency, buildNumberedList } from "./utils"
+import { getMessage } from "./messages"
+import { MSG } from "./message-keys"
 
 /**
  * Get main menu display
  */
-export function getMainMenu(name: string): string {
+export async function getMainMenu(name: string): Promise<string> {
   const options = MAIN_MENU_OPTIONS.map(
     (opt) => `${opt.key}. ${opt.emoji} ${opt.label}`
   ).join("\n")
 
-  return `👋 Hello ${name}!
-
-Welcome to *Manzhil*
-
-${options}
-
-Reply 1-10`
+  return await getMessage(MSG.MAIN_MENU, { name, options })
 }
 
 /**
  * Get user profile info display
  */
-export function getProfileInfo(profile: Profile): string {
+export async function getProfileInfo(profile: Profile): Promise<string> {
   const paymentStatus = profile.maintenance_paid ? "✅ Paid" : "❌ Unpaid"
   const lastPayment = profile.last_payment_date
     ? formatDate(profile.last_payment_date)
     : "No payment recorded"
 
-  return `👤 *Your Profile*
-
-📋 *Details*
-• Name: ${profile.name}
-• Apartment: ${profile.apartment_number}
-• Phone: ${profile.phone_number}
-• Building: ${profile.building_block || "Not specified"}
-
-💰 *Maintenance*
-• Status: ${paymentStatus}
-• Monthly: ${formatCurrency(profile.maintenance_charges || 0)}
-• Last Payment: ${lastPayment}
-
-Reply *0* for menu`
+  return await getMessage(MSG.PROFILE_INFO, {
+    name: profile.name,
+    apartment_number: profile.apartment_number,
+    phone_number: profile.phone_number,
+    building_block: profile.building_block || "Not specified",
+    payment_status: paymentStatus,
+    maintenance_charges: formatCurrency(profile.maintenance_charges || 0),
+    last_payment: lastPayment,
+  })
 }
 
 /**
  * Get maintenance status display
  */
-export function getMaintenanceStatus(profile: Profile): string {
+export async function getMaintenanceStatus(profile: Profile): Promise<string> {
   const paymentStatus = profile.maintenance_paid ? "✅ Paid" : "❌ Unpaid"
   const lastPayment = profile.last_payment_date
     ? formatDate(profile.last_payment_date)
     : "No payment recorded"
 
-  let statusMessage = `💰 *Maintenance Status*
-
-• Apartment: ${profile.apartment_number}
-• Monthly: ${formatCurrency(profile.maintenance_charges || 0)}
-• Status: ${paymentStatus}
-• Last Payment: ${lastPayment}`
+  let statusMessage = await getMessage(MSG.MAINTENANCE_STATUS, {
+    apartment_number: profile.apartment_number,
+    maintenance_charges: formatCurrency(profile.maintenance_charges || 0),
+    payment_status: paymentStatus,
+    last_payment: lastPayment,
+  })
 
   if (!profile.maintenance_paid) {
-    statusMessage += `
-
-⚠️ *Payment Due*
-Please pay soon to avoid service interruptions.`
+    statusMessage += "\n\n" + await getMessage(MSG.MAINTENANCE_PAYMENT_DUE)
   }
 
-  statusMessage += `
-
-Reply *0* for menu`
+  statusMessage += "\n\nReply *0* for menu"
 
   return statusMessage
 }
@@ -89,88 +75,74 @@ Reply *0* for menu`
 /**
  * Get emergency contacts display
  */
-export function getEmergencyContacts(): string {
+export async function getEmergencyContacts(): Promise<string> {
   const contacts = EMERGENCY_CONTACTS.map(
     (c) => `• ${c.name}: ${c.number}`
   ).join("\n")
 
-  return `🆘 *Emergency Contacts*
-
-${contacts}
-
-Reply *0* for menu`
+  return await getMessage(MSG.EMERGENCY_CONTACTS, { contacts })
 }
 
 /**
  * Get hall booking menu
  */
-export function getHallMenu(): string {
+export async function getHallMenu(): Promise<string> {
   const options = HALL_MENU_OPTIONS.map(
     (opt) => `${opt.key}. ${opt.emoji} ${opt.label}`
   ).join("\n")
 
-  return `🏛️ *Community Hall*
-
-${options}
-
-Reply 1-4 or *0* for menu`
+  return await getMessage(MSG.HALL_MENU, { options })
 }
 
 /**
  * Get staff management menu
  */
-export function getStaffMenu(): string {
+export async function getStaffMenu(): Promise<string> {
   const options = STAFF_MENU_OPTIONS.map(
     (opt) => `${opt.key}. ${opt.emoji} ${opt.label}`
   ).join("\n")
 
-  return `👥 *Staff Management*
-
-${options}
-
-Reply 1-4 or *0* for menu`
+  return await getMessage(MSG.STAFF_MENU, { options })
 }
 
 /**
  * Get complaint category selection menu
  */
-export function getComplaintCategoryMenu(): string {
-  return `📝 *Register Complaint*
-
-1. ${COMPLAINT_CATEGORIES.apartment.emoji} ${COMPLAINT_CATEGORIES.apartment.label}
-2. ${COMPLAINT_CATEGORIES.building.emoji} ${COMPLAINT_CATEGORIES.building.label}
-
-Reply *1* or *2*, or *0* for menu`
+export async function getComplaintCategoryMenu(): Promise<string> {
+  return await getMessage(MSG.COMPLAINT_CATEGORY_MENU, {
+    apartment_emoji: COMPLAINT_CATEGORIES.apartment.emoji,
+    apartment_label: COMPLAINT_CATEGORIES.apartment.label,
+    building_emoji: COMPLAINT_CATEGORIES.building.emoji,
+    building_label: COMPLAINT_CATEGORIES.building.label,
+  })
 }
 
 /**
  * Get apartment complaint subcategory menu
  */
-export function getApartmentSubcategoryMenu(): string {
+export async function getApartmentSubcategoryMenu(): Promise<string> {
   const subcategories = COMPLAINT_CATEGORIES.apartment.subcategories
     .map((s, i) => `${i + 1}. ${s.emoji} ${s.label}`)
     .join("\n")
 
-  return `🏠 *Apartment Complaint*
-
-${subcategories}
-
-Reply with number, or *B* to go back`
+  return await getMessage(MSG.COMPLAINT_APARTMENT_SUBCATEGORY, {
+    subcategories,
+    max: String(COMPLAINT_CATEGORIES.apartment.subcategories.length),
+  })
 }
 
 /**
  * Get building complaint subcategory menu
  */
-export function getBuildingSubcategoryMenu(): string {
+export async function getBuildingSubcategoryMenu(): Promise<string> {
   const subcategories = COMPLAINT_CATEGORIES.building.subcategories
     .map((s, i) => `${i + 1}. ${s.emoji} ${s.label}`)
     .join("\n")
 
-  return `🏢 *Building Complaint*
-
-${subcategories}
-
-Reply with number, or *B* to go back`
+  return await getMessage(MSG.COMPLAINT_BUILDING_SUBCATEGORY, {
+    subcategories,
+    max: String(COMPLAINT_CATEGORIES.building.subcategories.length),
+  })
 }
 
 /**
@@ -190,14 +162,13 @@ Reply 1-4, or *B* to go back`
 /**
  * Get staff role selection menu
  */
-export function getStaffRoleMenu(): string {
+export async function getStaffRoleMenu(): Promise<string> {
   const roles = STAFF_ROLES.map((r, i) => `${i + 1}. ${r.emoji} ${r.label}`).join("\n")
 
-  return `👤 *Select Staff Role*
-
-${roles}
-
-Reply with number, or *B* to go back`
+  return await getMessage(MSG.STAFF_ADD_ROLE, {
+    roles,
+    max: String(STAFF_ROLES.length),
+  })
 }
 
 /**

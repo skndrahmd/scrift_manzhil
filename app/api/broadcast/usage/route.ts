@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server"
 import { supabaseAdmin, BROADCAST_LIMITS } from "@/lib/supabase"
 
+export const dynamic = "force-dynamic"
+
 export async function GET() {
   try {
     // Get start of current day in UTC

@@ -9,26 +9,19 @@ import type { Profile, UserState } from "../types"
 import { getState, setState, clearState } from "../state"
 import { getCachedSettings } from "../profile"
 import { formatDate, formatCurrency } from "../utils"
+import { getMessage } from "../messages"
+import { MSG } from "../message-keys"
 
 /**
  * Initialize booking flow
  */
-export function initializeBookingFlow(phoneNumber: string): string {
+export async function initializeBookingFlow(phoneNumber: string): Promise<string> {
   setState(phoneNumber, {
     step: "booking_date",
     type: "booking",
   })
 
-  return `📅 *Community Hall Booking*
-
-Enter your booking date.
-
-*Formats:*
-• DD-MM-YYYY (e.g., 25-12-2025)
-• "today", "tomorrow", "Dec 25"
-• Just the day (e.g., "15")
-
-*B* to go back, *0* for menu`
+  return await getMessage(MSG.BOOKING_DATE_PROMPT)
 }
 
 /**
@@ -50,14 +43,7 @@ export async function handleBookingFlow(
     return await handleDateInput(message, profile, phoneNumber)
   }
 
-  return `❓ *Invalid Date*
-
-Try formats like:
-• DD-MM-YYYY (e.g., 25-12-2025)
-• "today", "tomorrow"
-• Just the day (e.g., "15")
-
-*B* to go back, *0* for menu`
+  return await getMessage(MSG.BOOKING_INVALID_DATE)
 }
 
 /**
@@ -71,12 +57,7 @@ async function handleDateInput(
   try {
     const parsedDate = parseDate(message)
     if (!parsedDate) {
-      return `❓ *Invalid Date*
-
-Please enter in DD-MM-YYYY format.
-Example: 25-12-2025
-
-*B* to go back, *0* for menu`
+      return await getMessage(MSG.BOOKING_INVALID_DATE_FORMAT)
     }
 
     // Check if the date is in the past
@@ -89,11 +70,7 @@ Example: 25-12-2025
       String(today.getDate()).padStart(2, "0")
 
     if (parsedDate < todayString) {
-      return `⚠️ *Invalid Date*
-
-Date is in the past. Please choose a future date.
-
-*B* to go back, *0* for menu`
+      return await getMessage(MSG.BOOKING_DATE_PAST)
     }
 
     // Get booking settings to check working days
@@ -101,11 +78,7 @@ Date is in the past. Please choose a future date.
 
     if (settings && !isWorkingDay(parsedDate, settings.working_days)) {
       const dayName = getDayName(parsedDate)
-      return `⚠️ *Hall Unavailable*
-
-Hall is closed on ${dayName}s. Please choose another date.
-
-*B* to go back, *0* for menu`
+      return await getMessage(MSG.BOOKING_HALL_UNAVAILABLE, { day_name: dayName })
     }
 
     // Check if date is already booked (ONE EVENT PER DAY)
@@ -116,11 +89,7 @@ Hall is closed on ${dayName}s. Please choose another date.
       .in("status", ["confirmed", "payment_pending"])
 
     if (existingBookings && existingBookings.length > 0) {
-      return `❌ *Date Already Booked*
-
-Hall is reserved for ${formatDate(parsedDate)}. Please choose another date.
-
-*B* to go back, *0* for menu`
+      return await getMessage(MSG.BOOKING_DATE_TAKEN, { date: formatDate(parsedDate) })
     }
 
     // Date is available, show policies
@@ -133,26 +102,14 @@ Hall is reserved for ${formatDate(parsedDate)}. Please choose another date.
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://com3-bms.vercel.app"
     const policiesLink = `${baseUrl}/policies`
 
-    return `📋 *Terms & Conditions*
-
-📅 Date: ${formatDate(parsedDate)}
-💰 Charges: ${formatCurrency(bookingCharges)}
-
-📄 Policies: ${policiesLink}
-
-Do you agree to the terms?
-
-1. ✅ Yes, I Agree
-2. ❌ No, I Decline
-
-Reply *1* or *2*`
+    return await getMessage(MSG.BOOKING_POLICIES, {
+      date: formatDate(parsedDate),
+      charges: formatCurrency(bookingCharges),
+      policies_link: policiesLink,
+    })
   } catch (error) {
     console.error("[Booking] Date input error:", error)
-    return `❌ *Unable to Process*
-
-Please try again.
-
-Reply *0* for menu`
+    return await getMessage(MSG.ERROR_GENERIC)
   }
 }
 
@@ -183,11 +140,7 @@ async function handlePoliciesAcceptance(
 
       if (checkAgain && checkAgain.length > 0) {
         clearState(phoneNumber)
-        return `⚠️ *Date No Longer Available*
-
-Just booked by someone else. Please choose another date.
-
-Reply *0* for menu`
+        return await getMessage(MSG.BOOKING_DATE_NO_LONGER_AVAILABLE)
       }
 
       const { data: booking, error: bookingError } = await supabase
@@ -209,17 +162,9 @@ Reply *0* for menu`
       if (bookingError) {
         console.error("[Booking] Error:", bookingError)
         if (bookingError.code === "23505") {
-          return `⚠️ *Date No Longer Available*
-
-Just booked by someone else. Please choose another date.
-
-Reply *0* for menu`
+          return await getMessage(MSG.BOOKING_DATE_NO_LONGER_AVAILABLE)
         }
-        return `❌ *Booking Failed*
-
-Please try again.
-
-Reply *0* for menu`
+        return await getMessage(MSG.BOOKING_FAILED)
       }
 
       clearState(phoneNumber)
@@ -227,42 +172,22 @@ Reply *0* for menu`
       const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
       const invoiceUrl = `${baseUrl}/booking-invoice/${booking.id}?payment=pending&booking=confirmed`
 
-      return `✅ *Booking Confirmed*
-
-📅 ${formatDate(userState.date!)} | ⏰ 9AM – 9PM
-💰 ${formatCurrency(bookingCharges)} | ⏳ Payment Pending
-
-📌 Notes:
-• Pay before event date
-• 24hr cancellation notice required
-• Leave hall clean
-
-📄 Invoice: ${invoiceUrl}
-
-Reply *0* for menu`
+      return await getMessage(MSG.BOOKING_CONFIRMED, {
+        date: formatDate(userState.date!),
+        charges: formatCurrency(bookingCharges),
+        invoice_url: invoiceUrl,
+      })
     }
 
     if (choice === "2") {
       // User declined terms
       clearState(phoneNumber)
-      return `❌ *Booking Cancelled*
-
-You must agree to terms to book the hall. Contact management if you have concerns.
-
-Reply *0* for menu`
+      return await getMessage(MSG.BOOKING_DECLINED)
     }
 
-    return `❓ *Invalid Response*
-
-Reply *1* (Yes) or *2* (No)
-
-Reply *0* for menu`
+    return await getMessage(MSG.BOOKING_INVALID_RESPONSE)
   } catch (error) {
     console.error("[Booking] Policies acceptance error:", error)
-    return `❌ *Unable to Process*
-
-Please try again.
-
-Reply *0* for menu`
+    return await getMessage(MSG.ERROR_GENERIC)
   }
 }

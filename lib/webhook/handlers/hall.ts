@@ -9,18 +9,24 @@ import type { Profile, UserState } from "../types"
 import { getState, setState, clearState } from "../state"
 import { getCachedSettings, getUserBookings } from "../profile"
 import { formatDate, formatCurrency, isYesResponse, isNoResponse } from "../utils"
-import { getHallMenu } from "../menu"
+import { getMessage } from "../messages"
+import { MSG } from "../message-keys"
+import { HALL_MENU_OPTIONS } from "../config"
 
 /**
  * Initialize hall management flow
  */
-export function initializeHallFlow(phoneNumber: string): string {
+export async function initializeHallFlow(phoneNumber: string): Promise<string> {
   setState(phoneNumber, {
     step: "hall_menu",
     type: "hall",
   })
 
-  return getHallMenu()
+  const options = HALL_MENU_OPTIONS.map(
+    (opt) => `${opt.key}. ${opt.emoji} ${opt.label}`
+  ).join("\n")
+
+  return await getMessage(MSG.HALL_MENU, { options })
 }
 
 /**
@@ -39,7 +45,7 @@ export async function handleHallFlow(
     if (userState.step === "hall_menu") {
       switch (choice) {
         case "1": // New Booking
-          return initializeNewBooking(phoneNumber)
+          return await initializeNewBooking(phoneNumber)
         case "2": // Cancel Booking
           return await initializeCancelBooking(profile, phoneNumber)
         case "3": // Edit Booking
@@ -47,11 +53,7 @@ export async function handleHallFlow(
         case "4": // View My Bookings
           return await viewMyBookings(profile, phoneNumber)
         default:
-          return `❓ *Invalid Selection*
-
-Please choose 1-4.
-
-Reply *0* for menu`
+          return await getMessage(MSG.HALL_INVALID_MENU_SELECTION)
       }
     }
 
@@ -82,38 +84,22 @@ Reply *0* for menu`
       return await handleEditDate(message, profile, phoneNumber, userState)
     }
 
-    return `❌ *Something Went Wrong*
-
-Please try again.
-
-Reply *0* for menu`
+    return await getMessage(MSG.ERROR_SOMETHING_WRONG)
   } catch (error) {
     console.error("[Hall] Flow error:", error)
-    return `❌ *Unable to Process*
-
-Please try again shortly.
-
-Reply *0* for menu`
+    return await getMessage(MSG.ERROR_GENERIC)
   }
 }
 
 /**
  * Initialize new booking flow
  */
-function initializeNewBooking(phoneNumber: string): string {
+async function initializeNewBooking(phoneNumber: string): Promise<string> {
   const userState = getState(phoneNumber)
   userState.step = "hall_new_booking_date"
   setState(phoneNumber, userState)
 
-  return `📅 *New Hall Booking*
-
-Enter your booking date.
-
-*Formats:*
-• DD-MM-YYYY (e.g., 25-12-2025)
-• "today", "tomorrow", "Dec 25"
-
-*B* to go back, *0* for menu`
+  return await getMessage(MSG.HALL_NEW_BOOKING_DATE)
 }
 
 /**
@@ -126,22 +112,12 @@ async function handleNewBookingDate(
   userState: UserState
 ): Promise<string> {
   if (!isDateFormat(message)) {
-    return `❓ *Invalid Date*
-
-Try formats like:
-• DD-MM-YYYY (e.g., 25-12-2025)
-• "today", "tomorrow"
-
-*B* to go back, *0* for menu`
+    return await getMessage(MSG.HALL_INVALID_DATE)
   }
 
   const parsedDate = parseDate(message)
   if (!parsedDate) {
-    return `❓ *Invalid Date*
-
-We couldn't understand that. Please try again.
-
-Reply *0* for menu`
+    return await getMessage(MSG.HALL_INVALID_DATE_PARSE)
   }
 
   // Check if date is in the past
@@ -149,22 +125,14 @@ Reply *0* for menu`
   const todayString = today.toISOString().split("T")[0]
 
   if (parsedDate < todayString) {
-    return `⚠️ *Invalid Date*
-
-Date is in the past. Please choose a future date.
-
-*B* to go back, *0* for menu`
+    return await getMessage(MSG.HALL_DATE_PAST)
   }
 
   // Check working days
   const settings = await getCachedSettings()
   if (settings && !isWorkingDay(parsedDate, settings.working_days)) {
     const dayName = getDayName(parsedDate)
-    return `⚠️ *Hall Unavailable*
-
-Hall is closed on ${dayName}s. Please choose another date.
-
-*B* to go back, *0* for menu`
+    return await getMessage(MSG.HALL_UNAVAILABLE, { day_name: dayName })
   }
 
   // Check if date is already booked
@@ -175,11 +143,7 @@ Hall is closed on ${dayName}s. Please choose another date.
     .in("status", ["confirmed", "payment_pending"])
 
   if (existingBookings && existingBookings.length > 0) {
-    return `❌ *Date Already Booked*
-
-Hall is reserved for ${formatDate(parsedDate)}. Please choose another date.
-
-*B* to go back, *0* for menu`
+    return await getMessage(MSG.HALL_DATE_TAKEN, { date: formatDate(parsedDate) })
   }
 
   // Date is available, show policies
@@ -191,19 +155,11 @@ Hall is reserved for ${formatDate(parsedDate)}. Please choose another date.
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://com3-bms.vercel.app"
   const policiesLink = `${baseUrl}/policies`
 
-  return `📋 *Terms & Conditions*
-
-📅 Date: ${formatDate(parsedDate)}
-💰 Charges: ${formatCurrency(bookingCharges)}
-
-📄 Policies: ${policiesLink}
-
-Do you agree to the terms?
-
-1. ✅ Yes, I Agree
-2. ❌ No, I Decline
-
-Reply *1* or *2*`
+  return await getMessage(MSG.HALL_POLICIES, {
+    date: formatDate(parsedDate),
+    charges: formatCurrency(bookingCharges),
+    policies_link: policiesLink,
+  })
 }
 
 /**
@@ -240,17 +196,9 @@ async function handleBookingPolicies(
     if (error) {
       console.error("[Hall] Booking error:", error)
       if (error.code === "23505") {
-        return `⚠️ *Date No Longer Available*
-
-Just booked by someone else. Please choose another date.
-
-Reply *0* for menu`
+        return await getMessage(MSG.HALL_DATE_NO_LONGER_AVAILABLE)
       }
-      return `❌ *Booking Failed*
-
-Please try again.
-
-Reply *0* for menu`
+      return await getMessage(MSG.HALL_BOOKING_FAILED)
     }
 
     clearState(phoneNumber)
@@ -258,35 +206,19 @@ Reply *0* for menu`
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
     const invoiceUrl = `${baseUrl}/booking-invoice/${booking.id}?payment=pending&booking=confirmed`
 
-    return `✅ *Booking Confirmed*
-
-📅 ${formatDate(userState.date!)} | ⏰ 9AM – 9PM
-💰 ${formatCurrency(bookingCharges)} | ⏳ Payment Pending
-
-📌 Notes:
-• Pay within 3 days
-• 24hr cancellation notice
-• Leave hall clean
-
-📄 Invoice: ${invoiceUrl}
-
-Reply *0* for menu`
+    return await getMessage(MSG.HALL_BOOKING_CONFIRMED, {
+      date: formatDate(userState.date!),
+      charges: formatCurrency(bookingCharges),
+      invoice_url: invoiceUrl,
+    })
   }
 
   if (choice === "2") {
     clearState(phoneNumber)
-    return `❌ *Booking Cancelled*
-
-You must agree to terms to book.
-
-Reply *0* for menu`
+    return await getMessage(MSG.HALL_BOOKING_DECLINED)
   }
 
-  return `❓ *Invalid Response*
-
-Reply *1* (Yes) or *2* (No)
-
-Reply *0* for menu`
+  return await getMessage(MSG.HALL_INVALID_RESPONSE)
 }
 
 /**
@@ -296,11 +228,7 @@ async function initializeCancelBooking(profile: Profile, phoneNumber: string): P
   const bookings = await getUserBookings(profile.id, "confirmed")
 
   if (!bookings || bookings.length === 0) {
-    return `📋 *No Bookings Found*
-
-You don't have any confirmed bookings to cancel.
-
-Reply *0* for menu`
+    return await getMessage(MSG.HALL_NO_BOOKINGS_CANCEL)
   }
 
   const userState = getState(phoneNumber)
@@ -312,11 +240,7 @@ Reply *0* for menu`
     .map((b, i) => `${i + 1}. 📅 ${formatDate(b.booking_date)} | ${b.payment_status === "paid" ? "✅ Paid" : "⏳ Pending"}`)
     .join("\n")
 
-  return `❌ *Cancel Booking*
-
-${listText}
-
-Reply with number to cancel, or *0* for menu`
+  return await getMessage(MSG.HALL_CANCEL_LIST, { list: listText })
 }
 
 /**
@@ -330,11 +254,9 @@ async function handleCancelSelect(
 ): Promise<string> {
   const bookingIndex = parseInt(choice, 10)
   if (isNaN(bookingIndex) || bookingIndex < 1 || bookingIndex > userState.bookingList!.length) {
-    return `❓ *Invalid Selection*
-
-Please choose 1-${userState.bookingList!.length}
-
-Reply *0* for menu`
+    return await getMessage(MSG.STATUS_INVALID_SELECTION, {
+      max: userState.bookingList!.length,
+    })
   }
 
   const selectedBooking = userState.bookingList![bookingIndex - 1]
@@ -342,16 +264,14 @@ Reply *0* for menu`
   userState.step = "hall_cancel_confirm"
   setState(phoneNumber, userState)
 
-  let response = `⚠️ *Confirm Cancellation*
-
-📅 Date: ${formatDate(selectedBooking.booking_date)}
-💰 Charges: ${formatCurrency(selectedBooking.booking_charges)}
-💳 Payment: ${selectedBooking.payment_status === "paid" ? "✅ Paid" : "⏳ Pending"}`
+  let response = await getMessage(MSG.HALL_CANCEL_CONFIRM, {
+    date: formatDate(selectedBooking.booking_date),
+    charges: formatCurrency(selectedBooking.booking_charges),
+    payment_status: selectedBooking.payment_status === "paid" ? "✅ Paid" : "⏳ Pending",
+  })
 
   if (selectedBooking.payment_status === "paid") {
-    response += `
-
-💡 Note: Refund per cancellation policy.`
+    response += "\n\n" + await getMessage(MSG.HALL_CANCEL_REFUND_NOTE)
   }
 
   response += `
@@ -385,46 +305,30 @@ async function handleCancelConfirm(
 
     if (error) {
       console.error("[Hall] Cancel error:", error)
-      return `❌ *Cancellation Failed*
-
-Please try again.
-
-Reply *0* for menu`
+      return await getMessage(MSG.HALL_CANCEL_FAILED)
     }
 
     clearState(phoneNumber)
 
-    let response = `✅ *Booking Cancelled*
-
-Your booking for ${formatDate(selectedBooking.booking_date)} has been cancelled.`
+    let response = await getMessage(MSG.HALL_CANCELLED, {
+      date: formatDate(selectedBooking.booking_date),
+    })
 
     if (selectedBooking.payment_status === "paid") {
-      response += `
-
-Refund per cancellation policy.`
+      response += "\n\n" + await getMessage(MSG.HALL_CANCELLED_REFUND)
     }
 
-    response += `
-
-Reply *0* for menu`
+    response += "\n\nReply *0* for menu"
 
     return response
   }
 
   if (isNoResponse(message)) {
     clearState(phoneNumber)
-    return `✅ *Cancellation Aborted*
-
-Your booking remains active. No changes made.
-
-Reply *0* for menu`
+    return await getMessage(MSG.HALL_CANCEL_ABORTED)
   }
 
-  return `❓ *Invalid Response*
-
-Reply *1* (Yes) or *2* (No)
-
-Reply *0* for menu`
+  return await getMessage(MSG.HALL_INVALID_RESPONSE)
 }
 
 /**
@@ -434,11 +338,7 @@ async function initializeEditBooking(profile: Profile, phoneNumber: string): Pro
   const bookings = await getUserBookings(profile.id, "confirmed")
 
   if (!bookings || bookings.length === 0) {
-    return `📋 *No Bookings Found*
-
-You don't have any confirmed bookings to edit.
-
-Reply *0* for menu`
+    return await getMessage(MSG.HALL_NO_BOOKINGS_EDIT)
   }
 
   const userState = getState(phoneNumber)
@@ -448,11 +348,7 @@ Reply *0* for menu`
 
   const listText = bookings.map((b, i) => `${i + 1}. 📅 ${formatDate(b.booking_date)}`).join("\n")
 
-  return `✏️ *Edit Booking*
-
-${listText}
-
-Reply with number to reschedule, or *0* for menu`
+  return await getMessage(MSG.HALL_EDIT_LIST, { list: listText })
 }
 
 /**
@@ -466,11 +362,9 @@ async function handleEditSelect(
 ): Promise<string> {
   const bookingIndex = parseInt(choice, 10)
   if (isNaN(bookingIndex) || bookingIndex < 1 || bookingIndex > userState.bookingList!.length) {
-    return `❓ *Invalid Selection*
-
-Please choose 1-${userState.bookingList!.length}
-
-Reply *0* for menu`
+    return await getMessage(MSG.STATUS_INVALID_SELECTION, {
+      max: userState.bookingList!.length,
+    })
   }
 
   const selectedBooking = userState.bookingList![bookingIndex - 1]
@@ -478,13 +372,9 @@ Reply *0* for menu`
   userState.step = "hall_edit_date"
   setState(phoneNumber, userState)
 
-  return `✏️ *Reschedule Booking*
-
-📅 Current: ${formatDate(selectedBooking.booking_date)}
-
-Enter the new date:
-
-*B* to go back, *0* for menu`
+  return await getMessage(MSG.HALL_EDIT_DATE_PROMPT, {
+    current_date: formatDate(selectedBooking.booking_date),
+  })
 }
 
 /**
@@ -497,31 +387,18 @@ async function handleEditDate(
   userState: UserState
 ): Promise<string> {
   if (!isDateFormat(message)) {
-    return `❓ *Invalid Date*
-
-Enter in DD-MM-YYYY format.
-Example: 25-12-2025
-
-*B* to go back, *0* for menu`
+    return await getMessage(MSG.HALL_EDIT_INVALID_DATE)
   }
 
   const parsedDate = parseDate(message)
   if (!parsedDate) {
-    return `❓ *Invalid Date*
-
-We couldn't understand that. Please try again.
-
-Reply *0* for menu`
+    return await getMessage(MSG.HALL_EDIT_INVALID_DATE_PARSE)
   }
 
   // Check if date is in the past
   const today = new Date().toISOString().split("T")[0]
   if (parsedDate < today) {
-    return `⚠️ *Invalid Date*
-
-Date is in the past. Please choose a future date.
-
-*B* to go back, *0* for menu`
+    return await getMessage(MSG.HALL_EDIT_DATE_PAST)
   }
 
   // Check if date is already booked
@@ -534,11 +411,7 @@ Date is in the past. Please choose a future date.
     .neq("id", selectedBooking.id)
 
   if (existingBookings && existingBookings.length > 0) {
-    return `❌ *Date Already Booked*
-
-That date is reserved. Please choose another.
-
-Reply *0* for menu`
+    return await getMessage(MSG.HALL_EDIT_DATE_TAKEN)
   }
 
   // Update booking
@@ -549,22 +422,14 @@ Reply *0* for menu`
 
   if (error) {
     console.error("[Hall] Edit error:", error)
-    return `❌ *Update Failed*
-
-Please try again.
-
-Reply *0* for menu`
+    return await getMessage(MSG.HALL_EDIT_FAILED)
   }
 
   clearState(phoneNumber)
-  return `✅ *Booking Updated*
-
-📅 From: ${formatDate(selectedBooking.booking_date)}
-📅 To: ${formatDate(parsedDate)}
-
-Successfully rescheduled!
-
-Reply *0* for menu`
+  return await getMessage(MSG.HALL_EDIT_SUCCESS, {
+    old_date: formatDate(selectedBooking.booking_date),
+    new_date: formatDate(parsedDate),
+  })
 }
 
 /**
@@ -574,11 +439,7 @@ async function viewMyBookings(profile: Profile, phoneNumber: string): Promise<st
   const bookings = await getUserBookings(profile.id)
 
   if (!bookings || bookings.length === 0) {
-    return `📋 *No Bookings Found*
-
-You don't have any bookings yet. Create one from the Hall menu.
-
-Reply *0* for menu`
+    return await getMessage(MSG.HALL_NO_BOOKINGS_VIEW)
   }
 
   const listText = bookings
@@ -593,9 +454,5 @@ Reply *0* for menu`
     .join("\n\n")
 
   clearState(phoneNumber)
-  return `📋 *Your Bookings*
-
-${listText}
-
-Reply *0* for menu`
+  return await getMessage(MSG.HALL_VIEW_BOOKINGS, { list: listText })
 }

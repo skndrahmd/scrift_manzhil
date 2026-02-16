@@ -9,6 +9,8 @@ import type { Profile, UserState } from "../types"
 import { getState, setState, clearState } from "../state"
 import { formatDate, formatSubcategory, isYesResponse, isNoResponse } from "../utils"
 import { getActiveComplaints } from "../profile"
+import { getMessage } from "../messages"
+import { MSG } from "../message-keys"
 
 /**
  * Initialize status check flow
@@ -20,11 +22,7 @@ export async function initializeStatusFlow(
   const complaints = await getActiveComplaints(profile.id)
 
   if (!complaints || complaints.length === 0) {
-    return `📋 *No Active Complaints*
-
-You don't have any active complaints. All resolved or none registered yet.
-
-Reply *0* for menu`
+    return await getMessage(MSG.STATUS_NO_COMPLAINTS)
   }
 
   setState(phoneNumber, {
@@ -42,11 +40,7 @@ Reply *0* for menu`
     })
     .join("\n\n")
 
-  return `🔍 *Complaint Status*
-
-${listText}
-
-Reply with number to view, or *0* for menu`
+  return await getMessage(MSG.STATUS_LIST, { list: listText })
 }
 
 /**
@@ -67,11 +61,9 @@ export async function handleStatusFlow(
       complaintIndex < 1 ||
       complaintIndex > userState.statusItems!.length
     ) {
-      return `❓ *Invalid Selection*
-
-Please choose 1-${userState.statusItems!.length}
-
-Reply *0* for menu`
+      return await getMessage(MSG.STATUS_INVALID_SELECTION, {
+        max: userState.statusItems!.length,
+      })
     }
 
     const complaint = userState.statusItems![complaintIndex - 1]
@@ -94,14 +86,13 @@ Reply *0* for menu`
       timeZone: "Asia/Karachi",
     })
 
-    let response = `📋 *Complaint Details*
-
-🎫 ID: ${complaint.complaint_id}
-🔧 Type: ${formatSubcategory(complaint.subcategory)}
-📝 ${complaint.description || "No description"}
-📅 Registered: ${formattedDate}
-
-📊 Status: ${statusText}`
+    let response = await getMessage(MSG.STATUS_DETAIL, {
+      complaint_id: complaint.complaint_id,
+      subcategory: formatSubcategory(complaint.subcategory),
+      description: complaint.description || "No description",
+      date: formattedDate,
+      status_text: statusText,
+    })
 
     if ((complaint as any).admin_notes) {
       response += `
@@ -116,11 +107,7 @@ Reply *0* for menu`
     return response
   }
 
-  return `❌ *Something Went Wrong*
-
-Please try again.
-
-Reply *0* for menu`
+  return await getMessage(MSG.ERROR_SOMETHING_WRONG)
 }
 
 /**
@@ -139,11 +126,7 @@ export async function initializeCancelFlow(
     .order("created_at", { ascending: false })
 
   if (error || !complaints || complaints.length === 0) {
-    return `📋 *No Cancellable Complaints*
-
-No pending complaints to cancel. Only pending complaints can be cancelled.
-
-Reply *0* for menu`
+    return await getMessage(MSG.CANCEL_NO_COMPLAINTS)
   }
 
   setState(phoneNumber, {
@@ -160,11 +143,7 @@ Reply *0* for menu`
     )
     .join("\n\n")
 
-  return `❌ *Cancel Complaint*
-
-${listText}
-
-Reply with number to cancel, or *0* for menu`
+  return await getMessage(MSG.CANCEL_LIST, { list: listText })
 }
 
 /**
@@ -185,11 +164,9 @@ export async function handleCancelFlow(
       complaintIndex < 1 ||
       complaintIndex > userState.cancelItems!.length
     ) {
-      return `❓ *Invalid Selection*
-
-Please choose 1-${userState.cancelItems!.length}
-
-Reply *0* for menu`
+      return await getMessage(MSG.STATUS_INVALID_SELECTION, {
+        max: userState.cancelItems!.length,
+      })
     }
 
     const selectedComplaint = userState.cancelItems![complaintIndex - 1]
@@ -197,18 +174,11 @@ Reply *0* for menu`
     userState.step = "cancel_confirm"
     setState(phoneNumber, userState)
 
-    return `⚠️ *Confirm Cancellation*
-
-📋 ID: ${selectedComplaint.complaint_id}
-🔧 Type: ${formatSubcategory(selectedComplaint.subcategory)}
-📝 ${selectedComplaint.description || "No description"}
-
-Cancel this complaint?
-
-1. ✅ Yes, cancel
-2. ❌ No, keep
-
-Reply *1* or *2*`
+    return await getMessage(MSG.CANCEL_CONFIRM, {
+      complaint_id: selectedComplaint.complaint_id,
+      subcategory: formatSubcategory(selectedComplaint.subcategory),
+      description: selectedComplaint.description || "No description",
+    })
   }
 
   if (userState.step === "cancel_confirm") {
@@ -225,40 +195,22 @@ Reply *1* or *2*`
 
       if (error) {
         console.error("[Status] Cancel error:", error)
-        return `❌ *Cancellation Failed*
-
-Please try again.
-
-Reply *0* for menu`
+        return await getMessage(MSG.CANCEL_FAILED)
       }
 
       clearState(phoneNumber)
-      return `✅ *Complaint Cancelled*
-
-Complaint ${selectedComplaint.complaint_id} has been cancelled.
-
-Reply *0* for menu`
+      return await getMessage(MSG.CANCEL_SUCCESS, {
+        complaint_id: selectedComplaint.complaint_id,
+      })
     }
 
     if (isNoResponse(message)) {
       clearState(phoneNumber)
-      return `✅ *Cancellation Aborted*
-
-Your complaint remains active. No changes made.
-
-Reply *0* for menu`
+      return await getMessage(MSG.CANCEL_ABORTED)
     }
 
-    return `❓ *Invalid Response*
-
-Reply *1* (Yes) or *2* (No)
-
-Reply *0* for menu`
+    return await getMessage(MSG.CANCEL_INVALID_RESPONSE)
   }
 
-  return `❌ *Something Went Wrong*
-
-Please try again.
-
-Reply *0* for menu`
+  return await getMessage(MSG.ERROR_SOMETHING_WRONG)
 }

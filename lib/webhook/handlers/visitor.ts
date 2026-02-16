@@ -8,22 +8,20 @@ import { isDateFormat, parseDate } from "@/lib/date"
 import type { Profile, UserState, VisitorData } from "../types"
 import { setState, clearState } from "../state"
 import { formatDate } from "../utils"
+import { getMessage } from "../messages"
+import { MSG } from "../message-keys"
 
 /**
  * Initialize visitor registration flow
  */
-export function initializeVisitorFlow(phoneNumber: string): string {
+export async function initializeVisitorFlow(phoneNumber: string): Promise<string> {
     setState(phoneNumber, {
         step: "visitor_name",
         type: "visitor",
         visitor: {},
     })
 
-    return `🎫 *Visitor Entry Pass*
-
-Enter the *visitor's name* ✍️
-
-*B* to go back, *0* for menu`
+    return await getMessage(MSG.VISITOR_NAME_PROMPT)
 }
 
 /**
@@ -40,35 +38,31 @@ export async function handleVisitorFlow(
 
     switch (step) {
         case "visitor_name":
-            return handleNameInput(message, phoneNumber, visitor)
+            return await handleNameInput(message, phoneNumber, visitor)
 
         case "visitor_car_number":
-            return handleCarNumberInput(message, phoneNumber, visitor)
+            return await handleCarNumberInput(message, phoneNumber, visitor)
 
         case "visitor_date":
             return await handleDateInputAndSave(message, profile, phoneNumber, visitor)
 
         default:
-            return initializeVisitorFlow(phoneNumber)
+            return await initializeVisitorFlow(phoneNumber)
     }
 }
 
 /**
  * Handle visitor name input
  */
-function handleNameInput(
+async function handleNameInput(
     message: string,
     phoneNumber: string,
     visitor: VisitorData
-): string {
+): Promise<string> {
     const name = message.trim()
 
     if (name.length < 2) {
-        return `❌ *Name too short*
-
-Please enter the visitor's full name (at least 2 characters).
-
-*B* to go back, *0* for menu`
+        return await getMessage(MSG.VISITOR_NAME_TOO_SHORT)
     }
 
     setState(phoneNumber, {
@@ -77,29 +71,21 @@ Please enter the visitor's full name (at least 2 characters).
         visitor: { ...visitor, visitor_name: name },
     })
 
-    return `✅ Name: ${name}
-
-🚗 Enter the visitor's *car number* (license plate).
-
-*B* to go back, *0* for menu`
+    return await getMessage(MSG.VISITOR_CAR_PROMPT, { name })
 }
 
 /**
  * Handle car number input
  */
-function handleCarNumberInput(
+async function handleCarNumberInput(
     message: string,
     phoneNumber: string,
     visitor: VisitorData
-): string {
+): Promise<string> {
     const input = message.trim()
 
     if (input.length < 2) {
-        return `❌ *Car number too short*
-
-Please enter a valid car number / license plate.
-
-*B* to go back, *0* for menu`
+        return await getMessage(MSG.VISITOR_CAR_TOO_SHORT)
     }
 
     const updatedVisitor = {
@@ -113,12 +99,7 @@ Please enter a valid car number / license plate.
         visitor: updatedVisitor,
     })
 
-    return `🚗 Car: ${input}
-
-📅 Enter *date of visit*.
-Formats: DD-MM-YYYY, "tomorrow", "next Monday"
-
-*B* to go back, *0* for menu`
+    return await getMessage(MSG.VISITOR_DATE_PROMPT, { car_number: input })
 }
 
 /**
@@ -131,20 +112,12 @@ async function handleDateInputAndSave(
     visitor: VisitorData
 ): Promise<string> {
     if (!isDateFormat(message)) {
-        return `❌ *Invalid Date*
-
-Try: DD-MM-YYYY, "tomorrow", "next Monday"
-
-*B* to go back, *0* for menu`
+        return await getMessage(MSG.VISITOR_INVALID_DATE)
     }
 
     const parsedDateStr = parseDate(message)
     if (!parsedDateStr) {
-        return `❌ *Invalid Date*
-
-Couldn't understand that date. Try again.
-
-*B* to go back, *0* for menu`
+        return await getMessage(MSG.VISITOR_INVALID_DATE_PARSE)
     }
 
     // Convert string to Date for comparison
@@ -154,22 +127,14 @@ Couldn't understand that date. Try again.
     const today = new Date()
     today.setHours(0, 0, 0, 0)
     if (parsedDate < today) {
-        return `❌ *Invalid Date*
-
-Visit date cannot be in the past.
-
-*B* to go back, *0* for menu`
+        return await getMessage(MSG.VISITOR_DATE_PAST)
     }
 
     // Check if date is too far in the future (30 days)
     const maxDate = new Date()
     maxDate.setDate(maxDate.getDate() + 30)
     if (parsedDate > maxDate) {
-        return `❌ *Invalid Date*
-
-Visitor passes can only be registered up to 30 days in advance.
-
-*B* to go back, *0* for menu`
+        return await getMessage(MSG.VISITOR_DATE_TOO_FAR)
     }
 
     try {
@@ -191,11 +156,7 @@ Visitor passes can only be registered up to 30 days in advance.
 
         if (error) {
             console.error("[Visitor] Error saving visitor pass:", error)
-            return `❌ *Registration Failed*
-
-Please try again later.
-
-Reply *0* for menu`
+            return await getMessage(MSG.VISITOR_CREATION_ERROR)
         }
 
         clearState(phoneNumber)
@@ -203,27 +164,15 @@ Reply *0* for menu`
         const carLine = visitor.car_number ? `\n🚗 Car: ${visitor.car_number}` : ""
         const passId = data.id.substring(0, 5)
 
-        return `✅ *Visitor Pass Created!*
-
-Forward this to your visitor:
-
-—————————————
-🎫 *Visitor Pass*
-🆔 Pass ID: *${passId}*
-👤 Name: ${visitor.visitor_name}${carLine}
-📅 Date: ${formattedDate}
-
-Show this message at the gate.
-—————————————
-
-Reply *0* for menu`
+        return await getMessage(MSG.VISITOR_CREATED, {
+            pass_id: passId,
+            visitor_name: visitor.visitor_name || "",
+            car_line: carLine,
+            date: formattedDate,
+        })
     } catch (error) {
         console.error("[Visitor] Error:", error)
         clearState(phoneNumber)
-        return `❌ *Registration Failed*
-
-An unexpected error occurred.
-
-Reply *0* for menu`
+        return await getMessage(MSG.VISITOR_UNEXPECTED_ERROR)
     }
 }

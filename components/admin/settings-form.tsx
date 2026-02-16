@@ -9,7 +9,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Settings, Save, Users, Calendar } from "lucide-react"
+import { Settings, Save, Users, Calendar, MessageSquare } from "lucide-react"
+import Link from "next/link"
 import { useToast } from "@/hooks/use-toast"
 import { StaffManagement } from "./staff-management"
 
@@ -77,7 +78,7 @@ export function SettingsForm() {
 
             {isSuperAdmin ? (
                 <Tabs defaultValue="booking" className="w-full">
-                    <TabsList className="grid w-full max-w-md grid-cols-2">
+                    <TabsList className="grid w-full max-w-lg grid-cols-3">
                         <TabsTrigger value="booking" className="flex items-center gap-2">
                             <Calendar className="h-4 w-4" />
                             Booking Settings
@@ -85,6 +86,10 @@ export function SettingsForm() {
                         <TabsTrigger value="staff" className="flex items-center gap-2">
                             <Users className="h-4 w-4" />
                             Staff Management
+                        </TabsTrigger>
+                        <TabsTrigger value="bot" className="flex items-center gap-2">
+                            <MessageSquare className="h-4 w-4" />
+                            Bot Messages
                         </TabsTrigger>
                     </TabsList>
 
@@ -101,6 +106,25 @@ export function SettingsForm() {
 
                     <TabsContent value="staff" className="mt-6">
                         <StaffManagement />
+                    </TabsContent>
+
+                    <TabsContent value="bot" className="mt-6">
+                        <Card className="border-0 shadow-lg shadow-manzhil-teal/5">
+                            <CardHeader>
+                                <CardTitle className="text-lg">WhatsApp Bot Messages</CardTitle>
+                            </CardHeader>
+                            <CardContent className="space-y-4">
+                                <p className="text-sm text-gray-500">
+                                    Customize the messages your WhatsApp bot sends to residents. Edit welcome text, menus, prompts, confirmations, and error messages without touching code.
+                                </p>
+                                <Link href="/admin/settings/bot-messages">
+                                    <Button className="bg-gradient-to-r from-manzhil-dark to-manzhil-teal hover:shadow-lg hover:shadow-manzhil-teal/30 transition-all">
+                                        <MessageSquare className="h-4 w-4 mr-2" />
+                                        Open Bot Messages Editor
+                                    </Button>
+                                </Link>
+                            </CardContent>
+                        </Card>
                     </TabsContent>
                 </Tabs>
             ) : (

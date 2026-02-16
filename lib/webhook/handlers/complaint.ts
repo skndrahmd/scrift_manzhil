@@ -9,19 +9,25 @@ import type { Profile, UserState } from "../types"
 import { getState, setState, clearState } from "../state"
 import { getComplaintRecipients, TEMPLATE_SIDS } from "../config"
 import { formatSubcategory } from "../utils"
-import { getComplaintCategoryMenu } from "../menu"
+import { getMessage } from "../messages"
+import { MSG } from "../message-keys"
 
 /**
  * Initialize complaint flow
  */
-export function initializeComplaintFlow(phoneNumber: string): string {
+export async function initializeComplaintFlow(phoneNumber: string): Promise<string> {
   setState(phoneNumber, {
     step: "complaint_category",
     type: "complaint",
     complaint: {},
   })
 
-  return getComplaintCategoryMenu()
+  return await getMessage(MSG.COMPLAINT_CATEGORY_MENU, {
+    apartment_emoji: "🏠",
+    apartment_label: "My Apartment Complaint",
+    building_emoji: "🏢",
+    building_label: "Building Complaint",
+  })
 }
 
 /**
@@ -37,7 +43,7 @@ export async function handleComplaintFlow(
 
   switch (userState.step) {
     case "complaint_category":
-      return handleCategorySelection(choice, phoneNumber, userState)
+      return await handleCategorySelection(choice, phoneNumber, userState)
 
     case "complaint_subcategory":
       return await handleSubcategorySelection(choice, profile, phoneNumber, userState)
@@ -47,36 +53,35 @@ export async function handleComplaintFlow(
       return await createComplaint(profile, userState, phoneNumber)
 
     default:
-      return `❌ *Something Went Wrong*
-
-We couldn't process your request. Please try again.
-
-Reply *0* for menu`
+      return await getMessage(MSG.COMPLAINT_FLOW_ERROR)
   }
 }
 
 /**
  * Handle category selection (apartment vs building)
  */
-function handleCategorySelection(
+async function handleCategorySelection(
   choice: string,
   phoneNumber: string,
   userState: UserState
-): string {
+): Promise<string> {
   if (choice === "1") {
     userState.complaint!.category = "apartment"
     userState.step = "complaint_subcategory"
     setState(phoneNumber, userState)
 
-    return `🏠 *Apartment Complaint*
+    const subcategories = [
+      "1. 🔧 Plumbing",
+      "2. ⚡ Electric",
+      "3. 🔨 Civil",
+      "4. 🅿️ My Parking Complaint",
+      "5. 🔧 Other",
+    ].join("\n")
 
-1. 🔧 Plumbing
-2. ⚡ Electric
-3. 🔨 Civil
-4. 🅿️ My Parking Complaint
-5. 🔧 Other
-
-Reply 1-5, or *B* to go back`
+    return await getMessage(MSG.COMPLAINT_APARTMENT_SUBCATEGORY, {
+      subcategories,
+      max: "5",
+    })
   }
 
   if (choice === "2") {
@@ -84,29 +89,28 @@ Reply 1-5, or *B* to go back`
     userState.step = "complaint_subcategory"
     setState(phoneNumber, userState)
 
-    return `🏢 *Building Complaint*
+    const subcategories = [
+      "1. 🛗 Lift/Elevator",
+      "2. 💪 Gym",
+      "3. 🎱 Snooker Room",
+      "4. 🎮 Play Area",
+      "5. 🚗 Parking",
+      "6. 🔒 Security Complaint",
+      "7. 🔧 Plumbing",
+      "8. ⚡ Electric",
+      "9. 🔨 Civil",
+      "10. 🤝 Collaboration Corner",
+      "11. 🪑 Seating Area",
+      "12. 📋 Other",
+    ].join("\n")
 
-1. 🛗 Lift/Elevator
-2. 💪 Gym
-3. 🎱 Snooker Room
-4. 🎮 Play Area
-5. 🚗 Parking
-6. 🔒 Security Complaint
-7. 🔧 Plumbing
-8. ⚡ Electric
-9. 🔨 Civil
-10. 🤝 Collaboration Corner
-11. 🪑 Seating Area
-12. 📋 Other
-
-Reply 1-12, or *B* to go back`
+    return await getMessage(MSG.COMPLAINT_BUILDING_SUBCATEGORY, {
+      subcategories,
+      max: "12",
+    })
   }
 
-  return `❓ *Invalid Selection*
-
-Reply *1* for Apartment or *2* for Building
-
-*B* to go back, *0* for menu`
+  return await getMessage(MSG.COMPLAINT_INVALID_CATEGORY)
 }
 
 /**
@@ -151,11 +155,7 @@ async function handleSubcategorySelection(
     if (needsDescription) {
       userState.step = "complaint_description"
       setState(phoneNumber, userState)
-      return `📝 *Add Description*
-
-Please describe the issue briefly.
-
-Reply *B* to go back`
+      return await getMessage(MSG.COMPLAINT_DESCRIPTION_PROMPT)
     }
 
     // Create complaint directly for apartment predefined categories
@@ -163,11 +163,7 @@ Reply *B* to go back`
   }
 
   const rangeText = isBuilding ? "1-12" : "1-5"
-  return `❓ *Invalid Selection*
-
-Please choose ${rangeText}.
-
-Reply *B* to go back`
+  return await getMessage(MSG.COMPLAINT_INVALID_SUBCATEGORY, { range: rangeText })
 }
 
 /**
@@ -210,11 +206,7 @@ async function createComplaint(
 
     if (error) {
       console.error("[Complaint] Creation error:", error)
-      return `❌ *Unable to Register Complaint*
-
-We couldn't register your complaint. Please try again.
-
-Reply *0* for menu`
+      return await getMessage(MSG.COMPLAINT_CREATION_ERROR)
     }
 
     // Clear state
@@ -256,23 +248,15 @@ Reply *0* for menu`
     }
 
     // Fallback confirmation message
-    return `✅ *Complaint Registered*
-
-📋 ID: ${complaintData.complaint_id}
-🔧 Type: ${subcategoryText}
-📝 ${finalDescription || "No description"}
-📅 Registered: ${formattedDateTime}
-
-Your complaint has been forwarded to maintenance. We'll notify you of updates.
-
-Reply *0* for menu`
+    return await getMessage(MSG.COMPLAINT_REGISTERED, {
+      complaint_id: complaintData.complaint_id,
+      subcategory: subcategoryText,
+      description: finalDescription || "No description",
+      date_time: formattedDateTime,
+    })
   } catch (error) {
     console.error("[Complaint] Create error:", error)
-    return `❌ *Unable to Create Complaint*
-
-We encountered an issue. Please try again.
-
-Reply *0* for menu`
+    return await getMessage(MSG.COMPLAINT_CREATION_ERROR)
   }
 }
 
@@ -357,17 +341,17 @@ async function sendNewComplaintNotification(
       // Fallback to plain text message
       if (!templateSent) {
         try {
-          const fallbackMessage = `🆕 *New Complaint*
-
-📋 ID: ${complaint.complaint_id || "N/A"}
-👤 ${profile.name || "Unknown"} (${profile.apartment_number || "N/A"})
-🔧 ${categoryText} - ${subcategoryText}
-📝 ${sanitizedDescription}
-📅 ${formattedDate} at ${formattedTime}
-
-🔗 Admin: ${baseUrl}/admin
-
-— Manzhil`
+          const fallbackMessage = await getMessage(MSG.COMPLAINT_NOTIFICATION_FALLBACK, {
+            complaint_id: complaint.complaint_id || "N/A",
+            name: profile.name || "Unknown",
+            apartment_number: profile.apartment_number || "N/A",
+            category: categoryText,
+            subcategory: subcategoryText,
+            description: sanitizedDescription,
+            date: formattedDate,
+            time: formattedTime,
+            admin_url: `${baseUrl}/admin`,
+          })
 
           await sendWhatsAppMessage(recipient, fallbackMessage)
           console.log(

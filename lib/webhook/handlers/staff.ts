@@ -8,12 +8,17 @@ import { getPakistanISOString } from "@/lib/date"
 import type { Profile, UserState } from "../types"
 import { getState, setState, clearState } from "../state"
 import { validateName, validatePhoneNumber, validateCNIC, isYesResponse, isNoResponse } from "../utils"
-import { getStaffMenu } from "../menu"
+import { getMessage } from "../messages"
+import { MSG } from "../message-keys"
+import {
+  STAFF_MENU_OPTIONS,
+  STAFF_ROLES,
+} from "../config"
 
 /**
  * Initialize staff management flow
  */
-export function initializeStaffFlow(phoneNumber: string): string {
+export async function initializeStaffFlow(phoneNumber: string): Promise<string> {
   setState(phoneNumber, {
     step: "staff_menu",
     type: "staff",
@@ -21,7 +26,11 @@ export function initializeStaffFlow(phoneNumber: string): string {
     staffList: [],
   })
 
-  return getStaffMenu()
+  const options = STAFF_MENU_OPTIONS.map(
+    (opt) => `${opt.key}. ${opt.emoji} ${opt.label}`
+  ).join("\n")
+
+  return await getMessage(MSG.STAFF_MENU, { options })
 }
 
 /**
@@ -38,7 +47,7 @@ export async function handleStaffFlow(
   // Guard: profile must be linked to a unit
   if (!profile.unit_id) {
     clearState(phoneNumber)
-    return `Unable to manage staff. Your profile is not linked to a unit.\n\nPlease contact building management.\n\nReply *0* for menu`
+    return await getMessage(MSG.STAFF_NO_UNIT)
   }
 
   try {
@@ -62,18 +71,10 @@ export async function handleStaffFlow(
       return await handleEditStaffFlow(message, profile, phoneNumber, userState)
     }
 
-    return `❌ *Something Went Wrong*
-
-Please try again.
-
-Reply *0* for menu`
+    return await getMessage(MSG.ERROR_SOMETHING_WRONG)
   } catch (error) {
     console.error("[Staff] Flow error:", error)
-    return `❌ *Unable to Process*
-
-Please try again shortly.
-
-Reply *0* for menu`
+    return await getMessage(MSG.ERROR_GENERIC)
   }
 }
 
@@ -91,11 +92,7 @@ async function handleStaffMenuSelection(
       userState.step = "staff_add_name"
       userState.staff = {}
       setState(phoneNumber, userState)
-      return `➕ *Add New Staff*
-
-Enter staff member's full name:
-
-*B* to go back, *0* for menu`
+      return await getMessage(MSG.STAFF_ADD_NAME)
 
     case "2": // View staff
       return await viewStaffList(profile, phoneNumber)
@@ -107,11 +104,7 @@ Enter staff member's full name:
       return await initializeDeleteStaff(profile, phoneNumber)
 
     default:
-      return `❓ *Invalid Selection*
-
-Please choose 1-4.
-
-Reply *0* for menu`
+      return await getMessage(MSG.STAFF_INVALID_MENU)
   }
 }
 
@@ -135,11 +128,7 @@ async function handleAddStaffFlow(
     userState.staff!.name = message.trim()
     userState.step = "staff_add_phone"
     setState(phoneNumber, userState)
-    return `📱 *Enter Phone Number*
-
-Format: 03001234567
-
-*B* to go back`
+    return await getMessage(MSG.STAFF_ADD_PHONE)
   }
 
   if (userState.step === "staff_add_phone") {
@@ -157,22 +146,13 @@ Format: 03001234567
       .single()
 
     if (existingStaff) {
-      return `⚠️ *Duplicate Entry*
-
-This phone is already in your staff list.
-
-Reply *0* for menu`
+      return await getMessage(MSG.STAFF_DUPLICATE_PHONE)
     }
 
     userState.staff!.phone = phoneValidation.normalized!
     userState.step = "staff_add_cnic"
     setState(phoneNumber, userState)
-    return `🆔 *Enter CNIC*
-
-Format: 13 digits
-Example: 1234512345671
-
-*B* to go back`
+    return await getMessage(MSG.STAFF_ADD_CNIC)
   }
 
   if (userState.step === "staff_add_cnic") {
@@ -184,18 +164,19 @@ Example: 1234512345671
     userState.staff!.cnic = cnicValidation.normalized!
     userState.step = "staff_add_role_select"
     setState(phoneNumber, userState)
-    return `👔 *Select Role*
 
-1. 🚗 Driver
-2. 👨‍🍳 Cook
-3. 🧹 Maid
-4. 🔧 Plumber
-5. ⚡ Electrician
-6. 🛠️ Maintenance
-7. 🔒 Security Guard
-8. 📋 Other
+    const roles = [
+      "1. 🚗 Driver",
+      "2. 👨‍🍳 Cook",
+      "3. 🧹 Maid",
+      "4. 🔧 Plumber",
+      "5. ⚡ Electrician",
+      "6. 🛠️ Maintenance",
+      "7. 🔒 Security Guard",
+      "8. 📋 Other",
+    ].join("\n")
 
-Reply 1-8, or *B* to go back`
+    return await getMessage(MSG.STAFF_ADD_ROLE, { roles, max: "8" })
   }
 
   if (userState.step === "staff_add_role_select") {
@@ -209,39 +190,22 @@ Reply 1-8, or *B* to go back`
     if (choice === "8") {
       userState.step = "staff_add_role_custom"
       setState(phoneNumber, userState)
-      return `📋 *Custom Role*
-
-Enter role name (3-30 characters):
-Examples: Gardener, Helper
-
-*B* to go back`
+      return await getMessage(MSG.STAFF_ADD_ROLE_CUSTOM)
     }
 
-    return `❓ *Invalid Selection*
-
-Please choose 1-8.
-
-*B* to go back`
+    return await getMessage(MSG.STAFF_INVALID_ROLE, { max: "8" })
   }
 
   if (userState.step === "staff_add_role_custom") {
     if (message.trim().length < 3 || message.trim().length > 30) {
-      return `❌ *Invalid Role*
-
-Must be 3-30 characters.
-
-*B* to go back`
+      return await getMessage(MSG.STAFF_INVALID_CUSTOM_ROLE)
     }
 
     userState.staff!.role = message.trim()
     return await createStaffMember(profile, userState, phoneNumber)
   }
 
-  return `❌ *Something Went Wrong*
-
-Please try again.
-
-Reply *0* for menu`
+  return await getMessage(MSG.ERROR_SOMETHING_WRONG)
 }
 
 /**
@@ -269,31 +233,19 @@ async function createStaffMember(
 
     if (error) {
       console.error("[Staff] Creation error:", error)
-      return `❌ *Unable to Add Staff*
-
-Please try again.
-
-Reply *0* for menu`
+      return await getMessage(MSG.STAFF_ADD_ERROR)
     }
 
     clearState(phoneNumber)
-    return `✅ *Staff Member Added*
-
-👤 ${staff.name}
-🆔 ${staff.cnic}
-📱 ${staff.phone}
-👔 ${staff.role}
-
-📌 Please submit their CNIC to maintenance for card issuance.
-
-Reply *0* for menu`
+    return await getMessage(MSG.STAFF_ADDED, {
+      name: staff.name || "",
+      cnic: staff.cnic || "",
+      phone: staff.phone || "",
+      role: staff.role || "",
+    })
   } catch (error) {
     console.error("[Staff] Creation error:", error)
-    return `❌ *Unable to Add Staff*
-
-Please try again.
-
-Reply *0* for menu`
+    return await getMessage(MSG.STAFF_ADD_ERROR)
   }
 }
 
@@ -310,19 +262,11 @@ async function viewStaffList(profile: Profile, phoneNumber: string): Promise<str
 
     if (error) {
       console.error("[Staff] Fetch error:", error)
-      return `❌ *Unable to Load Staff*
-
-Please try again.
-
-Reply *0* for menu`
+      return await getMessage(MSG.STAFF_VIEW_ERROR)
     }
 
     if (!staffList || staffList.length === 0) {
-      return `📋 *No Staff Found*
-
-You haven't added any staff yet.
-
-Reply *0* for menu`
+      return await getMessage(MSG.STAFF_VIEW_EMPTY)
     }
 
     const listText = staffList
@@ -334,18 +278,10 @@ Reply *0* for menu`
       .join("\n\n")
 
     clearState(phoneNumber)
-    return `📋 *Your Staff*
-
-${listText}
-
-Reply *0* for menu`
+    return await getMessage(MSG.STAFF_VIEW_LIST, { list: listText })
   } catch (error) {
     console.error("[Staff] View error:", error)
-    return `❌ *Unable to Load Staff*
-
-Please try again.
-
-Reply *0* for menu`
+    return await getMessage(MSG.STAFF_VIEW_ERROR)
   }
 }
 
@@ -361,11 +297,7 @@ async function initializeDeleteStaff(profile: Profile, phoneNumber: string): Pro
       .order("created_at", { ascending: false })
 
     if (error || !staffList || staffList.length === 0) {
-      return `📋 *No Staff Found*
-
-No staff members to delete.
-
-Reply *0* for menu`
+      return await getMessage(MSG.STAFF_DELETE_EMPTY)
     }
 
     const userState = getState(phoneNumber)
@@ -375,18 +307,10 @@ Reply *0* for menu`
 
     const listText = staffList.map((s, i) => `${i + 1}. ${s.name} (${s.role})`).join("\n")
 
-    return `🗑️ *Remove Staff*
-
-${listText}
-
-Reply with number to remove, or *0* for menu`
+    return await getMessage(MSG.STAFF_DELETE_LIST, { list: listText })
   } catch (error) {
     console.error("[Staff] Delete init error:", error)
-    return `❌ *Unable to Load Staff*
-
-Please try again.
-
-Reply *0* for menu`
+    return await getMessage(MSG.STAFF_VIEW_ERROR)
   }
 }
 
@@ -404,11 +328,9 @@ async function handleDeleteStaffFlow(
   if (userState.step === "staff_delete_list") {
     const staffIndex = parseInt(choice, 10)
     if (isNaN(staffIndex) || staffIndex < 1 || staffIndex > userState.staffList!.length) {
-      return `❓ *Invalid Selection*
-
-Please choose 1-${userState.staffList!.length}
-
-Reply *0* for menu`
+      return await getMessage(MSG.STATUS_INVALID_SELECTION, {
+        max: userState.staffList!.length,
+      })
     }
 
     const selectedStaff = userState.staffList![staffIndex - 1]
@@ -416,18 +338,11 @@ Reply *0* for menu`
     userState.step = "staff_delete_confirm"
     setState(phoneNumber, userState)
 
-    return `⚠️ *Confirm Removal*
-
-👤 ${selectedStaff.name}
-🆔 ${selectedStaff.cnic}
-📱 ${selectedStaff.phone_number}
-
-Remove this staff member?
-
-1. ✅ Yes, remove
-2. ❌ No, cancel
-
-Reply *1* or *2*`
+    return await getMessage(MSG.STAFF_DELETE_CONFIRM, {
+      name: selectedStaff.name,
+      cnic: selectedStaff.cnic,
+      phone: selectedStaff.phone_number,
+    })
   }
 
   if (userState.step === "staff_delete_confirm") {
@@ -437,42 +352,22 @@ Reply *1* or *2*`
 
       if (error) {
         console.error("[Staff] Deletion error:", error)
-        return `❌ *Removal Failed*
-
-Please try again.
-
-Reply *0* for menu`
+        return await getMessage(MSG.STAFF_DELETE_FAILED)
       }
 
       clearState(phoneNumber)
-      return `✅ *Staff Removed*
-
-${selectedStaff.name} removed from your list.
-
-Reply *0* for menu`
+      return await getMessage(MSG.STAFF_DELETED, { name: selectedStaff.name })
     }
 
     if (isNoResponse(message)) {
       clearState(phoneNumber)
-      return `✅ *Removal Cancelled*
-
-Staff list unchanged.
-
-Reply *0* for menu`
+      return await getMessage(MSG.STAFF_DELETE_CANCELLED)
     }
 
-    return `❓ *Invalid Response*
-
-Reply *1* (Yes) or *2* (No)
-
-Reply *0* for menu`
+    return await getMessage(MSG.CANCEL_INVALID_RESPONSE)
   }
 
-  return `❌ *Something Went Wrong*
-
-Please try again.
-
-Reply *0* for menu`
+  return await getMessage(MSG.ERROR_SOMETHING_WRONG)
 }
 
 /**
@@ -487,11 +382,7 @@ async function initializeEditStaff(profile: Profile, phoneNumber: string): Promi
       .order("created_at", { ascending: false })
 
     if (error || !staffList || staffList.length === 0) {
-      return `📋 *No Staff Found*
-
-No staff members to edit.
-
-Reply *0* for menu`
+      return await getMessage(MSG.STAFF_EDIT_EMPTY)
     }
 
     const userState = getState(phoneNumber)
@@ -501,18 +392,10 @@ Reply *0* for menu`
 
     const listText = staffList.map((s, i) => `${i + 1}. ${s.name} (${s.role})`).join("\n")
 
-    return `✏️ *Edit Staff*
-
-${listText}
-
-Reply with number to edit, or *0* for menu`
+    return await getMessage(MSG.STAFF_EDIT_LIST, { list: listText })
   } catch (error) {
     console.error("[Staff] Edit init error:", error)
-    return `❌ *Unable to Load Staff*
-
-Please try again.
-
-Reply *0* for menu`
+    return await getMessage(MSG.STAFF_VIEW_ERROR)
   }
 }
 
@@ -530,11 +413,9 @@ async function handleEditStaffFlow(
   if (userState.step === "staff_edit_list") {
     const staffIndex = parseInt(choice, 10)
     if (isNaN(staffIndex) || staffIndex < 1 || staffIndex > userState.staffList!.length) {
-      return `❓ *Invalid Selection*
-
-Please choose 1-${userState.staffList!.length}
-
-Reply *0* for menu`
+      return await getMessage(MSG.STATUS_INVALID_SELECTION, {
+        max: userState.staffList!.length,
+      })
     }
 
     const selectedStaff = userState.staffList![staffIndex - 1]
@@ -542,47 +423,28 @@ Reply *0* for menu`
     userState.step = "staff_edit_field"
     setState(phoneNumber, userState)
 
-    return `✏️ *Edit: ${selectedStaff.name}*
-
-1. 👤 Name
-2. 🆔 CNIC
-3. 📱 Phone
-
-Reply 1-3`
+    return await getMessage(MSG.STAFF_EDIT_FIELD_SELECT, { name: selectedStaff.name })
   }
 
   if (userState.step === "staff_edit_field") {
     const fields: Record<string, string> = { "1": "name", "2": "cnic", "3": "phone_number" }
-    const prompts: Record<string, string> = {
-      "1": `📝 *Update Name*
-
-Enter new name for ${(userState as any).selectedStaff.name}:
-
-*B* to go back`,
-      "2": `🆔 *Update CNIC*
-
-Enter new 13-digit CNIC:
-
-*B* to go back`,
-      "3": `📱 *Update Phone*
-
-Enter new phone (e.g., 03001234567):
-
-*B* to go back`,
-    }
 
     if (fields[choice]) {
       ; (userState as any).editField = fields[choice]
       userState.step = "staff_edit_value"
       setState(phoneNumber, userState)
-      return prompts[choice]
+
+      const selectedStaff = (userState as any).selectedStaff
+      if (choice === "1") {
+        return await getMessage(MSG.STAFF_EDIT_NAME_PROMPT, { name: selectedStaff.name })
+      } else if (choice === "2") {
+        return await getMessage(MSG.STAFF_EDIT_CNIC_PROMPT)
+      } else {
+        return await getMessage(MSG.STAFF_EDIT_PHONE_PROMPT)
+      }
     }
 
-    return `❓ *Invalid Selection*
-
-Please choose 1, 2, or 3.
-
-Reply *0* for menu`
+    return await getMessage(MSG.STATUS_INVALID_SELECTION, { max: "3" })
   }
 
   if (userState.step === "staff_edit_value") {
@@ -594,20 +456,12 @@ Reply *0* for menu`
     if (editField === "cnic") {
       newValue = newValue.replace(/[-\s]/g, "")
       if (!/^\d{13}$/.test(newValue)) {
-        return `❌ *Invalid CNIC*
-
-Enter exactly 13 digits.
-
-*B* to go back`
+        return await getMessage(MSG.STAFF_EDIT_INVALID_CNIC)
       }
     } else if (editField === "phone_number") {
       newValue = newValue.replace(/[-\s]/g, "")
       if (!/^03\d{9}$/.test(newValue)) {
-        return `❌ *Invalid Phone*
-
-Enter valid mobile number (e.g., 03001234567).
-
-*B* to go back`
+        return await getMessage(MSG.STAFF_EDIT_INVALID_PHONE)
       }
     }
 
@@ -619,11 +473,7 @@ Enter valid mobile number (e.g., 03001234567).
 
     if (error) {
       console.error("[Staff] Update error:", error)
-      return `❌ *Update Failed*
-
-Please try again.
-
-Reply *0* for menu`
+      return await getMessage(MSG.STAFF_EDIT_FAILED)
     }
 
     const fieldNames: Record<string, string> = {
@@ -633,16 +483,11 @@ Reply *0* for menu`
     }
 
     clearState(phoneNumber)
-    return `✅ *Staff Updated*
-
-${fieldNames[editField]} changed to: ${newValue}
-
-Reply *0* for menu`
+    return await getMessage(MSG.STAFF_EDIT_SUCCESS, {
+      field_name: fieldNames[editField],
+      new_value: newValue,
+    })
   }
 
-  return `❌ *Something Went Wrong*
-
-Please try again.
-
-Reply *0* for menu`
+  return await getMessage(MSG.ERROR_SOMETHING_WRONG)
 }
