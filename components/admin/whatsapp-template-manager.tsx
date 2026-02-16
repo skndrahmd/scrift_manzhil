@@ -44,6 +44,8 @@ import {
   Trash2,
   Pencil,
   X,
+  Copy,
+  Check,
 } from "lucide-react"
 import Link from "next/link"
 
@@ -393,6 +395,28 @@ function TemplateCard({
   onEdit: () => void
 }) {
   const [fallbackOpen, setFallbackOpen] = useState(false)
+  const [copied, setCopied] = useState(false)
+
+  const handleCopyBody = async () => {
+    if (!template.message_body_draft) return
+    try {
+      await navigator.clipboard.writeText(template.message_body_draft)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } catch {
+      const textarea = document.createElement("textarea")
+      textarea.value = template.message_body_draft
+      textarea.style.position = "fixed"
+      textarea.style.opacity = "0"
+      document.body.appendChild(textarea)
+      textarea.select()
+      document.execCommand("copy")
+      document.body.removeChild(textarea)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    }
+  }
+
   const isEditing = editingSid !== undefined
   const currentSid = isEditing ? editingSid : template.template_sid || ""
 
@@ -524,6 +548,53 @@ function TemplateCard({
             </div>
           </div>
         )}
+
+        {/* Suggested Template Body */}
+        <div className="space-y-1.5">
+          <div className="flex items-center justify-between">
+            <Label className="text-xs text-gray-500">Suggested Template Body</Label>
+            <div className="flex items-center gap-1.5">
+              {template.message_body_draft && (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={handleCopyBody}
+                  className="h-7 px-2 text-xs text-gray-500 hover:text-gray-700"
+                >
+                  {copied ? (
+                    <>
+                      <Check className="h-3.5 w-3.5 mr-1 text-green-600" />
+                      <span className="text-green-600">Copied</span>
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="h-3.5 w-3.5 mr-1" />
+                      Copy
+                    </>
+                  )}
+                </Button>
+              )}
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={onEdit}
+                className="h-7 px-2 text-xs text-gray-500 hover:text-gray-700"
+              >
+                <Pencil className="h-3 w-3 mr-1" />
+                Edit
+              </Button>
+            </div>
+          </div>
+          {template.message_body_draft ? (
+            <pre className="p-3 bg-emerald-50 border border-emerald-200 rounded-md text-xs text-gray-700 whitespace-pre-wrap font-mono overflow-x-auto">
+              {template.message_body_draft}
+            </pre>
+          ) : (
+            <div className="p-3 border border-dashed border-gray-300 rounded-md text-xs text-gray-400 text-center">
+              No suggested body added yet. Click Edit Details to add one.
+            </div>
+          )}
+        </div>
 
         {/* Fallback message */}
         {template.fallback_message && (

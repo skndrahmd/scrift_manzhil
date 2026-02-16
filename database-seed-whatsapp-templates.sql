@@ -22,13 +22,13 @@ VALUES
 
   ('maintenance_payment_reminder', 'Maintenance Payment Reminder', 'Reminder sent to residents with overdue maintenance payments', 'maintenance', 'TWILIO_MAINTENANCE_PAYMENT_REMINDER_TEMPLATE_SID', '[{"key":"1","label":"Months List","description":"List of unpaid months","example":"January, February 2026"},{"key":"2","label":"Total Amount","description":"Formatted total due amount","example":"10,000"},{"key":"3","label":"Invoice URL","description":"Link to the invoice PDF","example":"https://app.manzhil.com/maintenance-invoice/abc123"}]'::jsonb, 'Sent daily from the 3rd of each month for unpaid invoices via maintenance-reminder cron job', 'lib/twilio/notifications/maintenance.ts', NULL, 2),
 
-  ('maintenance_payment_confirmed', 'Maintenance Payment Confirmed', 'Confirmation sent when a maintenance payment is marked as paid', 'maintenance', 'TWILIO_MAINTENANCE_PAYMENT_CONFIRMED_TEMPLATE_SID', '[{"key":"1","label":"Resident Name","description":"Full name of the resident","example":"Ahmed Khan"},{"key":"2","label":"Month/Year","description":"Payment month and year","example":"January 2026"},{"key":"3","label":"Amount","description":"Formatted payment amount","example":"5,000"},{"key":"4","label":"Receipt URL","description":"Link to the payment receipt","example":"https://app.manzhil.com/maintenance-invoice/abc123"}]'::jsonb, 'Sent when admin marks a maintenance payment as paid from the maintenance page', 'lib/twilio/notifications/maintenance.ts', NULL, 3)
+  ('maintenance_payment_confirmed', 'Maintenance Payment Confirmed', 'Confirmation sent when a maintenance payment is marked as paid', 'maintenance', 'TWILIO_MAINTENANCE_PAYMENT_CONFIRMED_TEMPLATE_SID', '[{"key":"1","label":"Resident Name","description":"Full name of the resident","example":"Ahmed Khan"},{"key":"2","label":"Month/Year","description":"Payment month and year","example":"January 2026"},{"key":"3","label":"Amount","description":"Formatted payment amount","example":"5,000"},{"key":"4","label":"Receipt URL","description":"Link to the payment receipt","example":"https://app.manzhil.com/maintenance-invoice/abc123"}]'::jsonb, 'Sent when admin marks a maintenance payment as paid from the unit detail page or maintenance management', 'lib/twilio/notifications/maintenance.ts', NULL, 3)
 ON CONFLICT (template_key) DO NOTHING;
 
 -- Booking Templates (3)
 INSERT INTO whatsapp_templates (template_key, name, description, category, env_var_name, variables, trigger_description, trigger_source, fallback_message, sort_order)
 VALUES
-  ('booking_payment_confirmed', 'Booking Payment Confirmed', 'Confirmation sent when a hall booking payment is received', 'booking', 'TWILIO_BOOKING_PAYMENT_CONFIRMED_TEMPLATE_SID', '[{"key":"1","label":"Resident Name","description":"Full name of the resident","example":"Ahmed Khan"},{"key":"2","label":"Booking Date","description":"Formatted booking date","example":"January 15, 2026"},{"key":"3","label":"Start Time","description":"Formatted start time","example":"10:00 AM"},{"key":"4","label":"End Time","description":"Formatted end time","example":"2:00 PM"},{"key":"5","label":"Amount","description":"Formatted booking charges","example":"500"},{"key":"6","label":"Booking ID","description":"Unique booking identifier","example":"BK-001"},{"key":"7","label":"Invoice URL","description":"Link to booking invoice","example":"https://app.manzhil.com/booking-invoice/abc123"}]'::jsonb, 'Sent when admin marks a booking payment as paid from the bookings page', 'lib/twilio/notifications/booking.ts', NULL, 1),
+  ('booking_payment_confirmed', 'Booking Payment Confirmed', 'Confirmation sent when a hall booking payment is received', 'booking', 'TWILIO_BOOKING_PAYMENT_CONFIRMED_TEMPLATE_SID', '[{"key":"1","label":"Resident Name","description":"Full name of the resident","example":"Ahmed Khan"},{"key":"2","label":"Booking Date","description":"Formatted booking date","example":"January 15, 2026"},{"key":"3","label":"Start Time","description":"Formatted start time","example":"10:00 AM"},{"key":"4","label":"End Time","description":"Formatted end time","example":"2:00 PM"},{"key":"5","label":"Amount","description":"Formatted booking charges","example":"500"},{"key":"6","label":"Booking ID","description":"Unique booking identifier","example":"BK-001"},{"key":"7","label":"Invoice URL","description":"Link to booking invoice","example":"https://app.manzhil.com/booking-invoice/abc123"}]'::jsonb, 'Sent inline when admin marks a booking payment as paid from the bookings page', 'lib/twilio/notifications/booking.ts', NULL, 1),
 
   ('booking_payment_reminder', 'Booking Reminder', 'Reminder sent before a scheduled hall booking', 'booking', 'TWILIO_BOOKING_PAYMENT_REMINDER_TEMPLATE_SID', '[{"key":"1","label":"Resident Name","description":"Full name of the resident","example":"Ahmed Khan"},{"key":"2","label":"Booking Date","description":"Formatted booking date","example":"January 15, 2026"},{"key":"3","label":"Start Time","description":"Formatted start time","example":"10:00 AM"},{"key":"4","label":"End Time","description":"Formatted end time","example":"2:00 PM"}]'::jsonb, 'Sent as a reminder before scheduled bookings via the send-reminder endpoint on the bookings page', 'lib/twilio/notifications/booking.ts', NULL, 2),
 
@@ -80,3 +80,81 @@ VALUES
 
   ('pending_complaint', 'Pending Complaint Alert', 'Alert sent to admin recipients for complaints pending more than 24 hours', 'admin', 'TWILIO_PENDING_COMPLAINT_TEMPLATE_SID', '[{"key":"1","label":"Complaint ID","description":"Unique complaint identifier","example":"CMP-001"},{"key":"2","label":"Resident Name","description":"Name of the complaining resident","example":"Ahmed Khan"},{"key":"3","label":"Apartment","description":"Apartment number","example":"A-101"},{"key":"4","label":"Category","description":"Complaint category text","example":"Building Complaint"},{"key":"5","label":"Subcategory","description":"Formatted complaint type","example":"Water Leakage"},{"key":"6","label":"Description","description":"Sanitized complaint description (max 500 chars)","example":"Water leaking from ceiling in bathroom"},{"key":"7","label":"Registered Date","description":"Formatted registration date","example":"January 14, 2026"},{"key":"8","label":"Hours Pending","description":"Number of hours complaint has been pending","example":"36"},{"key":"9","label":"Admin URL","description":"Link to admin panel","example":"https://app.manzhil.com/admin"}]'::jsonb, 'Sent every 6 hours via pending-complaints cron job to admins with receive_reminder_notifications enabled', 'app/api/cron/pending-complaints/route.ts', NULL, 2)
 ON CONFLICT (template_key) DO NOTHING;
+
+
+-- ============================================
+-- Suggested Template Bodies (message_body_draft)
+-- ============================================
+-- Safe for existing installs: only updates rows where message_body_draft IS NULL
+-- These are the suggested message bodies admins can copy when creating
+-- templates in the Twilio Console for Meta approval.
+-- ============================================
+
+-- Account Templates
+UPDATE whatsapp_templates SET message_body_draft = E'Hello, welcome to Manzhil by Scrift.\n\nManzhil is a smart WhatsApp-powered Building Management System.\n\nEnter 0 (Zero) to begin.'
+WHERE template_key = 'welcome_message' AND message_body_draft IS NULL;
+
+UPDATE whatsapp_templates SET message_body_draft = E'Hello, this is Manzhil by Scrift.\n\nHi {{1}}, your account has been temporarily restricted.\n\nReason: {{2}}\nOverdue months: {{3}}\nTotal due: Rs. {{4}}\n\nPlease clear your dues to restore full access. Contact your building management for assistance.'
+WHERE template_key = 'account_blocked_maintenance' AND message_body_draft IS NULL;
+
+UPDATE whatsapp_templates SET message_body_draft = E'Hello, this is Manzhil by Scrift.\n\nHi {{1}}, great news! Your account has been reactivated.\n\nYou now have full access to all building services. Thank you for clearing your dues.'
+WHERE template_key = 'account_reactivated' AND message_body_draft IS NULL;
+
+-- Maintenance Templates
+UPDATE whatsapp_templates SET message_body_draft = E'Hello, this is Manzhil by Scrift.\n\nYour maintenance invoice for {{1}} is ready.\n\nAmount: Rs. {{2}}\nDue Date: {{3}}\n\nView & download your invoice:\n{{4}}\n\nPlease ensure timely payment. Thank you.'
+WHERE template_key = 'maintenance_invoice' AND message_body_draft IS NULL;
+
+UPDATE whatsapp_templates SET message_body_draft = E'Hello, this is Manzhil by Scrift.\n\nThis is a reminder for your pending maintenance payments.\n\nUnpaid months: {{1}}\nTotal due: Rs. {{2}}\n\nView your invoice:\n{{3}}\n\nPlease clear your dues at the earliest. Thank you.'
+WHERE template_key = 'maintenance_payment_reminder' AND message_body_draft IS NULL;
+
+UPDATE whatsapp_templates SET message_body_draft = E'Hello, this is Manzhil by Scrift.\n\nHi {{1}}, your maintenance payment has been confirmed.\n\nMonth: {{2}}\nAmount: Rs. {{3}}\n\nView your receipt:\n{{4}}\n\nThank you for your timely payment.'
+WHERE template_key = 'maintenance_payment_confirmed' AND message_body_draft IS NULL;
+
+-- Booking Templates
+UPDATE whatsapp_templates SET message_body_draft = E'Hello, this is Manzhil by Scrift.\n\nHi {{1}}, your hall booking has been confirmed!\n\nDate: {{2}}\nTime: {{3}} - {{4}}\nAmount: Rs. {{5}}\nBooking ID: {{6}}\n\nView your invoice:\n{{7}}\n\nEnjoy your event!'
+WHERE template_key = 'booking_payment_confirmed' AND message_body_draft IS NULL;
+
+UPDATE whatsapp_templates SET message_body_draft = E'Hello, this is Manzhil by Scrift.\n\nHi {{1}}, this is a reminder for your upcoming hall booking.\n\nDate: {{2}}\nTime: {{3}} - {{4}}\n\nPlease ensure everything is arranged for your event.'
+WHERE template_key = 'booking_payment_reminder' AND message_body_draft IS NULL;
+
+UPDATE whatsapp_templates SET message_body_draft = E'Hello, this is Manzhil by Scrift.\n\nHi {{1}}, your hall booking has been cancelled.\n\nDate: {{2}}\nTime: {{3}} - {{4}}\n\nIf you have any questions, please contact your building management.'
+WHERE template_key = 'booking_cancelled' AND message_body_draft IS NULL;
+
+-- Complaint Templates
+UPDATE whatsapp_templates SET message_body_draft = E'Hello, this is Manzhil by Scrift.\n\nHi {{1}}, your complaint has been registered successfully.\n\nType: {{2}}\nComplaint ID: {{3}}\nRegistered: {{4}}\n\nOur team will look into this and update you on the progress.'
+WHERE template_key = 'complaint_registered' AND message_body_draft IS NULL;
+
+UPDATE whatsapp_templates SET message_body_draft = E'Hello, this is Manzhil by Scrift.\n\nHi {{1}}, your complaint is now being worked on.\n\nType: {{2}}\nComplaint ID: {{3}}\nRegistered: {{4}}\n\nOur team is actively addressing this issue. We will notify you once resolved.'
+WHERE template_key = 'complaint_in_progress' AND message_body_draft IS NULL;
+
+UPDATE whatsapp_templates SET message_body_draft = E'Hello, this is Manzhil by Scrift.\n\nHi {{1}}, your complaint has been resolved.\n\nType: {{2}}\nComplaint ID: {{3}}\nRegistered: {{4}}\nResolved: {{5}}\n\nIf you have any further concerns, feel free to reach out.'
+WHERE template_key = 'complaint_completed' AND message_body_draft IS NULL;
+
+UPDATE whatsapp_templates SET message_body_draft = E'Hello, this is Manzhil by Scrift.\n\nHi {{1}}, your complaint has been cancelled.\n\nType: {{2}}\nComplaint ID: {{3}}\nRegistered: {{4}}\n\nIf you believe this was done in error, please contact your building management.'
+WHERE template_key = 'complaint_rejected' AND message_body_draft IS NULL;
+
+-- Parcel Template
+UPDATE whatsapp_templates SET message_body_draft = E'Hello, this is Manzhil by Scrift.\n\nHi {{1}}, a parcel has arrived for you at reception.\n\nDescription: {{2}}\n\nPhoto: {{3}}\n\nPlease collect it at your earliest convenience.'
+WHERE template_key = 'parcel_arrival' AND message_body_draft IS NULL;
+
+-- Visitor Template
+UPDATE whatsapp_templates SET message_body_draft = E'Hello, this is Manzhil by Scrift.\n\nHi {{1}}, a visitor has arrived for you.\n\nApartment: {{2}}\nDate: {{3}}\n\nPlease confirm at reception.'
+WHERE template_key = 'visitor_arrival' AND message_body_draft IS NULL;
+
+-- Broadcast Template
+UPDATE whatsapp_templates SET message_body_draft = E'{{1}}\n\n{{2}}'
+WHERE template_key = 'broadcast_announcement' AND message_body_draft IS NULL;
+
+-- Auth Templates
+UPDATE whatsapp_templates SET message_body_draft = E'Your Manzhil login code is: {{1}}\n\nThis code expires in 5 minutes. Do not share it with anyone.'
+WHERE template_key = 'otp_message' AND message_body_draft IS NULL;
+
+UPDATE whatsapp_templates SET message_body_draft = E'Hello, this is Manzhil by Scrift.\n\nHi {{1}}, you have been added as an admin to the Manzhil building management system.\n\nLogin here to get started:\n{{2}}'
+WHERE template_key = 'staff_invitation' AND message_body_draft IS NULL;
+
+-- Admin Templates
+UPDATE whatsapp_templates SET message_body_draft = E'Hello, this is Manzhil by Scrift.\n\nDaily Report for {{1}}\n\nLast 24 Hours:\n- New complaints: {{2}}\n- New bookings: {{3}}\n\nOpen Complaints Overview:\n- Total open: {{4}}\n- Pending: {{5}}\n- In progress: {{6}}\n\nView full reports:\n- Activity Report: {{7}}\n- Complaints Report: {{8}}\n\nGenerated at {{9}}'
+WHERE template_key = 'daily_report' AND message_body_draft IS NULL;
+
+UPDATE whatsapp_templates SET message_body_draft = E'Hello, this is Manzhil by Scrift.\n\nPending Complaint Alert\n\nComplaint ID: {{1}}\nResident: {{2}} (Apt {{3}})\nCategory: {{4}}\nType: {{5}}\nDescription: {{6}}\n\nRegistered: {{7}}\nPending for: {{8}} hours\n\nView in admin panel:\n{{9}}'
+WHERE template_key = 'pending_complaint' AND message_body_draft IS NULL;
