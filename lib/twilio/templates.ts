@@ -1,10 +1,11 @@
 /**
  * @module lib/twilio/templates
  * Centralized registry of Twilio Content Template SIDs.
- * Maps template types to environment-configured HX SIDs.
+ * Queries DB first (whatsapp_templates table), falls back to env vars.
  */
 
 import type { TemplateType } from "./types"
+import { supabaseAdmin } from "@/lib/supabase"
 
 /**
  * Template SID mapping - loads from environment variables
@@ -44,14 +45,33 @@ export const TEMPLATE_SIDS: Record<TemplateType, string | undefined> = {
   // Auth templates
   otp_message: process.env.TWILIO_OTP_TEMPLATE_SID,
   staff_invitation: process.env.TWILIO_STAFF_INVITATION_TEMPLATE_SID,
+
+  // Admin templates
+  daily_report: process.env.TWILIO_DAILY_REPORT_TEMPLATE_SID,
+  pending_complaint: process.env.TWILIO_PENDING_COMPLAINT_TEMPLATE_SID,
 }
 
 /**
  * Retrieves the Twilio Content Template SID for a given template type.
+ * Queries DB first (whatsapp_templates table), falls back to env vars.
  * @param type - Template type key (e.g. "welcome_message", "maintenance_invoice")
  * @returns HX-prefixed SID string, or undefined if not configured
  */
-export function getTemplateSid(type: TemplateType): string | undefined {
+export async function getTemplateSid(type: TemplateType): Promise<string | undefined> {
+  try {
+    const { data } = await supabaseAdmin
+      .from("whatsapp_templates")
+      .select("template_sid, env_var_name")
+      .eq("template_key", type)
+      .eq("is_active", true)
+      .eq("is_draft", false)
+      .single()
+
+    if (data?.template_sid) return data.template_sid
+    if (data?.env_var_name) return process.env[data.env_var_name]
+  } catch {
+    // DB unavailable — fall through to env var
+  }
   return TEMPLATE_SIDS[type]
 }
 

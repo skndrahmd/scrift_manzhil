@@ -84,7 +84,8 @@ app/
 │   ├── accounting/         # Financial management
 │   ├── feedback/           # Resident feedback
 │   ├── settings/           # Admin settings & RBAC (super_admin only)
-│   │   └── bot-messages/   # Bot message customization editor page
+│   │   ├── bot-messages/   # Bot message customization editor page
+│   │   └── whatsapp-templates/ # WhatsApp template manager page
 │   └── unauthorized/       # Access denied page
 ├── api/
 │   ├── auth/               # OTP authentication
@@ -139,6 +140,10 @@ app/
 │   ├── bot-messages/        # Bot message customization API
 │   │   ├── route.ts         # GET all messages (super_admin)
 │   │   └── [key]/route.ts   # PATCH update custom_text
+│   ├── whatsapp-templates/  # WhatsApp template management API
+│   │   ├── route.ts         # GET list all, POST create draft
+│   │   ├── [key]/route.ts   # PATCH update, DELETE draft
+│   │   └── test-send/route.ts # POST test send template
 │   ├── webhook/route.ts    # WhatsApp conversational bot endpoint
 │   ├── twilio/             # WhatsApp template sender
 │   │   └── send-template/
@@ -230,7 +235,8 @@ components/
 │   ├── settings-form.tsx
 │   ├── staff-management.tsx
 │   ├── visitors-table.tsx
-│   └── bot-messages-editor.tsx  # Bot message customization editor
+│   ├── bot-messages-editor.tsx  # Bot message customization editor
+│   └── whatsapp-template-manager.tsx # WhatsApp template management UI
 ├── accounting/             # Financial dashboard components
 │   ├── accounting-tab.tsx
 │   ├── expenses-manager.tsx
@@ -372,6 +378,16 @@ middleware.ts               # Authentication & RBAC route protection
 - API routes: `GET /api/bot-messages` (list all), `PATCH /api/bot-messages/[key]` (update/reset)
 - Seed data: `database-seed-bot-messages.sql` (idempotent, uses `ON CONFLICT DO NOTHING`)
 
+**14. WhatsApp Template Management**
+- All 20 Twilio Content Template SIDs are managed via the `whatsapp_templates` database table
+- Admin UI at `/admin/settings/whatsapp-templates` (super_admin only) — view triggers, edit SIDs, test send, create drafts
+- `getTemplateSid()` in `lib/twilio/templates.ts` queries DB first, falls back to env vars
+- Categories (tabs in UI): `account`, `maintenance`, `booking`, `complaint`, `parcel`, `visitor`, `broadcast`, `auth`, `admin`
+- Each template stores: SID, env var name (fallback), JSONB variables metadata, trigger description, source file
+- Draft templates (`is_draft = true`) can be created for future Twilio submission
+- API routes: `GET/POST /api/whatsapp-templates`, `PATCH/DELETE /api/whatsapp-templates/[key]`, `POST /api/whatsapp-templates/test-send`
+- Seed data: `database-seed-whatsapp-templates.sql` (idempotent, uses `ON CONFLICT DO NOTHING`)
+
 ## Important Development Guidelines
 
 ### Working with Supabase
@@ -469,7 +485,7 @@ Required variables (see `.env.example` for complete list):
 
 ## Database Schema
 
-Complete schema in `database-complete-schema.sql` — all 19 tables, RLS policies, indexes, triggers, and default data. Run once in Supabase SQL Editor for a fresh instance.
+Complete schema in `database-complete-schema.sql` — all 20 tables, RLS policies, indexes, triggers, and default data. Run once in Supabase SQL Editor for a fresh instance.
 
 **Core Tables:**
 - `units` — Apartment units with maintenance tracking
@@ -498,6 +514,9 @@ Complete schema in `database-complete-schema.sql` — all 19 tables, RLS policie
 
 **Bot Customization Tables:**
 - `bot_messages` — Customizable WhatsApp bot messages with default/custom text, variables, and flow grouping
+
+**Template Management Tables:**
+- `whatsapp_templates` — Twilio WhatsApp content template SIDs, variables, triggers, and metadata
 
 **Additional Tables:**
 - `admin_otp` — WhatsApp OTP codes for admin authentication
@@ -593,14 +612,15 @@ import { Button } from '@/components/ui/button'
 5. **Broadcast rate limits** — 250 messages/day, soft limit at 50 recipients, hard limit at 100
 6. **Permission cache** — HMAC-signed cookie with 5-min TTL; on denial, middleware re-verifies from DB
 7. **Supabase storage** — CNIC and parcel images stored in Supabase Storage buckets
-8. **Schema completeness** — `database-complete-schema.sql` contains all 19 tables for a fresh install
+8. **Schema completeness** — `database-complete-schema.sql` contains all 20 tables for a fresh install
 9. **Bot message cache** — 5-min in-memory cache; call `clearMessageCache()` after admin updates; falls back to hardcoded defaults if DB fails
 
 ## Additional Documentation
 
 - `docs-archive/` — Setup guides, troubleshooting, Docker configs, template examples
-- `database-complete-schema.sql` — Complete database setup (all 19 tables)
+- `database-complete-schema.sql` — Complete database setup (all 20 tables)
 - `database-seed-bot-messages.sql` — Seed data for all ~115 bot messages
+- `database-seed-whatsapp-templates.sql` — Seed data for all 20 WhatsApp templates
 
 ## Common Pitfalls
 

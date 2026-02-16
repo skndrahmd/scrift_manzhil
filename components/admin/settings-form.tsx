@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Settings, Save, Users, Calendar, MessageSquare } from "lucide-react"
+import { Settings, Save, Users, Calendar, MessageSquare, Send } from "lucide-react"
 import Link from "next/link"
 import { useToast } from "@/hooks/use-toast"
 import { StaffManagement } from "./staff-management"
@@ -78,7 +78,7 @@ export function SettingsForm() {
 
             {isSuperAdmin ? (
                 <Tabs defaultValue="booking" className="w-full">
-                    <TabsList className="grid w-full max-w-lg grid-cols-3">
+                    <TabsList className="grid w-full max-w-2xl grid-cols-4">
                         <TabsTrigger value="booking" className="flex items-center gap-2">
                             <Calendar className="h-4 w-4" />
                             Booking Settings
@@ -90,6 +90,10 @@ export function SettingsForm() {
                         <TabsTrigger value="bot" className="flex items-center gap-2">
                             <MessageSquare className="h-4 w-4" />
                             Bot Messages
+                        </TabsTrigger>
+                        <TabsTrigger value="templates" className="flex items-center gap-2">
+                            <Send className="h-4 w-4" />
+                            WA Templates
                         </TabsTrigger>
                     </TabsList>
 
@@ -121,6 +125,25 @@ export function SettingsForm() {
                                     <Button className="bg-gradient-to-r from-manzhil-dark to-manzhil-teal hover:shadow-lg hover:shadow-manzhil-teal/30 transition-all">
                                         <MessageSquare className="h-4 w-4 mr-2" />
                                         Open Bot Messages Editor
+                                    </Button>
+                                </Link>
+                            </CardContent>
+                        </Card>
+                    </TabsContent>
+
+                    <TabsContent value="templates" className="mt-6">
+                        <Card className="border-0 shadow-lg shadow-manzhil-teal/5">
+                            <CardHeader>
+                                <CardTitle className="text-lg">WhatsApp Templates</CardTitle>
+                            </CardHeader>
+                            <CardContent className="space-y-4">
+                                <p className="text-sm text-gray-500">
+                                    Manage Twilio Content Templates used for outbound notifications. View triggers, edit SIDs, test delivery, and create drafts for new templates.
+                                </p>
+                                <Link href="/admin/settings/whatsapp-templates">
+                                    <Button className="bg-gradient-to-r from-manzhil-dark to-manzhil-teal hover:shadow-lg hover:shadow-manzhil-teal/30 transition-all">
+                                        <Send className="h-4 w-4 mr-2" />
+                                        Open Template Manager
                                     </Button>
                                 </Link>
                             </CardContent>

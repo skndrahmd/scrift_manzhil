@@ -1,10 +1,10 @@
 import type { NextRequest } from "next/server"
 import { supabaseAdmin } from "@/lib/supabase"
 import { sendTemplate, sendMessage, formatSubcategory } from "@/lib/twilio"
+import { getTemplateSid } from "@/lib/twilio/templates"
 import { getReminderRecipients } from "@/lib/admin/notifications"
 
 const APP_BASE_URL = (process.env.NEXT_PUBLIC_APP_URL || "https://com3-bms.vercel.app").replace(/\/$/, "")
-const PENDING_COMPLAINT_TEMPLATE_SID = process.env.TWILIO_PENDING_COMPLAINT_TEMPLATE_SID
 
 export async function POST(request: NextRequest) {
   try {
@@ -49,6 +49,9 @@ export async function POST(request: NextRequest) {
     }
 
     console.log(`[PENDING COMPLAINTS] Found ${pendingComplaints.length} pending complaints`)
+
+    // Resolve template SID once before the loop
+    const pendingComplaintSid = await getTemplateSid("pending_complaint")
 
     // Send reminder for each pending complaint
     let sentCount = 0
@@ -126,8 +129,8 @@ ${DIVIDER}
         // Send reminder to all recipients
         for (const recipient of REMINDER_RECIPIENTS) {
           try {
-            if (PENDING_COMPLAINT_TEMPLATE_SID) {
-              const result = await sendTemplate(recipient, PENDING_COMPLAINT_TEMPLATE_SID, templateVariables)
+            if (pendingComplaintSid) {
+              const result = await sendTemplate(recipient, pendingComplaintSid, templateVariables)
               if (result.ok) {
                 console.log(`[PENDING COMPLAINTS] Reminder sent to ${recipient} for ${complaint.complaint_id} (${hoursPending}h pending)`)
                 continue

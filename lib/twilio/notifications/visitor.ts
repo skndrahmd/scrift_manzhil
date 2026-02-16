@@ -31,7 +31,7 @@ export async function sendVisitorArrivalNotification(
 
     const formattedDate = formatDate(visitDate)
 
-    const templateSid = getTemplateSid("visitor_arrival")
+    const templateSid = await getTemplateSid("visitor_arrival")
     const templateVariables = {
         "1": residentName || "Resident",
         "2": apartmentNumber || "N/A",

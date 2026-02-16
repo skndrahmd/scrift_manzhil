@@ -3,9 +3,9 @@ import { supabaseAdmin } from "@/lib/supabase"
 import jsPDF from "jspdf"
 import autoTable from "jspdf-autotable"
 import { sendTemplate, sendMessage } from "@/lib/twilio"
+import { getTemplateSid } from "@/lib/twilio/templates"
 
 const APP_BASE_URL = (process.env.NEXT_PUBLIC_APP_URL || "https://greensthree-bms.vercel.app").replace(/\/$/, "")
-const DAILY_REPORT_TEMPLATE_SID = process.env.TWILIO_DAILY_REPORT_TEMPLATE_SID || "HXe150ee7863ea59b5077930c67d61b68c"
 
 export async function POST(request: NextRequest) {
   try {
@@ -179,10 +179,14 @@ ${DIVIDER}
 Generated at ${generationTime}
 — Manzhil by Scrift`
 
+    const dailyReportSid = await getTemplateSid("daily_report")
+
     let sentCount = 0
     for (const recipient of REPORT_RECIPIENTS) {
       try {
-        const result = await sendTemplate(recipient, DAILY_REPORT_TEMPLATE_SID, templateVariables)
+        const result = dailyReportSid
+          ? await sendTemplate(recipient, dailyReportSid, templateVariables)
+          : { ok: false }
         if (result.ok) {
           sentCount++
           console.log(`[DAILY REPORTS] Sent to ${recipient}`)

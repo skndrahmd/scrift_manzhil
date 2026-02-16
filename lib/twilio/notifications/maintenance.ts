@@ -23,7 +23,7 @@ export async function sendMaintenanceInvoice(
   const { phone, name, monthYear, amount, dueDate, invoiceUrl } = params
   const formattedAmount = formatCurrency(amount)
 
-  const templateSid = getTemplateSid("maintenance_invoice")
+  const templateSid = await getTemplateSid("maintenance_invoice")
   const templateVariables = {
     "1": monthYear,
     "2": formattedAmount,
@@ -55,7 +55,7 @@ export async function sendMaintenanceReminder(
   const { phone, name, monthsList, totalAmount, invoiceUrl } = params
   const formattedAmount = formatCurrency(totalAmount)
 
-  const templateSid = getTemplateSid("maintenance_payment_reminder")
+  const templateSid = await getTemplateSid("maintenance_payment_reminder")
   const templateVariables = {
     "1": monthsList,
     "2": formattedAmount,
@@ -86,7 +86,7 @@ export async function sendMaintenancePaymentConfirmed(
   const { phone, name, monthYear, amount, receiptUrl } = params
   const formattedAmount = formatCurrency(amount)
 
-  const templateSid = getTemplateSid("maintenance_payment_confirmed")
+  const templateSid = await getTemplateSid("maintenance_payment_confirmed")
   const templateVariables = {
     "1": name || "Resident",
     "2": monthYear,

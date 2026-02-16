@@ -6,26 +6,27 @@
 --
 -- Last Updated: 2026-02-16
 --
--- Tables (19):
---   1.  units                - Apartment unit entities (first-class)
---   2.  profiles             - Resident/user information (FK → units)
---   3.  maintenance_payments - Monthly maintenance fee tracking (FK → profiles, units)
---   4.  booking_settings     - Hall booking configuration
---   5.  bookings             - Hall booking records (FK → profiles)
---   6.  complaints           - Complaint tracking (FK → profiles)
---   7.  feedback             - Resident feedback (FK → profiles)
---   8.  staff                - Building staff records (FK → units)
---   9.  daily_reports        - Generated daily PDF reports
---  10.  transactions         - Unified income/expense tracking (FK → profiles)
---  11.  expense_categories   - Expense category definitions
---  12.  expenses             - Expense records (FK → expense_categories)
---  13.  admin_users          - Admin RBAC accounts
---  14.  admin_permissions    - Page-level access control (FK → admin_users)
---  15.  admin_otp            - WhatsApp OTP authentication
---  16.  visitor_passes       - Visitor entry tracking (FK → profiles)
---  17.  parcels              - Parcel/delivery tracking (FK → profiles)
---  18.  broadcast_logs       - Broadcast rate limiting & history
---  19.  bot_messages         - Customizable WhatsApp bot messages
+-- Tables (20):
+--   1.  units                  - Apartment unit entities (first-class)
+--   2.  profiles               - Resident/user information (FK → units)
+--   3.  maintenance_payments   - Monthly maintenance fee tracking (FK → profiles, units)
+--   4.  booking_settings       - Hall booking configuration
+--   5.  bookings               - Hall booking records (FK → profiles)
+--   6.  complaints             - Complaint tracking (FK → profiles)
+--   7.  feedback               - Resident feedback (FK → profiles)
+--   8.  staff                  - Building staff records (FK → units)
+--   9.  daily_reports          - Generated daily PDF reports
+--  10.  transactions           - Unified income/expense tracking (FK → profiles)
+--  11.  expense_categories     - Expense category definitions
+--  12.  expenses               - Expense records (FK → expense_categories)
+--  13.  admin_users            - Admin RBAC accounts
+--  14.  admin_permissions      - Page-level access control (FK → admin_users)
+--  15.  admin_otp              - WhatsApp OTP authentication
+--  16.  visitor_passes         - Visitor entry tracking (FK → profiles)
+--  17.  parcels                - Parcel/delivery tracking (FK → profiles)
+--  18.  broadcast_logs         - Broadcast rate limiting & history
+--  19.  bot_messages           - Customizable WhatsApp bot messages
+--  20.  whatsapp_templates     - Twilio WhatsApp content template management
 --
 -- ============================================
 
@@ -36,6 +37,7 @@
 -- WARNING: This will DELETE ALL existing data!
 -- Comment out this section if you want to preserve existing data.
 
+DROP TABLE IF EXISTS whatsapp_templates CASCADE;
 DROP TABLE IF EXISTS broadcast_logs CASCADE;
 DROP TABLE IF EXISTS parcels CASCADE;
 DROP TABLE IF EXISTS visitor_passes CASCADE;
@@ -1001,6 +1003,41 @@ CREATE POLICY "Service role full access on bot_messages"
   WITH CHECK (true);
 
 -- ============================================
+-- TABLE 20: whatsapp_templates
+-- ============================================
+
+CREATE TABLE IF NOT EXISTS whatsapp_templates (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  template_key VARCHAR(100) NOT NULL UNIQUE,
+  name VARCHAR(200) NOT NULL,
+  description TEXT,
+  category VARCHAR(50) NOT NULL DEFAULT 'general',
+  template_sid VARCHAR(50),
+  env_var_name VARCHAR(100),
+  variables JSONB DEFAULT '[]'::jsonb,
+  trigger_description TEXT,
+  trigger_source TEXT,
+  message_body_draft TEXT,
+  fallback_message TEXT,
+  is_active BOOLEAN DEFAULT true,
+  is_draft BOOLEAN DEFAULT false,
+  sort_order INTEGER NOT NULL DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_by UUID REFERENCES admin_users(id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_whatsapp_templates_key ON whatsapp_templates(template_key);
+CREATE INDEX IF NOT EXISTS idx_whatsapp_templates_category ON whatsapp_templates(category);
+
+ALTER TABLE whatsapp_templates ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Service role full access on whatsapp_templates"
+  ON whatsapp_templates FOR ALL
+  USING (true)
+  WITH CHECK (true);
+
+-- ============================================
 -- Verification Queries
 -- ============================================
 
@@ -1016,12 +1053,13 @@ WHERE schemaname = 'public'
     'bookings', 'complaints', 'feedback', 'staff',
     'daily_reports', 'transactions', 'expense_categories', 'expenses',
     'admin_users', 'admin_permissions', 'admin_otp',
-    'visitor_passes', 'parcels', 'broadcast_logs', 'bot_messages'
+    'visitor_passes', 'parcels', 'broadcast_logs', 'bot_messages',
+    'whatsapp_templates'
   )
 ORDER BY tablename;
 
 -- Final status
 SELECT
   'Manzhil by Scrift - Database setup complete!' as status,
-  '19 tables created with RLS enabled' as summary,
+  '20 tables created with RLS enabled' as summary,
   NOW() as completed_at;

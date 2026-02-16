@@ -41,7 +41,7 @@ export async function sendParcelArrivalNotification(
         senderName ? `📍 From: ${senderName}` : null,
     ].filter(Boolean).join(" | ")
 
-    const templateSid = getTemplateSid("parcel_arrival")
+    const templateSid = await getTemplateSid("parcel_arrival")
     const templateVariables = {
         "1": residentName || "Resident",
         "2": description || "Package",

@@ -24,6 +24,8 @@ export type {
   WelcomeMessageParams,
   AccountBlockedParams,
   AccountReactivatedParams,
+  WhatsAppTemplate,
+  TemplateVariable,
 } from "./types"
 
 // Re-export client utilities

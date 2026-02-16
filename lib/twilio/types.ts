@@ -30,6 +30,8 @@ export type TemplateType =
   | "visitor_arrival"
   | "otp_message"
   | "staff_invitation"
+  | "daily_report"
+  | "pending_complaint"
 
 // Base notification params (common to all)
 export interface BaseNotificationParams {
@@ -128,4 +130,33 @@ export interface StaffInvitationParams {
   phone: string
   name: string
   loginUrl: string
+}
+
+// WhatsApp Template Management types
+export interface TemplateVariable {
+  key: string        // "1", "2", etc. (Twilio numbered placeholders)
+  label: string      // Human-readable: "Resident Name"
+  description: string // "Full name of the resident"
+  example: string    // "John Doe"
+}
+
+export interface WhatsAppTemplate {
+  id: string
+  template_key: string
+  name: string
+  description: string | null
+  category: string
+  template_sid: string | null
+  env_var_name: string | null
+  variables: TemplateVariable[]
+  trigger_description: string | null
+  trigger_source: string | null
+  message_body_draft: string | null
+  fallback_message: string | null
+  is_active: boolean
+  is_draft: boolean
+  sort_order: number
+  created_at: string
+  updated_at: string
+  updated_by: string | null
 }

@@ -27,7 +27,7 @@ export async function sendBookingConfirmation(
   const formattedStartTime = formatTime(startTime)
   const formattedEndTime = formatTime(endTime)
 
-  const templateSid = getTemplateSid("booking_payment_confirmed")
+  const templateSid = await getTemplateSid("booking_payment_confirmed")
   const templateVariables = {
     "1": name || "Resident",
     "2": formattedDate,
@@ -65,7 +65,7 @@ export async function sendBookingReminder(
   const formattedStartTime = formatTime(startTime)
   const formattedEndTime = formatTime(endTime)
 
-  const templateSid = getTemplateSid("booking_payment_reminder")
+  const templateSid = await getTemplateSid("booking_payment_reminder")
   const templateVariables = {
     "1": name || "Resident",
     "2": formattedDate,
@@ -99,7 +99,7 @@ export async function sendBookingCancelled(
   const formattedStartTime = formatTime(startTime)
   const formattedEndTime = formatTime(endTime)
 
-  const templateSid = getTemplateSid("booking_cancelled")
+  const templateSid = await getTemplateSid("booking_cancelled")
   const templateVariables = {
     "1": name || "Resident",
     "2": formattedDate,

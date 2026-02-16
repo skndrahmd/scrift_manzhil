@@ -20,7 +20,7 @@ export async function sendBroadcastAnnouncement(
   const sanitizedVar1 = (variable1 || "Announcement").replace(/[\r\n]+/g, " ").trim()
   const sanitizedVar2 = (variable2 || "").replace(/[\r\n]+/g, " ").trim()
 
-  const templateSid = getTemplateSid("broadcast_announcement")
+  const templateSid = await getTemplateSid("broadcast_announcement")
   const templateVariables: Record<string, string> = {
     "1": sanitizedVar1,
     "2": sanitizedVar2,

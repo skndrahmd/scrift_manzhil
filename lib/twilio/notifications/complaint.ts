@@ -18,7 +18,7 @@ export async function sendComplaintRegistered(
   const { phone, name, complaintId, category, subcategory, registeredTime } = params
   const subcategoryDisplay = formatSubcategory(subcategory)
 
-  const templateSid = getTemplateSid("complaint_registered")
+  const templateSid = await getTemplateSid("complaint_registered")
   const templateVariables = {
     "1": name || "Resident",
     "2": subcategoryDisplay,
@@ -49,7 +49,7 @@ export async function sendComplaintInProgress(
   const { phone, name, complaintId, subcategory, registeredTime } = params
   const subcategoryDisplay = formatSubcategory(subcategory)
 
-  const templateSid = getTemplateSid("complaint_in_progress")
+  const templateSid = await getTemplateSid("complaint_in_progress")
   const templateVariables = {
     "1": name || "Resident",
     "2": subcategoryDisplay,
@@ -80,7 +80,7 @@ export async function sendComplaintCompleted(
   const { phone, name, complaintId, subcategory, registeredTime, resolvedTime } = params
   const subcategoryDisplay = formatSubcategory(subcategory)
 
-  const templateSid = getTemplateSid("complaint_completed")
+  const templateSid = await getTemplateSid("complaint_completed")
   const templateVariables = {
     "1": name || "Resident",
     "2": subcategoryDisplay,
@@ -113,7 +113,7 @@ export async function sendComplaintRejected(
   const { phone, name, complaintId, subcategory, registeredTime } = params
   const subcategoryDisplay = formatSubcategory(subcategory)
 
-  const templateSid = getTemplateSid("complaint_rejected")
+  const templateSid = await getTemplateSid("complaint_rejected")
   const templateVariables = {
     "1": name || "Resident",
     "2": subcategoryDisplay,

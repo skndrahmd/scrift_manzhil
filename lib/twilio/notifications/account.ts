@@ -25,7 +25,7 @@ export async function sendWelcomeMessage(
 ): Promise<TwilioResult> {
   const { phone, name, apartmentNumber } = params
 
-  const templateSid = getTemplateSid("welcome_message")
+  const templateSid = await getTemplateSid("welcome_message")
   // This template has no dynamic variables - it's a static welcome message
   const templateVariables = {}
 
@@ -47,7 +47,7 @@ export async function sendAccountBlocked(
 ): Promise<TwilioResult> {
   const { phone, name, reason, overdueMonths, totalDue } = params
 
-  const templateSid = getTemplateSid("account_blocked_maintenance")
+  const templateSid = await getTemplateSid("account_blocked_maintenance")
   const templateVariables = {
     "1": name || "Resident",
     "2": reason,
@@ -80,7 +80,7 @@ export async function sendAccountReactivated(
 ): Promise<TwilioResult> {
   const { phone, name, message } = params
 
-  const templateSid = getTemplateSid("account_reactivated")
+  const templateSid = await getTemplateSid("account_reactivated")
   const templateVariables = {
     "1": name || "Resident",
   }
@@ -106,7 +106,7 @@ export async function sendOtpMessage(
 ): Promise<TwilioResult> {
   const { phone, otp } = params
 
-  const templateSid = getTemplateSid("otp_message")
+  const templateSid = await getTemplateSid("otp_message")
   const templateVariables = {
     "1": otp,
   }
@@ -127,7 +127,7 @@ export async function sendStaffInvitation(
 ): Promise<TwilioResult> {
   const { phone, name, loginUrl } = params
 
-  const templateSid = getTemplateSid("staff_invitation")
+  const templateSid = await getTemplateSid("staff_invitation")
   const templateVariables = {
     "1": name,
     "2": loginUrl,
