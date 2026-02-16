@@ -53,9 +53,10 @@ curl http://localhost:3000/api/ping
 curl http://localhost:3000/api/test-twilio
 
 # Manually trigger cron jobs (for testing)
-curl -X POST http://localhost:3000/api/cron/daily-reports
-curl -X POST http://localhost:3000/api/cron/maintenance-reminder
-curl -X POST http://localhost:3000/api/cron/pending-complaints
+# Include x-cron-key header if CRON_SECRET is set in .env
+curl -X POST http://localhost:3000/api/cron/daily-reports -H "x-cron-key: $CRON_SECRET"
+curl -X POST http://localhost:3000/api/cron/maintenance-reminder -H "x-cron-key: $CRON_SECRET"
+curl -X POST http://localhost:3000/api/cron/pending-complaints -H "x-cron-key: $CRON_SECRET"
 ```
 
 ## Architecture Overview
@@ -314,6 +315,7 @@ middleware.ts               # Authentication & RBAC route protection
 
 **8. Cron Jobs (Automated Tasks)**
 - Located in `app/api/cron/`
+- **All 3 cron routes validate `CRON_SECRET`** via the `x-cron-key` request header. If `CRON_SECRET` env var is set, requests without a matching header return 401.
 - **Vercel Cron Schedule** (from `vercel.json`):
   - `daily-reports` — Daily at 5 AM (`0 5 * * *`)
   - `maintenance-reminder` — Daily at 2 AM (`0 2 * * *`); on 1st of month creates invoices
@@ -605,13 +607,14 @@ import { Button } from '@/components/ui/button'
 
 1. **WhatsApp template approval** — Templates must be approved by Meta before use
 2. **RLS policies** — Be careful when modifying, test thoroughly with both clients
-3. **Timezone handling** — Always use utility functions, never `new Date()` directly for display
+3. **Timezone handling** — Always use `getPakistanTime()` from `lib/date` instead of `new Date()` for any date comparisons or "today" calculations. `new Date()` returns UTC on Vercel, which is wrong for Pakistan (UTC+5).
 4. **PDF generation** — Memory-intensive, may need optimization for large reports
 5. **Broadcast rate limits** — 250 messages/day, soft limit at 50 recipients, hard limit at 100
 6. **Permission cache** — HMAC-signed cookie with 5-min TTL; on denial, middleware re-verifies from DB
-7. **Supabase storage** — CNIC and parcel images stored in Supabase Storage buckets
-8. **Schema completeness** — `database-complete-schema.sql` contains all 20 tables for a fresh install
-9. **Bot message cache** — 5-min in-memory cache; call `clearMessageCache()` after admin updates; falls back to hardcoded defaults if DB fails
+7. **SUPABASE_SERVICE_ROLE_KEY is required** — Middleware redirects to `/admin/unauthorized` if this env var is missing. It is not optional.
+8. **Supabase storage** — CNIC and parcel images stored in Supabase Storage buckets
+9. **Schema completeness** — `database-complete-schema.sql` contains all 20 tables for a fresh install
+10. **Bot message cache** — 5-min in-memory cache; call `clearMessageCache()` after admin updates; falls back to hardcoded defaults if DB fails
 
 ## Additional Documentation
 
@@ -625,12 +628,13 @@ import { Button } from '@/components/ui/button'
 **Don't:**
 - Use regular `supabase` client for admin operations that bypass RLS
 - Hardcode Twilio template SIDs
-- Format dates without timezone conversion utilities
+- Use `new Date()` for "today" calculations or date comparisons — use `getPakistanTime()` from `lib/date` instead
 - Create API routes without proper error handling
 - Modify RLS policies without testing both anon and service_role
 - Use `getSession()` for server-side auth (use `getUser()` instead)
 - Exceed broadcast rate limits (can result in WhatsApp bans)
-- Skip permission checks in admin API routes
+- Skip permission checks in admin API routes (all GET/POST/PUT/DELETE handlers need `verifyAdminAccess()`)
+- Create cron routes without `CRON_SECRET` validation
 - Forget to add `unit_id` when creating maintenance payments or profiles
 - Hardcode WhatsApp bot response strings — use `getMessage()` from `lib/webhook/messages.ts`
 

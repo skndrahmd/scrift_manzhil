@@ -104,7 +104,7 @@ cp .env.example .env.local
 |----------|-------------|
 | `NEXT_PUBLIC_SUPABASE_URL` | Your Supabase project URL |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Public anon key (safe for client-side) |
-| `SUPABASE_SERVICE_ROLE_KEY` | Service role key (server-side only, bypasses RLS) |
+| `SUPABASE_SERVICE_ROLE_KEY` | Service role key (server-side only, bypasses RLS). **Required** — middleware blocks all admin access without this. |
 
 **Twilio** (required for WhatsApp features):
 | Variable | Description |
@@ -118,6 +118,7 @@ cp .env.example .env.local
 | Variable | Description |
 |----------|-------------|
 | `NEXT_PUBLIC_APP_URL` | Your app's public URL (used for generating invoice links) |
+| `CRON_SECRET` | Secret key to authenticate cron job requests. All 3 cron routes validate the `x-cron-key` request header against this value. |
 
 ### Database Setup
 
@@ -344,12 +345,14 @@ All API routes are in `app/api/`. Protected admin routes use `verifyAdminAccess(
 
 | Route | Method | What It Does | Tables |
 |-------|--------|-------------|--------|
-| `/api/accounting/categories` | GET/POST | List or create expense categories | `expense_categories` |
-| `/api/accounting/expenses` | GET/POST | List or create expense records | `expenses` |
+| `/api/accounting/categories` | GET/POST/PUT/DELETE | List, create, update, or soft-delete expense categories | `expense_categories` |
+| `/api/accounting/expenses` | GET/POST/PUT/DELETE | List, create, update, or delete expense records (also manages linked transactions) | `expenses`, `transactions` |
 | `/api/accounting/summary` | GET | Get financial summary for a period | `transactions`, `expenses` |
-| `/api/accounting/transactions` | GET | List all transactions with filtering | `transactions` |
+| `/api/accounting/transactions` | GET/POST/DELETE | List, create, or delete transactions | `transactions` |
 
 #### Cron Jobs
+
+All 3 cron routes validate `CRON_SECRET` via the `x-cron-key` request header. If the env var is set, requests without a matching header return 401.
 
 | Route | Schedule | What It Does | Tables |
 |-------|----------|-------------|--------|
@@ -509,14 +512,18 @@ All dates in the system must be displayed in Pakistan Standard Time (PST, UTC+5)
 
 **Files:**
 - **`constants.ts`** — PST timezone constant and locale settings.
-- **`formatting.ts`** — `formatDateTimePK()` and related formatting functions. Always use these instead of raw `new Date()` for display.
-- **`parsing.ts`** — Date parsing utilities for converting strings to Date objects in PST.
+- **`formatting.ts`** — `formatDateTimePK()`, `getPakistanTime()`, and related formatting functions. Always use these instead of raw `new Date()` for display and date comparisons.
+- **`parsing.ts`** — Date parsing utilities for converting strings to Date objects in PST. Uses `getPakistanTime()` internally for "today"/"tomorrow" resolution.
 - **`time-slots.ts`** — Generates available booking time slots based on hall settings.
 - **`index.ts`** — Re-exports.
 
+**Critical:** Use `getPakistanTime()` instead of `new Date()` for any "today" calculations or date comparisons. `new Date()` returns UTC on Vercel, which is 5 hours behind Pakistan time and causes wrong date validation.
+
 ```typescript
-import { formatDateTimePK } from '@/lib/date'
+import { formatDateTimePK, getPakistanTime } from '@/lib/date'
+
 const display = formatDateTimePK(someDate)  // "15 Feb 2026, 3:30 PM"
+const today = getPakistanTime()             // Current time in Pakistan
 ```
 
 ### `lib/admin/` — Notification Recipients
@@ -627,7 +634,7 @@ These routes skip all middleware checks:
 
 ### How It Works
 
-1. **Check session** — Uses Supabase `getUser()` to verify the JWT. If no valid session, redirect to `/login`.
+1. **Check session** — Uses Supabase `getUser()` to verify the JWT. If no valid session, redirect to `/login`. If `SUPABASE_SERVICE_ROLE_KEY` is not set, redirect to `/admin/unauthorized` (this env var is required for RBAC).
 
 2. **Check cache** — Looks for an `x-admin-cache` cookie. This is an HMAC-signed JSON payload containing the admin's role and permissions, with a 5-minute TTL.
 
@@ -885,7 +892,7 @@ Rule of thumb: if the code runs in an API route or cron job and needs to access 
 
 ### API Route Auth Guard
 
-Every protected admin API route should start with:
+Every protected admin API route should start with this guard — on **every** HTTP method handler (GET, POST, PUT, DELETE):
 
 ```typescript
 import { verifyAdminAccess } from '@/lib/auth'
@@ -922,13 +929,19 @@ if (error) {
 All user-facing dates must use Pakistan Standard Time (UTC+5):
 
 ```typescript
-import { formatDateTimePK } from '@/lib/date'
+import { formatDateTimePK, getPakistanTime } from '@/lib/date'
 
 // Correct — shows "15 Feb 2026, 3:30 PM" in PST
 const display = formatDateTimePK(record.created_at)
 
+// Correct — gets "today" in Pakistan time for date comparisons
+const today = getPakistanTime()
+
 // Wrong — shows UTC time, which is 5 hours behind Pakistan
 const display = new Date(record.created_at).toLocaleString()
+
+// Wrong — "today" will be wrong on Vercel (UTC server)
+const today = new Date()
 ```
 
 ### Twilio Templates

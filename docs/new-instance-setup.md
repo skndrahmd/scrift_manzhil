@@ -144,7 +144,7 @@ Add all environment variables in **Settings > Environment Variables**:
 ```
 NEXT_PUBLIC_SUPABASE_URL=https://xxxx.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJ...
-SUPABASE_SERVICE_ROLE_KEY=eyJ...
+SUPABASE_SERVICE_ROLE_KEY=eyJ...          # REQUIRED — middleware blocks all admin access without this
 ```
 
 **Twilio:**
@@ -331,7 +331,7 @@ Run through this checklist after deployment:
 
 ### Cron Jobs
 - [ ] `/api/ping` returns `{"status":"ok",...}`
-- [ ] Manual trigger: `curl -X POST https://your-app.vercel.app/api/cron/daily-reports`
+- [ ] Manual trigger: `curl -X POST https://your-app.vercel.app/api/cron/daily-reports -H "x-cron-key: YOUR_CRON_SECRET"`
 - [ ] Check Vercel cron dashboard for scheduled runs
 
 ### Admin Features
@@ -370,9 +370,10 @@ Run through this checklist after deployment:
 - Check Vercel function logs for errors
 - Ensure the resident's phone number exists in `profiles` table
 
-**Cron jobs not running**
+**Cron jobs not running or returning 401**
 - Vercel Hobby plan doesn't support cron — upgrade to Pro or use external cron
-- Verify `CRON_SECRET` matches in both env vars and cron request headers
+- All 3 cron routes validate the `x-cron-key` request header against the `CRON_SECRET` env var. Requests without a matching header are rejected with 401.
+- When using an external cron service, add the header `x-cron-key: YOUR_CRON_SECRET` to each request
 
 **Policies page returns 500**
 - Set the `POLICIES_PDF_URL` environment variable
