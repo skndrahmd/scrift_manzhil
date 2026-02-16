@@ -35,7 +35,9 @@ import {
     Loader2,
     Pencil,
     Bell,
+    Download,
 } from "lucide-react"
+import { generateMaintenanceInvoicePdf, generateBookingInvoicePdf } from "@/lib/pdf/invoice"
 
 function formatMonth(year: number, month: number) {
     const date = new Date(year, month - 1, 1)
@@ -412,6 +414,10 @@ export default function UnitDetailPage({ params }: { params: { id: string } }) {
     // Send maintenance reminder state
     const [sendingReminderId, setSendingReminderId] = useState<string | null>(null)
 
+    // Invoice download state
+    const [downloadingInvoiceId, setDownloadingInvoiceId] = useState<string | null>(null)
+    const [downloadingBookingId, setDownloadingBookingId] = useState<string | null>(null)
+
     async function sendMaintenanceReminder(paymentId: string) {
         setSendingReminderId(paymentId)
         try {
@@ -431,6 +437,48 @@ export default function UnitDetailPage({ params }: { params: { id: string } }) {
             toast({ title: "Error", description: error?.message || "Failed to send reminder", variant: "destructive" })
         } finally {
             setSendingReminderId(null)
+        }
+    }
+
+    async function downloadMaintenanceInvoice(payment: MaintenancePayment) {
+        setDownloadingInvoiceId(payment.id)
+        try {
+            const paymentWithProfile = {
+                ...payment,
+                profiles: primaryResident ? {
+                    name: primaryResident.name,
+                    phone_number: primaryResident.phone_number,
+                    apartment_number: primaryResident.apartment_number,
+                } : null,
+            }
+            const { blob, fileName } = await generateMaintenanceInvoicePdf(paymentWithProfile)
+            const url = URL.createObjectURL(blob)
+            const a = document.createElement("a")
+            a.href = url
+            a.download = fileName
+            a.click()
+            URL.revokeObjectURL(url)
+        } catch {
+            toast({ title: "Error", description: "Failed to download invoice", variant: "destructive" })
+        } finally {
+            setDownloadingInvoiceId(null)
+        }
+    }
+
+    async function downloadBookingInvoice(booking: any) {
+        setDownloadingBookingId(booking.id)
+        try {
+            const { blob, fileName } = await generateBookingInvoicePdf(booking)
+            const url = URL.createObjectURL(blob)
+            const a = document.createElement("a")
+            a.href = url
+            a.download = fileName
+            a.click()
+            URL.revokeObjectURL(url)
+        } catch {
+            toast({ title: "Error", description: "Failed to download invoice", variant: "destructive" })
+        } finally {
+            setDownloadingBookingId(null)
         }
     }
 
@@ -872,6 +920,20 @@ export default function UnitDetailPage({ params }: { params: { id: string } }) {
                                                 <TableCell>{row.paid_date ? new Date(row.paid_date + "T00:00:00").toLocaleDateString("en-GB") : "—"}</TableCell>
                                                 <TableCell className="text-right">
                                                     <div className="flex gap-2 justify-end">
+                                                        <Button
+                                                            variant="outline"
+                                                            size="sm"
+                                                            onClick={() => downloadMaintenanceInvoice(row)}
+                                                            disabled={downloadingInvoiceId === row.id}
+                                                            className="text-gray-600 hover:bg-gray-50"
+                                                            title="Download invoice"
+                                                        >
+                                                            {downloadingInvoiceId === row.id ? (
+                                                                <Loader2 className="h-4 w-4 animate-spin" />
+                                                            ) : (
+                                                                <Download className="h-4 w-4" />
+                                                            )}
+                                                        </Button>
                                                         {row.status === "paid" ? (
                                                             <Button variant="outline" size="sm" onClick={() => markPayment(row, false)} className="text-red-600 hover:bg-red-50">
                                                                 <XCircle className="h-4 w-4 mr-1" /> Unpaid
@@ -926,8 +988,22 @@ export default function UnitDetailPage({ params }: { params: { id: string } }) {
                                                     <Badge variant={row.status === "paid" ? "default" : "secondary"}>{row.status}</Badge>
                                                 </div>
                                                 <div className="pt-2 border-t border-gray-100 flex gap-2">
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        onClick={() => downloadMaintenanceInvoice(row)}
+                                                        disabled={downloadingInvoiceId === row.id}
+                                                        className="text-gray-600"
+                                                        title="Download invoice"
+                                                    >
+                                                        {downloadingInvoiceId === row.id ? (
+                                                            <Loader2 className="h-4 w-4 animate-spin" />
+                                                        ) : (
+                                                            <Download className="h-4 w-4" />
+                                                        )}
+                                                    </Button>
                                                     {row.status === "paid" ? (
-                                                        <Button variant="outline" size="sm" onClick={() => markPayment(row, false)} className="w-full text-red-600">
+                                                        <Button variant="outline" size="sm" onClick={() => markPayment(row, false)} className="flex-1 text-red-600">
                                                             <XCircle className="h-4 w-4 mr-2" /> Mark Unpaid
                                                         </Button>
                                                     ) : (
@@ -1112,6 +1188,7 @@ export default function UnitDetailPage({ params }: { params: { id: string } }) {
                                             <TableHead>Amount</TableHead>
                                             <TableHead>Payment</TableHead>
                                             <TableHead>Status</TableHead>
+                                            <TableHead className="text-right">Actions</TableHead>
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
@@ -1122,10 +1199,26 @@ export default function UnitDetailPage({ params }: { params: { id: string } }) {
                                                 <TableCell>Rs. {Number(b.booking_charges).toLocaleString()}</TableCell>
                                                 <TableCell><Badge variant={b.payment_status === "paid" ? "default" : "secondary"}>{b.payment_status}</Badge></TableCell>
                                                 <TableCell><Badge variant={b.status === "confirmed" ? "default" : b.status === "cancelled" ? "destructive" : "secondary"}>{b.status}</Badge></TableCell>
+                                                <TableCell className="text-right">
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        onClick={() => downloadBookingInvoice(b)}
+                                                        disabled={downloadingBookingId === b.id}
+                                                        className="text-gray-600 hover:bg-gray-50"
+                                                        title="Download invoice"
+                                                    >
+                                                        {downloadingBookingId === b.id ? (
+                                                            <Loader2 className="h-4 w-4 animate-spin" />
+                                                        ) : (
+                                                            <Download className="h-4 w-4" />
+                                                        )}
+                                                    </Button>
+                                                </TableCell>
                                             </TableRow>
                                         ))}
                                         {bookings.length === 0 && (
-                                            <TableRow><TableCell colSpan={5} className="text-center text-gray-500 py-8">No bookings</TableCell></TableRow>
+                                            <TableRow><TableCell colSpan={6} className="text-center text-gray-500 py-8">No bookings</TableCell></TableRow>
                                         )}
                                     </TableBody>
                                 </Table>

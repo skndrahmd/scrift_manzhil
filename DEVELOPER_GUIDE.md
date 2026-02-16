@@ -123,7 +123,9 @@ cp .env.example .env.local
 
 1. Open the Supabase SQL Editor for your project
 2. Paste the entire contents of `database-complete-schema.sql`
-3. Run it — this creates all 18 tables, RLS policies, indexes, triggers, and default data
+3. Run it — this creates all 20 tables, RLS policies, indexes, triggers, and default data
+4. Optionally run `database-seed-bot-messages.sql` to populate bot messages
+5. Optionally run `database-seed-whatsapp-templates.sql` to populate WhatsApp template metadata
 
 ### Supabase Storage Buckets
 
@@ -147,7 +149,12 @@ curl http://localhost:3000/api/ping
 scriftmanzhil/
 ├── app/                    # Next.js pages and API routes
 │   ├── admin/              #   Admin dashboard (12 page groups)
+│   │   └── settings/       #     Admin settings & RBAC (super_admin only)
+│   │       ├── bot-messages/       # Bot message editor page
+│   │       └── whatsapp-templates/ # Template manager page
 │   ├── api/                #   Backend API routes (40+ endpoints)
+│   │   ├── bot-messages/   #     Bot message CRUD
+│   │   └── whatsapp-templates/ #  Template management + test-send
 │   ├── login/              #   Authentication page
 │   ├── booking-invoice/    #   Public invoice PDFs
 │   ├── maintenance-invoice/#   Public invoice PDFs
@@ -156,6 +163,8 @@ scriftmanzhil/
 ├── components/             # React components
 │   ├── ui/                 #   50+ Radix UI primitives (button, dialog, table, etc.)
 │   ├── admin/              #   Feature-specific admin components
+│   │   ├── bot-messages-editor.tsx        # Bot message customization
+│   │   └── whatsapp-template-manager.tsx  # WhatsApp template management
 │   ├── accounting/         #   Financial dashboard components
 │   └── *.tsx               #   Root-level shared components
 ├── hooks/                  # React custom hooks
@@ -176,7 +185,9 @@ scriftmanzhil/
 ├── public/                 # Static assets
 ├── styles/                 # Global styles
 ├── middleware.ts           # Auth & RBAC route protection
-├── database-complete-schema.sql  # Full DB schema (18 tables)
+├── database-complete-schema.sql  # Full DB schema (20 tables)
+├── database-seed-bot-messages.sql       # Bot message seed data (~115 messages)
+├── database-seed-whatsapp-templates.sql # WhatsApp template seed data (20 templates)
 ├── vercel.json             # Cron job schedules
 ├── tailwind.config.ts      # Tailwind configuration
 ├── tsconfig.json           # TypeScript config (@ path alias)
@@ -200,16 +211,18 @@ All admin pages are protected by the middleware. Access depends on the admin's r
 | **Residents** | `/admin` (root) | List all residents, search/filter, add/edit/delete, bulk import via CSV, send welcome WhatsApp |
 | **Resident Detail** | `/admin/residents/[id]` | Single resident profile, linked unit, maintenance history, complaints, bookings |
 | **Units** | `/admin/units` | List all apartment units, add/edit/delete, bulk import via CSV |
-| **Unit Detail** | `/admin/units/[id]` | Single unit profile, linked residents, toggle primary resident, maintenance records |
+| **Unit Detail** | `/admin/units/[id]` | Single unit profile, linked residents, toggle primary resident, maintenance records, invoice download buttons for maintenance payments and bookings |
 | **Bookings** | `/admin/bookings` | Hall booking management, approve/reject, payment status, send reminders |
 | **Complaints** | `/admin/complaints` | View/update complaint statuses (pending → in_progress → completed/rejected), real-time updates |
 | **Visitors** | `/admin/visitors` | Visitor pass management, CNIC verification, arrival notifications |
 | **Parcels** | `/admin/parcels` | Parcel tracking, image uploads, delivery notifications |
 | **Analytics** | `/admin/analytics` | Charts and statistics — collections, complaints, bookings, occupancy |
-| **Accounting** | `/admin/accounting` | Income/expense tracking, financial summaries, PDF and CSV reports |
+| **Accounting** | `/admin/accounting` | Income/expense tracking, financial summaries, PDF and CSV reports, invoice view links for income transactions |
 | **Broadcast** | `/admin/broadcast` | Send bulk WhatsApp messages with rate limiting (250/day), recipient selection |
 | **Feedback** | `/admin/feedback` | View resident feedback submissions |
-| **Settings** | `/admin/settings` | **Super admin only.** Manage staff accounts, set roles and page permissions, notification preferences |
+| **Settings** | `/admin/settings` | **Super admin only.** Booking Settings, Staff Management, Bot Messages, WhatsApp Templates |
+| **Bot Messages** | `/admin/settings/bot-messages` | **Super admin only.** Customize WhatsApp bot response messages |
+| **WhatsApp Templates** | `/admin/settings/whatsapp-templates` | **Super admin only.** Manage Twilio content template SIDs, test send, create drafts |
 | **Unauthorized** | `/admin/unauthorized` | Access denied landing page |
 
 The admin layout (`app/admin/layout.tsx`) wraps all admin pages with a sidebar navigation and top bar. A loading skeleton (`app/admin/loading.tsx`) shows while pages are server-rendering.
@@ -271,7 +284,6 @@ All API routes are in `app/api/`. Protected admin routes use `verifyAdminAccess(
 | `/api/maintenance/update-status` | POST | Update maintenance payment status and send confirmation | `maintenance_payments`, `transactions` |
 | `/api/maintenance/bulk-reminder` | POST | Send payment reminders to all residents with pending payments | `maintenance_payments`, `profiles` |
 | `/api/maintenance/ensure-months` | POST | Create missing monthly maintenance records | `maintenance_payments`, `units` |
-| `/api/maintenance/confirmation` | POST | Send maintenance payment confirmation via WhatsApp | `maintenance_payments`, `profiles` |
 
 #### Complaints
 
@@ -310,6 +322,23 @@ All API routes are in `app/api/`. Protected admin routes use `verifyAdminAccess(
 | `/api/admin/staff/[id]` | PUT | Update a staff member's details | `admin_users` |
 | `/api/admin/staff/[id]` | DELETE | Deactivate a staff account | `admin_users` |
 | `/api/admin/staff/[id]/permissions` | GET/PUT | Get or update page-level permissions | `admin_permissions` |
+
+#### Bot Messages
+
+| Route | Method | What It Does | Tables |
+|-------|--------|-------------|--------|
+| `/api/bot-messages` | GET | List all bot messages grouped by flow | `bot_messages` |
+| `/api/bot-messages/[key]` | PATCH | Update custom text for a bot message | `bot_messages` |
+
+#### WhatsApp Templates
+
+| Route | Method | What It Does | Tables |
+|-------|--------|-------------|--------|
+| `/api/whatsapp-templates` | GET | List all templates grouped by category | `whatsapp_templates` |
+| `/api/whatsapp-templates` | POST | Create a new template draft | `whatsapp_templates` |
+| `/api/whatsapp-templates/[key]` | PATCH | Update template fields (SID, variables, etc.) | `whatsapp_templates` |
+| `/api/whatsapp-templates/[key]` | DELETE | Delete a draft template | `whatsapp_templates` |
+| `/api/whatsapp-templates/test-send` | POST | Test send a template to a phone number | `whatsapp_templates` |
 
 #### Accounting
 
@@ -405,7 +434,7 @@ Handles all outbound WhatsApp messages via Twilio's Content Template API.
 
 **Files:**
 - **`client.ts`** — Twilio client singleton (initialized once, reused across requests).
-- **`templates.ts`** — Registry mapping template names to their Twilio SIDs (read from env vars).
+- **`templates.ts`** — Template SID resolver. Queries the `whatsapp_templates` DB table first, falls back to env vars. Also exports the static `TEMPLATE_SIDS` map as a last resort.
 - **`send.ts`** — Core message sending logic — takes a phone number, template SID, and variables.
 - **`formatters.ts`** — Helper functions to format dates, times, and currency for WhatsApp messages.
 - **`types.ts`** — TypeScript types for Twilio-specific data.
@@ -463,7 +492,7 @@ Service-layer modules used by both API routes and cron jobs. These encapsulate c
 **Files:**
 - **`theme.ts`** — Shared PDF styling: colors, fonts, margins, header/footer templates used across all PDFs.
 - **`utils.ts`** — Low-level PDF utility functions.
-- **`invoice.ts`** — Invoice PDF generation for bookings and maintenance payments.
+- **`invoice.ts`** — Invoice PDF generation for bookings and maintenance payments. Exports `generateMaintenanceInvoicePdf(payment, summary?)` and `generateBookingInvoicePdf(booking)` — both return `{ blob, fileName }`. Used client-side on the unit detail page for inline invoice downloads.
 - **`reports.ts`** — Five PDF report types:
   1. **Income Statement** — Revenue summary by category
   2. **Collection Report** — Payment collection details
@@ -558,6 +587,8 @@ These are the main UI components for each admin page. Each one typically include
 | `staff-management.tsx` | `/admin/settings` | Staff account and permission management |
 | `bulk-import-modal.tsx` | `/admin` | CSV upload modal for resident bulk import |
 | `bulk-import-units-modal.tsx` | `/admin/units` | CSV upload modal for unit bulk import |
+| `bot-messages-editor.tsx` | `/admin/settings/bot-messages` | Editable bot message cards grouped by flow, with save/reset |
+| `whatsapp-template-manager.tsx` | `/admin/settings/whatsapp-templates` | Template cards with SID editing, test send, create/edit dialogs |
 
 ### `components/accounting/` — Financial Dashboard
 
@@ -566,7 +597,7 @@ These are the main UI components for each admin page. Each one typically include
 | `accounting-tab.tsx` | Main tab container for the accounting page |
 | `financial-summary-cards.tsx` | Summary cards showing income, expenses, net balance |
 | `revenue-charts.tsx` | Revenue visualization using Recharts |
-| `transactions-table.tsx` | Transaction listing with filters |
+| `transactions-table.tsx` | Transaction listing with filters and invoice view buttons for booking/maintenance income rows |
 | `expenses-manager.tsx` | Expense creation and management |
 
 ### Root-Level Components
@@ -740,7 +771,7 @@ Admin visits /admin/broadcast
 
 ### Setup
 
-Run `database-complete-schema.sql` in the Supabase SQL Editor. This single file creates all 18 tables, RLS policies, indexes, triggers, and default data.
+Run `database-complete-schema.sql` in the Supabase SQL Editor. This single file creates all 20 tables, RLS policies, indexes, triggers, and default data.
 
 ### Table Groups
 
@@ -782,6 +813,18 @@ Run `database-complete-schema.sql` in the Supabase SQL Editor. This single file 
 |-------|---------|
 | `broadcast_logs` | Message history — recipient count, success/fail counts, message content |
 
+**Bot Customization (1 table):**
+
+| Table | Purpose |
+|-------|---------|
+| `bot_messages` | Customizable WhatsApp bot conversation messages with default/custom text and variable interpolation |
+
+**Template Management (1 table):**
+
+| Table | Purpose |
+|-------|---------|
+| `whatsapp_templates` | Twilio content template SIDs, variables metadata, trigger info, and draft management |
+
 ### Key Relationships
 
 ```
@@ -799,7 +842,9 @@ profiles
  └─< feedback (profile_id)
 
 admin_users
- └─< admin_permissions (admin_id)
+ ├─< admin_permissions (admin_id)
+ ├─< bot_messages (updated_by)
+ └─< whatsapp_templates (updated_by)
 ```
 
 ### Row Level Security (RLS)
@@ -888,18 +933,18 @@ const display = new Date(record.created_at).toLocaleString()
 
 ### Twilio Templates
 
-Template SIDs are always stored in environment variables, never hardcoded:
+Template SIDs are resolved from the database first, with env var fallback:
 
 ```typescript
-// In lib/twilio/templates.ts — maps names to env vars
-// In lib/twilio/notifications/*.ts — uses the registry
+// In lib/twilio/templates.ts — queries whatsapp_templates DB table, falls back to env vars
+// In lib/twilio/notifications/*.ts — uses the resolver
 
 // To add a new template:
 // 1. Create template in Twilio Console
-// 2. Add SID to .env.example and .env.local
-// 3. Register in lib/twilio/templates.ts
-// 4. Create send function in appropriate notifications/ module
-// 5. Test at /api/test-twilio
+// 2. Option A: Add SID via admin UI at /admin/settings/whatsapp-templates
+// 3. Option B: Add SID to .env (env var fallback still works)
+// 4. Template SIDs resolve: DB → env var → static fallback
+// 5. Test via the "Test Send" button in the template manager UI
 ```
 
 ### WhatsApp Message Format

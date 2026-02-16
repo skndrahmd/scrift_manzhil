@@ -56,8 +56,6 @@ curl http://localhost:3000/api/test-twilio
 curl -X POST http://localhost:3000/api/cron/daily-reports
 curl -X POST http://localhost:3000/api/cron/maintenance-reminder
 curl -X POST http://localhost:3000/api/cron/pending-complaints
-curl -X POST http://localhost:3000/api/cron/booking-confirmation
-curl -X POST http://localhost:3000/api/cron/maintenance-confirmation
 ```
 
 ## Architecture Overview
@@ -72,7 +70,7 @@ app/
 │   ├── dashboard/          # Main dashboard
 │   ├── units/              # Unit management (V3)
 │   │   ├── page.tsx        # Units listing
-│   │   └── [id]/page.tsx   # Unit detail page
+│   │   └── [id]/page.tsx   # Unit detail page (with invoice download buttons)
 │   ├── residents/
 │   │   └── [id]/page.tsx   # Resident detail page
 │   ├── bookings/           # Hall booking management
@@ -133,9 +131,6 @@ app/
 │   │   ├── daily-reports/
 │   │   ├── maintenance-reminder/
 │   │   ├── pending-complaints/
-│   │   ├── booking-reminder/
-│   │   ├── booking-confirmation/
-│   │   ├── maintenance-confirmation/
 │   │   └── utils.ts
 │   ├── bot-messages/        # Bot message customization API
 │   │   ├── route.ts         # GET all messages (super_admin)
@@ -242,7 +237,7 @@ components/
 │   ├── expenses-manager.tsx
 │   ├── financial-summary-cards.tsx
 │   ├── revenue-charts.tsx
-│   ├── transactions-table.tsx
+│   ├── transactions-table.tsx  # Includes invoice view buttons for income rows
 │   └── index.ts
 ├── auth-provider.tsx
 ├── mobile-nav.tsx
@@ -324,10 +319,9 @@ middleware.ts               # Authentication & RBAC route protection
   - `maintenance-reminder` — Daily at 2 AM (`0 2 * * *`); on 1st of month creates invoices
   - `pending-complaints` — Every 6 hours (`0 */6 * * *`)
   - `ping` — Every 5 minutes (`*/5 * * * *`)
-- **Additional cron routes** (exist but triggered ad-hoc, not in `vercel.json`):
-  - `booking-confirmation` — Sends booking payment confirmations
-  - `maintenance-confirmation` — Sends maintenance payment confirmations
-  - `booking-reminder` — Sends booking reminders (endpoint exists, not scheduled)
+- **Inline confirmations** (sent directly when admin updates payment status, not via cron):
+  - Maintenance confirmations are sent inline by `api/maintenance/update-status`
+  - Booking confirmations are sent inline by `api/bookings/update-payment-status`
 - Daily reports sent only to admins with `receive_daily_reports = true`
 
 **9. Dynamic Admin Notification Recipients**
@@ -348,9 +342,12 @@ middleware.ts               # Authentication & RBAC route protection
   - Annual Summary
 - `lib/csv-export.ts` — CSV export for all report types
 - `lib/reporting.ts` — Period filtering: `"all" | "daily" | "weekly" | "monthly" | "yearly"`
-- Invoice generation: `lib/invoice.ts`
+- Invoice generation: `lib/pdf/invoice.ts`
+  - `generateMaintenanceInvoicePdf(payment, summary?)` — returns `{ blob, fileName }`
+  - `generateBookingInvoicePdf(booking)` — returns `{ blob, fileName }`
 - Daily reports: `app/api/cron/daily-reports/`
 - Public routes for PDF access (no auth required)
+- **Admin inline downloads:** Unit detail page (`/admin/units/[id]`) has download buttons for maintenance and booking invoices (client-side PDF generation via `lib/pdf/invoice.ts`)
 
 **11. Accounting Module**
 - Unified transaction tracking system
@@ -358,6 +355,7 @@ middleware.ts               # Authentication & RBAC route protection
 - Financial summaries and reports in `lib/accounting-reports.ts`
 - Expense categories with icons and colors
 - CSV export functionality for all report types
+- Transactions table includes an Invoice column — for `booking_income` and `maintenance_income` rows with a `reference_id`, a button opens the public invoice page (`/maintenance-invoice/[id]` or `/booking-invoice/[id]`) in a new tab
 
 **12. Realtime Features**
 - Supabase Realtime configured for:

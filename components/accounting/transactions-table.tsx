@@ -25,7 +25,8 @@ import {
     Search,
     Filter,
     ChevronLeft,
-    ChevronRight
+    ChevronRight,
+    FileText
 } from "lucide-react"
 import type { Transaction } from "@/lib/supabase"
 
@@ -175,13 +176,14 @@ export function TransactionsTable({
                             <TableHead>Resident</TableHead>
                             <TableHead>Payment Method</TableHead>
                             <TableHead className="text-right">Amount</TableHead>
+                            <TableHead className="text-center w-[60px]">Invoice</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
                         {loading ? (
                             [...Array(5)].map((_, i) => (
                                 <TableRow key={i}>
-                                    {[...Array(6)].map((_, j) => (
+                                    {[...Array(7)].map((_, j) => (
                                         <TableCell key={j}>
                                             <div className="h-4 bg-gray-200 rounded animate-pulse" />
                                         </TableCell>
@@ -190,7 +192,7 @@ export function TransactionsTable({
                             ))
                         ) : transactions.length === 0 ? (
                             <TableRow>
-                                <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                                <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                                     No transactions found
                                 </TableCell>
                             </TableRow>
@@ -233,6 +235,24 @@ export function TransactionsTable({
                                             )}
                                             {formatCurrency(transaction.amount)}
                                         </div>
+                                    </TableCell>
+                                    <TableCell className="text-center">
+                                        {(transaction.transaction_type === 'maintenance_income' || transaction.transaction_type === 'booking_income') && transaction.reference_id ? (
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={() => {
+                                                    const path = transaction.transaction_type === 'maintenance_income'
+                                                        ? `/maintenance-invoice/${transaction.reference_id}`
+                                                        : `/booking-invoice/${transaction.reference_id}`
+                                                    window.open(path, '_blank')
+                                                }}
+                                                title="View invoice"
+                                                className="text-gray-600 hover:text-manzhil-teal"
+                                            >
+                                                <FileText className="h-4 w-4" />
+                                            </Button>
+                                        ) : null}
                                     </TableCell>
                                 </TableRow>
                             ))
@@ -288,15 +308,32 @@ export function TransactionsTable({
 
                             <div className="pt-2 border-t border-gray-50 flex justify-between items-center text-xs text-gray-500">
                                 <span>{getPaymentMethodLabel(transaction.payment_method)}</span>
-                                {transaction.amount < 0 ? (
-                                    <span className="flex items-center text-amber-600">
-                                        <ArrowDownRight className="h-3 w-3 mr-1" /> Expense
-                                    </span>
-                                ) : (
-                                    <span className="flex items-center text-manzhil-teal">
-                                        <ArrowUpRight className="h-3 w-3 mr-1" /> Income
-                                    </span>
-                                )}
+                                <div className="flex items-center gap-2">
+                                    {(transaction.transaction_type === 'maintenance_income' || transaction.transaction_type === 'booking_income') && transaction.reference_id && (
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            className="h-6 px-2 text-xs text-gray-600 hover:text-manzhil-teal"
+                                            onClick={() => {
+                                                const path = transaction.transaction_type === 'maintenance_income'
+                                                    ? `/maintenance-invoice/${transaction.reference_id}`
+                                                    : `/booking-invoice/${transaction.reference_id}`
+                                                window.open(path, '_blank')
+                                            }}
+                                        >
+                                            <FileText className="h-3 w-3 mr-1" /> Invoice
+                                        </Button>
+                                    )}
+                                    {transaction.amount < 0 ? (
+                                        <span className="flex items-center text-amber-600">
+                                            <ArrowDownRight className="h-3 w-3 mr-1" /> Expense
+                                        </span>
+                                    ) : (
+                                        <span className="flex items-center text-manzhil-teal">
+                                            <ArrowUpRight className="h-3 w-3 mr-1" /> Income
+                                        </span>
+                                    )}
+                                </div>
                             </div>
                         </div>
                     ))
