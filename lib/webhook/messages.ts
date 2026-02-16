@@ -5,7 +5,6 @@
  */
 
 import { supabaseAdmin } from "@/lib/supabase"
-import { SETTINGS_CACHE_DURATION } from "./config"
 import { MESSAGE_DEFAULTS } from "./message-defaults"
 import type { MessageKey } from "./message-keys"
 
@@ -14,20 +13,11 @@ interface CachedMessage {
   custom_text: string | null
 }
 
-let messageCache: Map<string, CachedMessage> | null = null
-let cacheTimestamp = 0
-
 /**
- * Load all messages from the database into the in-memory cache.
- * Cache expires after SETTINGS_CACHE_DURATION (5 minutes).
+ * Load all messages from the database.
+ * No caching — always fetches fresh data so admin edits are reflected instantly.
  */
 async function loadMessages(): Promise<Map<string, CachedMessage>> {
-  const now = Date.now()
-
-  if (messageCache && now - cacheTimestamp < SETTINGS_CACHE_DURATION) {
-    return messageCache
-  }
-
   try {
     const { data, error } = await supabaseAdmin
       .from("bot_messages")
@@ -35,24 +25,21 @@ async function loadMessages(): Promise<Map<string, CachedMessage>> {
 
     if (error) {
       console.error("[BotMessages] Failed to load from DB:", error)
-      // Return existing cache if available, otherwise empty
-      return messageCache || new Map()
+      return new Map()
     }
 
-    const newCache = new Map<string, CachedMessage>()
+    const messages = new Map<string, CachedMessage>()
     for (const row of data) {
-      newCache.set(row.message_key, {
+      messages.set(row.message_key, {
         default_text: row.default_text,
         custom_text: row.custom_text,
       })
     }
 
-    messageCache = newCache
-    cacheTimestamp = now
-    return messageCache
+    return messages
   } catch (error) {
     console.error("[BotMessages] Load error:", error)
-    return messageCache || new Map()
+    return new Map()
   }
 }
 
@@ -115,11 +102,3 @@ export function getMessageSync(
   return text
 }
 
-/**
- * Clear the in-memory message cache.
- * Call this when an admin updates a message to force a fresh load.
- */
-export function clearMessageCache(): void {
-  messageCache = null
-  cacheTimestamp = 0
-}

@@ -89,7 +89,7 @@ export {
 } from "./config"
 
 // Bot message system
-export { getMessage, getMessageSync, clearMessageCache } from "./messages"
+export { getMessage, getMessageSync } from "./messages"
 export { MSG } from "./message-keys"
 export type { MessageKey } from "./message-keys"
 

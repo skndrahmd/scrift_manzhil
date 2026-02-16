@@ -9,7 +9,6 @@ import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
 import { isSuperAdmin, verifyAdminAccess } from "@/lib/auth/api-auth"
 import { supabaseAdmin } from "@/lib/supabase"
-import { clearMessageCache } from "@/lib/webhook/messages"
 
 export async function PATCH(
   request: NextRequest,
@@ -53,9 +52,6 @@ export async function PATCH(
     if (!data) {
       return NextResponse.json({ error: "Message not found" }, { status: 404 })
     }
-
-    // Clear the in-memory cache so the webhook picks up changes immediately
-    clearMessageCache()
 
     return NextResponse.json({ message: data })
   } catch (error) {
