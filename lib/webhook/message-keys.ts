@@ -151,6 +151,18 @@ export const MSG = {
   ERROR_EMPTY_MESSAGE: "error.empty_message",
   ERROR_UNEXPECTED: "error.unexpected",
 
+  // === Translatable Labels (newline-delimited for getLabels()) ===
+  LABELS_MAIN_MENU_OPTIONS: "labels.main_menu_options",
+  LABELS_HALL_MENU_OPTIONS: "labels.hall_menu_options",
+  LABELS_STAFF_MENU_OPTIONS: "labels.staff_menu_options",
+  LABELS_COMPLAINT_CATEGORIES: "labels.complaint_categories",
+  LABELS_APARTMENT_SUBCATEGORIES: "labels.apartment_subcategories",
+  LABELS_BUILDING_SUBCATEGORIES: "labels.building_subcategories",
+  LABELS_STAFF_ROLES: "labels.staff_roles",
+  LABELS_STAFF_EDIT_FIELDS: "labels.staff_edit_fields",
+  LABELS_TOWER_SELECTION: "labels.tower_selection",
+  LABELS_REPLY_MENU: "labels.reply_menu",
+
   // === Back Navigation ===
   BACK_COMPLAINT_SUBCATEGORY_BUILDING: "nav.back_complaint_sub_building",
   BACK_COMPLAINT_SUBCATEGORY_APARTMENT: "nav.back_complaint_sub_apartment",

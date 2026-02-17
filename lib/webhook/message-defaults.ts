@@ -870,6 +870,70 @@ Please send a text message, or type *0* for menu.`,
 
   "error.unexpected": `❌ An error occurred. Try again or type *0* for menu.`,
 
+  // === Translatable Labels (newline-delimited, used by getLabels()) ===
+  "labels.main_menu_options": `Register Complaint
+Check Complaint Status
+Cancel Complaint
+My Staff Management
+Check Maintenance Dues
+Community Hall
+Visitor Entry Pass
+View My Profile
+Suggestions/Feedback
+Emergency Contacts`,
+
+  "labels.hall_menu_options": `New Booking
+Cancel Booking
+Edit Booking
+View My Bookings`,
+
+  "labels.staff_menu_options": `Add Staff Member
+View My Staff
+Edit Staff Member
+Remove Staff Member`,
+
+  "labels.complaint_categories": `My Apartment Complaint
+Building Complaint`,
+
+  "labels.apartment_subcategories": `Plumbing
+Electric
+Civil
+My Parking Complaint
+Other`,
+
+  "labels.building_subcategories": `Lift/Elevator
+Gym
+Snooker Room
+Play Area
+Parking
+Security Complaint
+Plumbing
+Electric
+Civil
+Collaboration Corner
+Seating Area
+Other`,
+
+  "labels.staff_roles": `Driver
+Cook
+Maid
+Plumber
+Electrician
+Maintenance
+Security Guard
+Other`,
+
+  "labels.staff_edit_fields": `Name
+CNIC
+Phone`,
+
+  "labels.tower_selection": `Tower A
+Tower B
+Tower C
+Tower D`,
+
+  "labels.reply_menu": `Reply *0* for menu`,
+
   // === Back Navigation ===
   "nav.back_complaint_sub_building": `🔙 *Going Back*
 

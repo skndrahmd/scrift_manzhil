@@ -10,6 +10,7 @@ import { getState, setState, clearState } from "../state"
 import { validateName, validatePhoneNumber, validateCNIC, isYesResponse, isNoResponse } from "../utils"
 import { getMessage } from "../messages"
 import { MSG } from "../message-keys"
+import { getStaffRoleMenu } from "../menu"
 import {
   STAFF_MENU_OPTIONS,
   STAFF_ROLES,
@@ -169,18 +170,7 @@ async function handleAddStaffFlow(
     userState.step = "staff_add_role_select"
     setState(phoneNumber, userState)
 
-    const roles = [
-      "1. 🚗 Driver",
-      "2. 👨‍🍳 Cook",
-      "3. 🧹 Maid",
-      "4. 🔧 Plumber",
-      "5. ⚡ Electrician",
-      "6. 🛠️ Maintenance",
-      "7. 🔒 Security Guard",
-      "8. 📋 Other",
-    ].join("\n")
-
-    return await getMessage(MSG.STAFF_ADD_ROLE, { roles, max: "8" }, language)
+    return await getStaffRoleMenu(language)
   }
 
   if (userState.step === "staff_add_role_select") {

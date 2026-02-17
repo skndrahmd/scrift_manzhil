@@ -1,6 +1,7 @@
 /**
  * Menu Functions
  * Display menus and information screens
+ * Labels are fetched via getLabels() so they are translated when a language is active.
  */
 
 import type { Profile } from "./types"
@@ -10,18 +11,18 @@ import {
   STAFF_MENU_OPTIONS,
   EMERGENCY_CONTACTS,
   COMPLAINT_CATEGORIES,
-  STAFF_ROLES,
 } from "./config"
-import { formatDate, formatCurrency, buildNumberedList } from "./utils"
-import { getMessage } from "./messages"
+import { formatDate, formatCurrency } from "./utils"
+import { getMessage, getLabels } from "./messages"
 import { MSG } from "./message-keys"
 
 /**
  * Get main menu display
  */
 export async function getMainMenu(name: string, language?: string): Promise<string> {
+  const labels = await getLabels(MSG.LABELS_MAIN_MENU_OPTIONS, language)
   const options = MAIN_MENU_OPTIONS.map(
-    (opt) => `${opt.key}. ${opt.emoji} ${opt.label}`
+    (opt, i) => `${opt.key}. ${opt.emoji} ${labels[i] || opt.label}`
   ).join("\n")
 
   return await getMessage(MSG.MAIN_MENU, { name, options }, language)
@@ -67,7 +68,8 @@ export async function getMaintenanceStatus(profile: Profile, language?: string):
     statusMessage += "\n\n" + await getMessage(MSG.MAINTENANCE_PAYMENT_DUE, undefined, language)
   }
 
-  statusMessage += "\n\nReply *0* for menu"
+  const replyMenu = await getMessage(MSG.LABELS_REPLY_MENU, undefined, language)
+  statusMessage += "\n\n" + replyMenu
 
   return statusMessage
 }
@@ -87,8 +89,9 @@ export async function getEmergencyContacts(language?: string): Promise<string> {
  * Get hall booking menu
  */
 export async function getHallMenu(language?: string): Promise<string> {
+  const labels = await getLabels(MSG.LABELS_HALL_MENU_OPTIONS, language)
   const options = HALL_MENU_OPTIONS.map(
-    (opt) => `${opt.key}. ${opt.emoji} ${opt.label}`
+    (opt, i) => `${opt.key}. ${opt.emoji} ${labels[i] || opt.label}`
   ).join("\n")
 
   return await getMessage(MSG.HALL_MENU, { options }, language)
@@ -98,8 +101,9 @@ export async function getHallMenu(language?: string): Promise<string> {
  * Get staff management menu
  */
 export async function getStaffMenu(language?: string): Promise<string> {
+  const labels = await getLabels(MSG.LABELS_STAFF_MENU_OPTIONS, language)
   const options = STAFF_MENU_OPTIONS.map(
-    (opt) => `${opt.key}. ${opt.emoji} ${opt.label}`
+    (opt, i) => `${opt.key}. ${opt.emoji} ${labels[i] || opt.label}`
   ).join("\n")
 
   return await getMessage(MSG.STAFF_MENU, { options }, language)
@@ -109,11 +113,12 @@ export async function getStaffMenu(language?: string): Promise<string> {
  * Get complaint category selection menu
  */
 export async function getComplaintCategoryMenu(language?: string): Promise<string> {
+  const labels = await getLabels(MSG.LABELS_COMPLAINT_CATEGORIES, language)
   return await getMessage(MSG.COMPLAINT_CATEGORY_MENU, {
     apartment_emoji: COMPLAINT_CATEGORIES.apartment.emoji,
-    apartment_label: COMPLAINT_CATEGORIES.apartment.label,
+    apartment_label: labels[0] || COMPLAINT_CATEGORIES.apartment.label,
     building_emoji: COMPLAINT_CATEGORIES.building.emoji,
-    building_label: COMPLAINT_CATEGORIES.building.label,
+    building_label: labels[1] || COMPLAINT_CATEGORIES.building.label,
   }, language)
 }
 
@@ -121,8 +126,9 @@ export async function getComplaintCategoryMenu(language?: string): Promise<strin
  * Get apartment complaint subcategory menu
  */
 export async function getApartmentSubcategoryMenu(language?: string): Promise<string> {
+  const labels = await getLabels(MSG.LABELS_APARTMENT_SUBCATEGORIES, language)
   const subcategories = COMPLAINT_CATEGORIES.apartment.subcategories
-    .map((s, i) => `${i + 1}. ${s.emoji} ${s.label}`)
+    .map((s, i) => `${i + 1}. ${s.emoji} ${labels[i] || s.label}`)
     .join("\n")
 
   return await getMessage(MSG.COMPLAINT_APARTMENT_SUBCATEGORY, {
@@ -135,8 +141,9 @@ export async function getApartmentSubcategoryMenu(language?: string): Promise<st
  * Get building complaint subcategory menu
  */
 export async function getBuildingSubcategoryMenu(language?: string): Promise<string> {
+  const labels = await getLabels(MSG.LABELS_BUILDING_SUBCATEGORIES, language)
   const subcategories = COMPLAINT_CATEGORIES.building.subcategories
-    .map((s, i) => `${i + 1}. ${s.emoji} ${s.label}`)
+    .map((s, i) => `${i + 1}. ${s.emoji} ${labels[i] || s.label}`)
     .join("\n")
 
   return await getMessage(MSG.COMPLAINT_BUILDING_SUBCATEGORY, {
@@ -148,26 +155,34 @@ export async function getBuildingSubcategoryMenu(language?: string): Promise<str
 /**
  * Get tower selection menu
  */
-export function getTowerSelectionMenu(): string {
+export async function getTowerSelectionMenu(language?: string): Promise<string> {
+  const labels = await getLabels(MSG.LABELS_TOWER_SELECTION, language)
+  const options = ["A", "B", "C", "D"]
+    .map((key, i) => `${i + 1}. ${labels[i] || `Tower ${key}`}`)
+    .join("\n")
+
   return `🏗️ *Select Tower*
 
-1. Tower A
-2. Tower B
-3. Tower C
-4. Tower D
+${options}
 
 Reply 1-4, or *B* to go back`
 }
 
 /**
  * Get staff role selection menu
+ * Note: The role list here (8 items) matches the handler's selection logic,
+ * which differs from the STAFF_ROLES config (6 items used elsewhere).
  */
 export async function getStaffRoleMenu(language?: string): Promise<string> {
-  const roles = STAFF_ROLES.map((r, i) => `${i + 1}. ${r.emoji} ${r.label}`).join("\n")
+  const ROLE_EMOJIS = ["🚗", "👨‍🍳", "🧹", "🔧", "⚡", "🛠️", "🔒", "📋"]
+  const labels = await getLabels(MSG.LABELS_STAFF_ROLES, language)
+  const roles = labels
+    .map((label, i) => `${i + 1}. ${ROLE_EMOJIS[i] || "📋"} ${label}`)
+    .join("\n")
 
   return await getMessage(MSG.STAFF_ADD_ROLE, {
     roles,
-    max: String(STAFF_ROLES.length),
+    max: String(labels.length),
   }, language)
 }
 

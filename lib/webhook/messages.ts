@@ -107,6 +107,19 @@ export async function getMessage(
 }
 
 /**
+ * Get a list of translatable labels by key.
+ * Labels are stored as newline-delimited strings in bot_messages.
+ * Returns an array of trimmed, non-empty strings.
+ */
+export async function getLabels(
+  key: MessageKey,
+  language?: string
+): Promise<string[]> {
+  const text = await getMessage(key, undefined, language)
+  return text.split("\n").map((s) => s.trim()).filter(Boolean)
+}
+
+/**
  * Get a message synchronously using only the hardcoded defaults.
  * Use this when you cannot await (e.g., in non-async contexts).
  */

@@ -11,6 +11,7 @@ import { getComplaintRecipients, TEMPLATE_SIDS } from "../config"
 import { formatSubcategory } from "../utils"
 import { getMessage } from "../messages"
 import { MSG } from "../message-keys"
+import { getComplaintCategoryMenu, getApartmentSubcategoryMenu, getBuildingSubcategoryMenu } from "../menu"
 
 /**
  * Initialize complaint flow
@@ -23,12 +24,7 @@ export async function initializeComplaintFlow(phoneNumber: string, language?: st
     language,
   })
 
-  return await getMessage(MSG.COMPLAINT_CATEGORY_MENU, {
-    apartment_emoji: "🏠",
-    apartment_label: "My Apartment Complaint",
-    building_emoji: "🏢",
-    building_label: "Building Complaint",
-  }, language)
+  return await getComplaintCategoryMenu(language)
 }
 
 /**
@@ -73,18 +69,7 @@ async function handleCategorySelection(
     userState.step = "complaint_subcategory"
     setState(phoneNumber, userState)
 
-    const subcategories = [
-      "1. 🔧 Plumbing",
-      "2. ⚡ Electric",
-      "3. 🔨 Civil",
-      "4. 🅿️ My Parking Complaint",
-      "5. 🔧 Other",
-    ].join("\n")
-
-    return await getMessage(MSG.COMPLAINT_APARTMENT_SUBCATEGORY, {
-      subcategories,
-      max: "5",
-    }, language)
+    return await getApartmentSubcategoryMenu(language)
   }
 
   if (choice === "2") {
@@ -92,25 +77,7 @@ async function handleCategorySelection(
     userState.step = "complaint_subcategory"
     setState(phoneNumber, userState)
 
-    const subcategories = [
-      "1. 🛗 Lift/Elevator",
-      "2. 💪 Gym",
-      "3. 🎱 Snooker Room",
-      "4. 🎮 Play Area",
-      "5. 🚗 Parking",
-      "6. 🔒 Security Complaint",
-      "7. 🔧 Plumbing",
-      "8. ⚡ Electric",
-      "9. 🔨 Civil",
-      "10. 🤝 Collaboration Corner",
-      "11. 🪑 Seating Area",
-      "12. 📋 Other",
-    ].join("\n")
-
-    return await getMessage(MSG.COMPLAINT_BUILDING_SUBCATEGORY, {
-      subcategories,
-      max: "12",
-    }, language)
+    return await getBuildingSubcategoryMenu(language)
   }
 
   return await getMessage(MSG.COMPLAINT_INVALID_CATEGORY, undefined, language)

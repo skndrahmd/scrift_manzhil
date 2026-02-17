@@ -17,7 +17,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { useToast } from "@/hooks/use-toast"
-import { Globe, ArrowLeft, Loader2, Plus, Trash2, Languages, Search } from "lucide-react"
+import { Globe, ArrowLeft, Loader2, Plus, Trash2, Languages, Search, RefreshCw } from "lucide-react"
 import Link from "next/link"
 
 interface EnabledLanguage {
@@ -46,6 +46,7 @@ export function LanguageSettings() {
   const [deleting, setDeleting] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
   const [showAddSection, setShowAddSection] = useState(false)
+  const [retranslatingCode, setRetranslatingCode] = useState<string | null>(null)
 
   const fetchLanguages = useCallback(async () => {
     try {
@@ -197,6 +198,31 @@ export function LanguageSettings() {
     }
   }
 
+  const handleRetranslateAll = async (lang: EnabledLanguage) => {
+    setRetranslatingCode(lang.language_code)
+    try {
+      const res = await fetch(`/api/languages/${lang.language_code}/retranslate-all`, {
+        method: "POST",
+      })
+
+      const data = await res.json()
+
+      if (!res.ok) {
+        toast({ title: "Error", description: data.error || "Failed to retranslate", variant: "destructive" })
+        return
+      }
+
+      toast({
+        title: "Retranslation Complete",
+        description: `${data.translations_count} messages retranslated for ${lang.language_name}`,
+      })
+    } catch {
+      toast({ title: "Error", description: "Failed to retranslate", variant: "destructive" })
+    } finally {
+      setRetranslatingCode(null)
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
@@ -261,6 +287,24 @@ export function LanguageSettings() {
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleRetranslateAll(lang)}
+                    disabled={retranslatingCode === lang.language_code}
+                  >
+                    {retranslatingCode === lang.language_code ? (
+                      <>
+                        <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                        Retranslating...
+                      </>
+                    ) : (
+                      <>
+                        <RefreshCw className="h-3 w-3 mr-1" />
+                        Retranslate All
+                      </>
+                    )}
+                  </Button>
                   <Link href={`/admin/settings/languages/${lang.language_code}`}>
                     <Button variant="outline" size="sm">
                       Edit Translations
