@@ -79,6 +79,7 @@ export interface UserState {
   booking?: any
   bookingList?: any[]
   visitor?: VisitorData
+  language?: string
 }
 
 /**
