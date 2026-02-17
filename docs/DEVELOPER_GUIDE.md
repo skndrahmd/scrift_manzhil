@@ -32,6 +32,7 @@ A hands-on guide for developers joining the Manzhil codebase. Jump to any sectio
 - **Broadcast Messaging** — bulk WhatsApp announcements with rate limiting
 - **Accounting** — income/expense tracking with PDF and CSV reports
 - **WhatsApp Bot** — resident self-service via conversational webhook
+- **Multilingual Translations** — bot messages translatable into multiple languages via Google Translate
 
 ### Tech Stack
 
@@ -120,13 +121,20 @@ cp .env.example .env.local
 | `NEXT_PUBLIC_APP_URL` | Your app's public URL (used for generating invoice links) |
 | `CRON_SECRET` | Secret key to authenticate cron job requests. All 3 cron routes validate the `x-cron-key` request header against this value. |
 
+**Google Translate** (required for multilingual features):
+| Variable | Description |
+|----------|-------------|
+| `GOOGLE_TRANSLATE_API_KEY` | Google Cloud Translation API v2 key. Used to auto-translate bot messages when a new language is added. |
+
 ### Database Setup
 
 1. Open the Supabase SQL Editor for your project
 2. Paste the entire contents of `database-complete-schema.sql`
-3. Run it — this creates all 20 tables, RLS policies, indexes, triggers, and default data
+3. Run it — this creates all 22 tables, RLS policies, indexes, triggers, and default data
 4. Optionally run `database-seed-bot-messages.sql` to populate bot messages
 5. Optionally run `database-seed-whatsapp-templates.sql` to populate WhatsApp template metadata
+6. Optionally run `sql/database-seed-label-messages.sql` to populate translatable label message keys
+7. Optionally run `sql/database-multilingual-schema.sql` if it is not already included in the complete schema
 
 ### Supabase Storage Buckets
 
@@ -152,10 +160,13 @@ scriftmanzhil/
 │   ├── admin/              #   Admin dashboard (12 page groups)
 │   │   └── settings/       #     Admin settings & RBAC (super_admin only)
 │   │       ├── bot-messages/       # Bot message editor page
-│   │       └── whatsapp-templates/ # Template manager page
+│   │       ├── whatsapp-templates/ # Template manager page
+│   │       └── languages/          # Language management & translation editor
+│   │           └── [code]/         # Per-language translation editor page
 │   ├── api/                #   Backend API routes (40+ endpoints)
 │   │   ├── bot-messages/   #     Bot message CRUD
-│   │   └── whatsapp-templates/ #  Template management + test-send
+│   │   ├── whatsapp-templates/ #  Template management + test-send
+│   │   └── languages/      #     Language management & translations
 │   ├── login/              #   Authentication page
 │   ├── booking-invoice/    #   Public invoice PDFs
 │   ├── maintenance-invoice/#   Public invoice PDFs
@@ -165,7 +176,9 @@ scriftmanzhil/
 │   ├── ui/                 #   50+ Radix UI primitives (button, dialog, table, etc.)
 │   ├── admin/              #   Feature-specific admin components
 │   │   ├── bot-messages-editor.tsx        # Bot message customization
-│   │   └── whatsapp-template-manager.tsx  # WhatsApp template management
+│   │   ├── whatsapp-template-manager.tsx  # WhatsApp template management
+│   │   ├── language-settings.tsx          # Language management UI
+│   │   └── translation-editor.tsx         # Per-language translation editor
 │   ├── accounting/         #   Financial dashboard components
 │   └── *.tsx               #   Root-level shared components
 ├── hooks/                  # React custom hooks
@@ -182,13 +195,17 @@ scriftmanzhil/
 │   ├── admin/              #   Notification recipient fetchers
 │   ├── bulk-import/        #   Resident CSV import
 │   ├── bulk-import-units/  #   Unit CSV import
+│   ├── google-translate.ts #   Google Translate API v2 utility
 │   └── utils.ts            #   Tailwind cn() helper
 ├── public/                 # Static assets
 ├── styles/                 # Global styles
 ├── middleware.ts           # Auth & RBAC route protection
-├── database-complete-schema.sql  # Full DB schema (20 tables)
+├── database-complete-schema.sql  # Full DB schema (22 tables)
 ├── database-seed-bot-messages.sql       # Bot message seed data (~115 messages)
 ├── database-seed-whatsapp-templates.sql # WhatsApp template seed data (20 templates)
+├── sql/
+│   ├── database-seed-label-messages.sql     # 10 translatable label message keys
+│   └── database-multilingual-schema.sql     # Schema for multilingual tables
 ├── vercel.json             # Cron job schedules
 ├── tailwind.config.ts      # Tailwind configuration
 ├── tsconfig.json           # TypeScript config (@ path alias)
@@ -224,6 +241,8 @@ All admin pages are protected by the middleware. Access depends on the admin's r
 | **Settings** | `/admin/settings` | **Super admin only.** Booking Settings, Staff Management, Bot Messages, WhatsApp Templates |
 | **Bot Messages** | `/admin/settings/bot-messages` | **Super admin only.** Customize WhatsApp bot response messages |
 | **WhatsApp Templates** | `/admin/settings/whatsapp-templates` | **Super admin only.** Manage Twilio content template SIDs, test send, create drafts |
+| **Languages** | `/admin/settings/languages` | **Super admin only.** Add, toggle, and remove enabled languages; trigger bulk retranslation |
+| **Translation Editor** | `/admin/settings/languages/[code]` | **Super admin only.** Edit individual translated messages for a specific language |
 | **Unauthorized** | `/admin/unauthorized` | Access denied landing page |
 
 The admin layout (`app/admin/layout.tsx`) wraps all admin pages with a sidebar navigation and top bar. A loading skeleton (`app/admin/loading.tsx`) shows while pages are server-rendering.
@@ -340,6 +359,20 @@ All API routes are in `app/api/`. Protected admin routes use `verifyAdminAccess(
 | `/api/whatsapp-templates/[key]` | PATCH | Update template fields (SID, variables, etc.) | `whatsapp_templates` |
 | `/api/whatsapp-templates/[key]` | DELETE | Delete a draft template | `whatsapp_templates` |
 | `/api/whatsapp-templates/test-send` | POST | Test send a template to a phone number | `whatsapp_templates` |
+
+#### Languages & Translations
+
+| Route | Method | What It Does | Tables |
+|-------|--------|-------------|--------|
+| `/api/languages` | GET | List all enabled languages | `enabled_languages` |
+| `/api/languages` | POST | Add a language and auto-translate all bot messages | `enabled_languages`, `bot_message_translations`, `bot_messages` |
+| `/api/languages/supported` | GET | List languages supported by Google Translate | — (external API) |
+| `/api/languages/[code]` | PATCH | Toggle a language enabled/disabled | `enabled_languages` |
+| `/api/languages/[code]` | DELETE | Remove a language and all its translations | `enabled_languages`, `bot_message_translations` |
+| `/api/languages/[code]/translations` | GET | Get all translations for a language | `bot_message_translations`, `bot_messages` |
+| `/api/languages/[code]/translations/[key]` | PATCH | Update a single translation | `bot_message_translations` |
+| `/api/languages/[code]/translations/[key]/retranslate` | POST | Re-translate a single message via Google Translate | `bot_message_translations`, `bot_messages` |
+| `/api/languages/[code]/retranslate-all` | POST | Re-translate all messages for a language | `bot_message_translations`, `bot_messages` |
 
 #### Accounting
 
@@ -465,7 +498,10 @@ Handles **inbound** WhatsApp messages from residents. When a resident texts the 
 **Files:**
 - **`router.ts`** — Main message router. Determines what the resident is trying to do based on their input and current conversation state, then dispatches to the appropriate handler.
 - **`state.ts`** — Conversation state management. Tracks where each user is in a multi-step flow (e.g., halfway through registering a complaint).
-- **`menu.ts`** — Builds the main menu and sub-menus that are sent as WhatsApp text responses.
+- **`menu.ts`** — Builds the main menu and sub-menus that are sent as WhatsApp text responses. All menu builders accept an optional `language` parameter and use `getLabels()` for translated labels.
+- **`messages.ts`** — DB-backed message loader with 5-min cache. Also exports `getLabels(key, language?)` for retrieving `\n`-delimited label messages split into arrays.
+- **`message-keys.ts`** — TypeScript constants for all message keys, including 10 label keys for translatable menu labels.
+- **`message-defaults.ts`** — Hardcoded fallback defaults for all messages.
 - **`profile.ts`** — Looks up resident profiles and fetches related data (bookings, complaints, maintenance status).
 - **`config.ts`** — Bot configuration constants (menu options, timeouts, etc.).
 - **`types.ts`** — Webhook-specific TypeScript types.
@@ -536,6 +572,26 @@ const today = getPakistanTime()             // Current time in Pakistan
 
 All return an array of admin phone numbers (or empty array if none configured).
 
+### `lib/google-translate.ts` — Google Translate API
+
+A utility module for translating text via the Google Cloud Translation API v2. Key behaviors:
+
+- Wraps `{variable}` placeholders in `<span translate="no">` tags to protect them from translation
+- Converts `\n` to `<br>` before translation and reverses it after, preserving newline formatting
+- Decodes HTML entities (`&amp;`, `&#39;`, etc.) in the translated output
+- Uses HTML mode (`format=html`) for the API call
+- Exports a single `translateText(text, targetLanguage)` function
+
+```typescript
+import { translateText } from '@/lib/google-translate'
+
+const translated = await translateText(
+  'Hello {name}, your complaint #{id} has been registered.',
+  'ur' // Urdu
+)
+// Placeholders {name} and {id} are preserved as-is in the output
+```
+
 ### `lib/bulk-import/` — Resident CSV Import
 
 - **`parser.ts`** — Parses CSV files using PapaParse, handles encoding and delimiter detection.
@@ -596,6 +652,8 @@ These are the main UI components for each admin page. Each one typically include
 | `bulk-import-units-modal.tsx` | `/admin/units` | CSV upload modal for unit bulk import |
 | `bot-messages-editor.tsx` | `/admin/settings/bot-messages` | Editable bot message cards grouped by flow, with save/reset |
 | `whatsapp-template-manager.tsx` | `/admin/settings/whatsapp-templates` | Template cards with SID editing, test send, create/edit dialogs |
+| `language-settings.tsx` | `/admin/settings/languages` | Language management with add, toggle, remove, and retranslate-all |
+| `translation-editor.tsx` | `/admin/settings/languages/[code]` | Per-language translation editor with search, edit, and retranslate per message |
 
 ### `components/accounting/` — Financial Dashboard
 
@@ -772,13 +830,49 @@ Admin visits /admin/broadcast
     → Returns success/failure summary
 ```
 
+### Multilingual Translation System
+
+The bot supports multiple languages for its conversational messages. Residents can select their preferred language via menu option "0" in the WhatsApp bot.
+
+```
+Admin visits /admin/settings/languages
+  → Sees currently enabled languages (max 5)
+  → Clicks "Add Language"
+    → Fetches supported languages: GET /api/languages/supported
+    → Selects a language (e.g., Urdu)
+    → POST /api/languages
+      → Creates row in enabled_languages
+      → Auto-translates all ~115+ bot messages via Google Translate API v2
+      → Stores translations in bot_message_translations
+  → Can toggle language enabled/disabled: PATCH /api/languages/[code]
+  → Can remove language and all translations: DELETE /api/languages/[code]
+  → Can retranslate all messages: POST /api/languages/[code]/retranslate-all
+
+Admin visits /admin/settings/languages/[code]
+  → Sees all messages with original English and translated text
+  → Can manually edit any translation: PATCH /api/languages/[code]/translations/[key]
+  → Can retranslate a single message: POST /api/languages/[code]/translations/[key]/retranslate
+
+Resident sends "0" to WhatsApp bot
+  → Bot shows language selection menu
+  → Resident picks a language
+  → All subsequent bot messages use translated versions
+  → Menu labels retrieved via getLabels(key, language) from lib/webhook/messages.ts
+```
+
+**Architecture details:**
+- `lib/google-translate.ts` — wraps Google Translate API v2, protects `{variable}` placeholders with `<span translate="no">`, preserves `\n` via `<br>` conversion
+- `lib/webhook/messages.ts` — `getMessage(key, variables, language?)` resolves translations from `bot_message_translations`; `getLabels(key, language?)` splits `\n`-delimited label messages into arrays
+- `lib/webhook/menu.ts` — all menu builders accept optional `language` parameter
+- Menu labels are stored as `\n`-delimited values in `bot_messages` (10 label keys), split into arrays at runtime
+
 ---
 
 ## 9. Database
 
 ### Setup
 
-Run `database-complete-schema.sql` in the Supabase SQL Editor. This single file creates all 20 tables, RLS policies, indexes, triggers, and default data.
+Run `database-complete-schema.sql` in the Supabase SQL Editor. This single file creates all 22 tables, RLS policies, indexes, triggers, and default data.
 
 ### Table Groups
 
@@ -832,6 +926,13 @@ Run `database-complete-schema.sql` in the Supabase SQL Editor. This single file 
 |-------|---------|
 | `whatsapp_templates` | Twilio content template SIDs, variables metadata, trigger info, and draft management |
 
+**Multilingual Translation (2 tables):**
+
+| Table | Purpose |
+|-------|---------|
+| `enabled_languages` | Available languages — `language_code` (PK), `language_name`, `native_name`, `is_enabled`, `sort_order`. Max 5 enabled at once. |
+| `bot_message_translations` | Translated bot messages — links `message_key` (FK to `bot_messages`) and `language_code` (FK to `enabled_languages`). Stores `translated_text`, `is_auto_translated` flag, and `updated_by`. Unique constraint on `(message_key, language_code)`. |
+
 ### Key Relationships
 
 ```
@@ -852,6 +953,12 @@ admin_users
  ├─< admin_permissions (admin_id)
  ├─< bot_messages (updated_by)
  └─< whatsapp_templates (updated_by)
+
+bot_messages
+ └─< bot_message_translations (message_key)
+
+enabled_languages
+ └─< bot_message_translations (language_code)
 ```
 
 ### Row Level Security (RLS)
@@ -1022,6 +1129,16 @@ dashboard, residents, units, bookings, complaints,
 visitors, parcels, analytics, feedback, accounting,
 broadcast, settings
 ```
+
+### Adding a New Language
+
+1. Ensure `GOOGLE_TRANSLATE_API_KEY` is set in `.env.local`
+2. Navigate to Admin > Settings > Languages (super admin only)
+3. Click "Add Language" and select from the supported languages list
+4. All bot messages are auto-translated via Google Translate API v2
+5. Review and manually edit translations at `/admin/settings/languages/[code]`
+6. Use "Retranslate All" to regenerate translations after bot message changes
+7. Maximum 5 languages can be enabled simultaneously
 
 ### Admin Roles
 
