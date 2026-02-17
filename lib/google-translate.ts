@@ -18,25 +18,26 @@ interface TranslateResult {
 }
 
 /**
- * Wrap {variable} placeholders in translate="no" spans so Google Translate
- * leaves them intact.
+ * Prepare text for HTML-mode translation:
+ * 1. Convert \n to <br> so line breaks survive (HTML mode collapses \n to whitespace)
+ * 2. Wrap {variable} placeholders in translate="no" spans
  */
-function protectPlaceholders(text: string): string {
-  return text.replace(
-    /\{(\w+)\}/g,
-    '<span translate="no">{$1}</span>'
-  )
+function prepareForTranslation(text: string): string {
+  return text
+    .replace(/\n/g, "<br>")
+    .replace(/\{(\w+)\}/g, '<span translate="no">{$1}</span>')
 }
 
 /**
- * Strip the <span translate="no"> wrappers to recover original {variable} placeholders.
+ * Restore text after HTML-mode translation:
+ * 1. Strip <span translate="no"> wrappers to recover {variable} placeholders
+ * 2. Convert <br> back to \n to restore line breaks
  * Handles potential whitespace or attribute variations added by Google Translate.
  */
-function restorePlaceholders(text: string): string {
-  return text.replace(
-    /<span[^>]*translate\s*=\s*"no"[^>]*>\s*\{(\w+)\}\s*<\/span>/gi,
-    "{$1}"
-  )
+function restoreFromTranslation(text: string): string {
+  return text
+    .replace(/<span[^>]*translate\s*=\s*"no"[^>]*>\s*\{(\w+)\}\s*<\/span>/gi, "{$1}")
+    .replace(/<br\s*\/?>/gi, "\n")
 }
 
 /**
@@ -66,7 +67,7 @@ export async function translateText(
     throw new Error("GOOGLE_TRANSLATE_API_KEY is not set")
   }
 
-  const protected_text = protectPlaceholders(text)
+  const protected_text = prepareForTranslation(text)
 
   const response = await fetch(`${BASE_URL}?key=${GOOGLE_TRANSLATE_API_KEY}`, {
     method: "POST",
@@ -86,7 +87,7 @@ export async function translateText(
 
   const data = await response.json()
   const raw = data.data.translations[0].translatedText
-  return decodeHtmlEntities(restorePlaceholders(raw))
+  return decodeHtmlEntities(restoreFromTranslation(raw))
 }
 
 /**
@@ -108,7 +109,7 @@ export async function translateBatch(
   const results: string[] = []
 
   for (let i = 0; i < texts.length; i += BATCH_SIZE) {
-    const batch = texts.slice(i, i + BATCH_SIZE).map(protectPlaceholders)
+    const batch = texts.slice(i, i + BATCH_SIZE).map(prepareForTranslation)
 
     const response = await fetch(`${BASE_URL}?key=${GOOGLE_TRANSLATE_API_KEY}`, {
       method: "POST",
@@ -128,7 +129,7 @@ export async function translateBatch(
 
     const data = await response.json()
     const translated = data.data.translations.map(
-      (t: TranslateResult) => decodeHtmlEntities(restorePlaceholders(t.translatedText))
+      (t: TranslateResult) => decodeHtmlEntities(restoreFromTranslation(t.translatedText))
     )
     results.push(...translated)
   }
