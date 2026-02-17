@@ -19,18 +19,18 @@ import { MSG } from "./message-keys"
 /**
  * Get main menu display
  */
-export async function getMainMenu(name: string): Promise<string> {
+export async function getMainMenu(name: string, language?: string): Promise<string> {
   const options = MAIN_MENU_OPTIONS.map(
     (opt) => `${opt.key}. ${opt.emoji} ${opt.label}`
   ).join("\n")
 
-  return await getMessage(MSG.MAIN_MENU, { name, options })
+  return await getMessage(MSG.MAIN_MENU, { name, options }, language)
 }
 
 /**
  * Get user profile info display
  */
-export async function getProfileInfo(profile: Profile): Promise<string> {
+export async function getProfileInfo(profile: Profile, language?: string): Promise<string> {
   const paymentStatus = profile.maintenance_paid ? "✅ Paid" : "❌ Unpaid"
   const lastPayment = profile.last_payment_date
     ? formatDate(profile.last_payment_date)
@@ -44,13 +44,13 @@ export async function getProfileInfo(profile: Profile): Promise<string> {
     payment_status: paymentStatus,
     maintenance_charges: formatCurrency(profile.maintenance_charges || 0),
     last_payment: lastPayment,
-  })
+  }, language)
 }
 
 /**
  * Get maintenance status display
  */
-export async function getMaintenanceStatus(profile: Profile): Promise<string> {
+export async function getMaintenanceStatus(profile: Profile, language?: string): Promise<string> {
   const paymentStatus = profile.maintenance_paid ? "✅ Paid" : "❌ Unpaid"
   const lastPayment = profile.last_payment_date
     ? formatDate(profile.last_payment_date)
@@ -61,10 +61,10 @@ export async function getMaintenanceStatus(profile: Profile): Promise<string> {
     maintenance_charges: formatCurrency(profile.maintenance_charges || 0),
     payment_status: paymentStatus,
     last_payment: lastPayment,
-  })
+  }, language)
 
   if (!profile.maintenance_paid) {
-    statusMessage += "\n\n" + await getMessage(MSG.MAINTENANCE_PAYMENT_DUE)
+    statusMessage += "\n\n" + await getMessage(MSG.MAINTENANCE_PAYMENT_DUE, undefined, language)
   }
 
   statusMessage += "\n\nReply *0* for menu"
@@ -75,52 +75,52 @@ export async function getMaintenanceStatus(profile: Profile): Promise<string> {
 /**
  * Get emergency contacts display
  */
-export async function getEmergencyContacts(): Promise<string> {
+export async function getEmergencyContacts(language?: string): Promise<string> {
   const contacts = EMERGENCY_CONTACTS.map(
     (c) => `• ${c.name}: ${c.number}`
   ).join("\n")
 
-  return await getMessage(MSG.EMERGENCY_CONTACTS, { contacts })
+  return await getMessage(MSG.EMERGENCY_CONTACTS, { contacts }, language)
 }
 
 /**
  * Get hall booking menu
  */
-export async function getHallMenu(): Promise<string> {
+export async function getHallMenu(language?: string): Promise<string> {
   const options = HALL_MENU_OPTIONS.map(
     (opt) => `${opt.key}. ${opt.emoji} ${opt.label}`
   ).join("\n")
 
-  return await getMessage(MSG.HALL_MENU, { options })
+  return await getMessage(MSG.HALL_MENU, { options }, language)
 }
 
 /**
  * Get staff management menu
  */
-export async function getStaffMenu(): Promise<string> {
+export async function getStaffMenu(language?: string): Promise<string> {
   const options = STAFF_MENU_OPTIONS.map(
     (opt) => `${opt.key}. ${opt.emoji} ${opt.label}`
   ).join("\n")
 
-  return await getMessage(MSG.STAFF_MENU, { options })
+  return await getMessage(MSG.STAFF_MENU, { options }, language)
 }
 
 /**
  * Get complaint category selection menu
  */
-export async function getComplaintCategoryMenu(): Promise<string> {
+export async function getComplaintCategoryMenu(language?: string): Promise<string> {
   return await getMessage(MSG.COMPLAINT_CATEGORY_MENU, {
     apartment_emoji: COMPLAINT_CATEGORIES.apartment.emoji,
     apartment_label: COMPLAINT_CATEGORIES.apartment.label,
     building_emoji: COMPLAINT_CATEGORIES.building.emoji,
     building_label: COMPLAINT_CATEGORIES.building.label,
-  })
+  }, language)
 }
 
 /**
  * Get apartment complaint subcategory menu
  */
-export async function getApartmentSubcategoryMenu(): Promise<string> {
+export async function getApartmentSubcategoryMenu(language?: string): Promise<string> {
   const subcategories = COMPLAINT_CATEGORIES.apartment.subcategories
     .map((s, i) => `${i + 1}. ${s.emoji} ${s.label}`)
     .join("\n")
@@ -128,13 +128,13 @@ export async function getApartmentSubcategoryMenu(): Promise<string> {
   return await getMessage(MSG.COMPLAINT_APARTMENT_SUBCATEGORY, {
     subcategories,
     max: String(COMPLAINT_CATEGORIES.apartment.subcategories.length),
-  })
+  }, language)
 }
 
 /**
  * Get building complaint subcategory menu
  */
-export async function getBuildingSubcategoryMenu(): Promise<string> {
+export async function getBuildingSubcategoryMenu(language?: string): Promise<string> {
   const subcategories = COMPLAINT_CATEGORIES.building.subcategories
     .map((s, i) => `${i + 1}. ${s.emoji} ${s.label}`)
     .join("\n")
@@ -142,7 +142,7 @@ export async function getBuildingSubcategoryMenu(): Promise<string> {
   return await getMessage(MSG.COMPLAINT_BUILDING_SUBCATEGORY, {
     subcategories,
     max: String(COMPLAINT_CATEGORIES.building.subcategories.length),
-  })
+  }, language)
 }
 
 /**
@@ -162,13 +162,13 @@ Reply 1-4, or *B* to go back`
 /**
  * Get staff role selection menu
  */
-export async function getStaffRoleMenu(): Promise<string> {
+export async function getStaffRoleMenu(language?: string): Promise<string> {
   const roles = STAFF_ROLES.map((r, i) => `${i + 1}. ${r.emoji} ${r.label}`).join("\n")
 
   return await getMessage(MSG.STAFF_ADD_ROLE, {
     roles,
     max: String(STAFF_ROLES.length),
-  })
+  }, language)
 }
 
 /**
