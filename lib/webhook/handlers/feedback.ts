@@ -13,13 +13,14 @@ import { MSG } from "../message-keys"
 /**
  * Initialize feedback flow
  */
-export async function initializeFeedbackFlow(phoneNumber: string): Promise<string> {
+export async function initializeFeedbackFlow(phoneNumber: string, language?: string): Promise<string> {
   setState(phoneNumber, {
     step: "feedback_input",
     type: "feedback",
+    language,
   })
 
-  return await getMessage(MSG.FEEDBACK_PROMPT)
+  return await getMessage(MSG.FEEDBACK_PROMPT, undefined, language)
 }
 
 /**
@@ -31,6 +32,8 @@ export async function handleFeedbackFlow(
   phoneNumber: string,
   userState: UserState
 ): Promise<string> {
+  const language = userState.language
+
   try {
     if (userState.step === "feedback_input") {
       // Save feedback to database
@@ -46,18 +49,18 @@ export async function handleFeedbackFlow(
 
       if (error) {
         console.error("[Feedback] Creation error:", error)
-        return await getMessage(MSG.FEEDBACK_ERROR)
+        return await getMessage(MSG.FEEDBACK_ERROR, undefined, language)
       }
 
       // Clear state
       clearState(phoneNumber)
 
-      return await getMessage(MSG.FEEDBACK_RECEIVED)
+      return await getMessage(MSG.FEEDBACK_RECEIVED, undefined, language)
     }
 
-    return await getMessage(MSG.ERROR_SOMETHING_WRONG)
+    return await getMessage(MSG.ERROR_SOMETHING_WRONG, undefined, language)
   } catch (error) {
     console.error("[Feedback] Flow error:", error)
-    return await getMessage(MSG.ERROR_GENERIC)
+    return await getMessage(MSG.ERROR_GENERIC, undefined, language)
   }
 }

@@ -15,11 +15,12 @@ import { MSG } from "../message-keys"
 /**
  * Initialize complaint flow
  */
-export async function initializeComplaintFlow(phoneNumber: string): Promise<string> {
+export async function initializeComplaintFlow(phoneNumber: string, language?: string): Promise<string> {
   setState(phoneNumber, {
     step: "complaint_category",
     type: "complaint",
     complaint: {},
+    language,
   })
 
   return await getMessage(MSG.COMPLAINT_CATEGORY_MENU, {
@@ -27,7 +28,7 @@ export async function initializeComplaintFlow(phoneNumber: string): Promise<stri
     apartment_label: "My Apartment Complaint",
     building_emoji: "🏢",
     building_label: "Building Complaint",
-  })
+  }, language)
 }
 
 /**
@@ -40,20 +41,21 @@ export async function handleComplaintFlow(
   userState: UserState
 ): Promise<string> {
   const choice = message.trim()
+  const language = userState.language
 
   switch (userState.step) {
     case "complaint_category":
-      return await handleCategorySelection(choice, phoneNumber, userState)
+      return await handleCategorySelection(choice, phoneNumber, userState, language)
 
     case "complaint_subcategory":
-      return await handleSubcategorySelection(choice, profile, phoneNumber, userState)
+      return await handleSubcategorySelection(choice, profile, phoneNumber, userState, language)
 
     case "complaint_description":
       userState.complaint!.description = message
-      return await createComplaint(profile, userState, phoneNumber)
+      return await createComplaint(profile, userState, phoneNumber, language)
 
     default:
-      return await getMessage(MSG.COMPLAINT_FLOW_ERROR)
+      return await getMessage(MSG.COMPLAINT_FLOW_ERROR, undefined, language)
   }
 }
 
@@ -63,7 +65,8 @@ export async function handleComplaintFlow(
 async function handleCategorySelection(
   choice: string,
   phoneNumber: string,
-  userState: UserState
+  userState: UserState,
+  language?: string
 ): Promise<string> {
   if (choice === "1") {
     userState.complaint!.category = "apartment"
@@ -81,7 +84,7 @@ async function handleCategorySelection(
     return await getMessage(MSG.COMPLAINT_APARTMENT_SUBCATEGORY, {
       subcategories,
       max: "5",
-    })
+    }, language)
   }
 
   if (choice === "2") {
@@ -107,10 +110,10 @@ async function handleCategorySelection(
     return await getMessage(MSG.COMPLAINT_BUILDING_SUBCATEGORY, {
       subcategories,
       max: "12",
-    })
+    }, language)
   }
 
-  return await getMessage(MSG.COMPLAINT_INVALID_CATEGORY)
+  return await getMessage(MSG.COMPLAINT_INVALID_CATEGORY, undefined, language)
 }
 
 /**
@@ -120,7 +123,8 @@ async function handleSubcategorySelection(
   choice: string,
   profile: Profile,
   phoneNumber: string,
-  userState: UserState
+  userState: UserState,
+  language?: string
 ): Promise<string> {
   const isBuilding = userState.complaint!.category === "building"
 
@@ -155,15 +159,15 @@ async function handleSubcategorySelection(
     if (needsDescription) {
       userState.step = "complaint_description"
       setState(phoneNumber, userState)
-      return await getMessage(MSG.COMPLAINT_DESCRIPTION_PROMPT)
+      return await getMessage(MSG.COMPLAINT_DESCRIPTION_PROMPT, undefined, language)
     }
 
     // Create complaint directly for apartment predefined categories
-    return await createComplaint(profile, userState, phoneNumber)
+    return await createComplaint(profile, userState, phoneNumber, language)
   }
 
   const rangeText = isBuilding ? "1-12" : "1-5"
-  return await getMessage(MSG.COMPLAINT_INVALID_SUBCATEGORY, { range: rangeText })
+  return await getMessage(MSG.COMPLAINT_INVALID_SUBCATEGORY, { range: rangeText }, language)
 }
 
 /**
@@ -172,7 +176,8 @@ async function handleSubcategorySelection(
 async function createComplaint(
   profile: Profile,
   userState: UserState,
-  phoneNumber: string
+  phoneNumber: string,
+  language?: string
 ): Promise<string> {
   try {
     const complaint = userState.complaint!
@@ -206,7 +211,7 @@ async function createComplaint(
 
     if (error) {
       console.error("[Complaint] Creation error:", error)
-      return await getMessage(MSG.COMPLAINT_CREATION_ERROR)
+      return await getMessage(MSG.COMPLAINT_CREATION_ERROR, undefined, language)
     }
 
     // Clear state
@@ -253,10 +258,10 @@ async function createComplaint(
       subcategory: subcategoryText,
       description: finalDescription || "No description",
       date_time: formattedDateTime,
-    })
+    }, language)
   } catch (error) {
     console.error("[Complaint] Create error:", error)
-    return await getMessage(MSG.COMPLAINT_CREATION_ERROR)
+    return await getMessage(MSG.COMPLAINT_CREATION_ERROR, undefined, language)
   }
 }
 

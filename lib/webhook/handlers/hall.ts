@@ -16,17 +16,18 @@ import { HALL_MENU_OPTIONS } from "../config"
 /**
  * Initialize hall management flow
  */
-export async function initializeHallFlow(phoneNumber: string): Promise<string> {
+export async function initializeHallFlow(phoneNumber: string, language?: string): Promise<string> {
   setState(phoneNumber, {
     step: "hall_menu",
     type: "hall",
+    language,
   })
 
   const options = HALL_MENU_OPTIONS.map(
     (opt) => `${opt.key}. ${opt.emoji} ${opt.label}`
   ).join("\n")
 
-  return await getMessage(MSG.HALL_MENU, { options })
+  return await getMessage(MSG.HALL_MENU, { options }, language)
 }
 
 /**
@@ -39,67 +40,68 @@ export async function handleHallFlow(
   userState: UserState
 ): Promise<string> {
   const choice = message.trim()
+  const language = userState.language
 
   try {
     // Hall menu selection
     if (userState.step === "hall_menu") {
       switch (choice) {
         case "1": // New Booking
-          return await initializeNewBooking(phoneNumber)
+          return await initializeNewBooking(phoneNumber, language)
         case "2": // Cancel Booking
-          return await initializeCancelBooking(profile, phoneNumber)
+          return await initializeCancelBooking(profile, phoneNumber, language)
         case "3": // Edit Booking
-          return await initializeEditBooking(profile, phoneNumber)
+          return await initializeEditBooking(profile, phoneNumber, language)
         case "4": // View My Bookings
-          return await viewMyBookings(profile, phoneNumber)
+          return await viewMyBookings(profile, phoneNumber, language)
         default:
-          return await getMessage(MSG.HALL_INVALID_MENU_SELECTION)
+          return await getMessage(MSG.HALL_INVALID_MENU_SELECTION, undefined, language)
       }
     }
 
     // New booking flow
     if (userState.step === "hall_new_booking_date") {
-      return await handleNewBookingDate(message, profile, phoneNumber, userState)
+      return await handleNewBookingDate(message, profile, phoneNumber, userState, language)
     }
 
     if (userState.step === "hall_new_booking_policies") {
-      return await handleBookingPolicies(message, profile, phoneNumber, userState)
+      return await handleBookingPolicies(message, profile, phoneNumber, userState, language)
     }
 
     // Cancel booking flow
     if (userState.step === "hall_cancel_select") {
-      return await handleCancelSelect(choice, profile, phoneNumber, userState)
+      return await handleCancelSelect(choice, profile, phoneNumber, userState, language)
     }
 
     if (userState.step === "hall_cancel_confirm") {
-      return await handleCancelConfirm(message, profile, phoneNumber, userState)
+      return await handleCancelConfirm(message, profile, phoneNumber, userState, language)
     }
 
     // Edit booking flow
     if (userState.step === "hall_edit_select") {
-      return await handleEditSelect(choice, profile, phoneNumber, userState)
+      return await handleEditSelect(choice, profile, phoneNumber, userState, language)
     }
 
     if (userState.step === "hall_edit_date") {
-      return await handleEditDate(message, profile, phoneNumber, userState)
+      return await handleEditDate(message, profile, phoneNumber, userState, language)
     }
 
-    return await getMessage(MSG.ERROR_SOMETHING_WRONG)
+    return await getMessage(MSG.ERROR_SOMETHING_WRONG, undefined, language)
   } catch (error) {
     console.error("[Hall] Flow error:", error)
-    return await getMessage(MSG.ERROR_GENERIC)
+    return await getMessage(MSG.ERROR_GENERIC, undefined, language)
   }
 }
 
 /**
  * Initialize new booking flow
  */
-async function initializeNewBooking(phoneNumber: string): Promise<string> {
+async function initializeNewBooking(phoneNumber: string, language?: string): Promise<string> {
   const userState = getState(phoneNumber)
   userState.step = "hall_new_booking_date"
   setState(phoneNumber, userState)
 
-  return await getMessage(MSG.HALL_NEW_BOOKING_DATE)
+  return await getMessage(MSG.HALL_NEW_BOOKING_DATE, undefined, language)
 }
 
 /**
@@ -109,15 +111,16 @@ async function handleNewBookingDate(
   message: string,
   profile: Profile,
   phoneNumber: string,
-  userState: UserState
+  userState: UserState,
+  language?: string
 ): Promise<string> {
   if (!isDateFormat(message)) {
-    return await getMessage(MSG.HALL_INVALID_DATE)
+    return await getMessage(MSG.HALL_INVALID_DATE, undefined, language)
   }
 
   const parsedDate = parseDate(message)
   if (!parsedDate) {
-    return await getMessage(MSG.HALL_INVALID_DATE_PARSE)
+    return await getMessage(MSG.HALL_INVALID_DATE_PARSE, undefined, language)
   }
 
   // Check if date is in the past
@@ -130,14 +133,14 @@ async function handleNewBookingDate(
     String(today.getDate()).padStart(2, "0")
 
   if (parsedDate < todayString) {
-    return await getMessage(MSG.HALL_DATE_PAST)
+    return await getMessage(MSG.HALL_DATE_PAST, undefined, language)
   }
 
   // Check working days
   const settings = await getCachedSettings()
   if (settings && !isWorkingDay(parsedDate, settings.working_days)) {
     const dayName = getDayName(parsedDate)
-    return await getMessage(MSG.HALL_UNAVAILABLE, { day_name: dayName })
+    return await getMessage(MSG.HALL_UNAVAILABLE, { day_name: dayName }, language)
   }
 
   // Check if date is already booked
@@ -148,7 +151,7 @@ async function handleNewBookingDate(
     .in("status", ["confirmed", "payment_pending"])
 
   if (existingBookings && existingBookings.length > 0) {
-    return await getMessage(MSG.HALL_DATE_TAKEN, { date: formatDate(parsedDate) })
+    return await getMessage(MSG.HALL_DATE_TAKEN, { date: formatDate(parsedDate) }, language)
   }
 
   // Date is available, show policies
@@ -164,7 +167,7 @@ async function handleNewBookingDate(
     date: formatDate(parsedDate),
     charges: formatCurrency(bookingCharges),
     policies_link: policiesLink,
-  })
+  }, language)
 }
 
 /**
@@ -174,7 +177,8 @@ async function handleBookingPolicies(
   message: string,
   profile: Profile,
   phoneNumber: string,
-  userState: UserState
+  userState: UserState,
+  language?: string
 ): Promise<string> {
   const choice = message.trim()
 
@@ -201,9 +205,9 @@ async function handleBookingPolicies(
     if (error) {
       console.error("[Hall] Booking error:", error)
       if (error.code === "23505") {
-        return await getMessage(MSG.HALL_DATE_NO_LONGER_AVAILABLE)
+        return await getMessage(MSG.HALL_DATE_NO_LONGER_AVAILABLE, undefined, language)
       }
-      return await getMessage(MSG.HALL_BOOKING_FAILED)
+      return await getMessage(MSG.HALL_BOOKING_FAILED, undefined, language)
     }
 
     clearState(phoneNumber)
@@ -215,25 +219,25 @@ async function handleBookingPolicies(
       date: formatDate(userState.date!),
       charges: formatCurrency(bookingCharges),
       invoice_url: invoiceUrl,
-    })
+    }, language)
   }
 
   if (choice === "2") {
     clearState(phoneNumber)
-    return await getMessage(MSG.HALL_BOOKING_DECLINED)
+    return await getMessage(MSG.HALL_BOOKING_DECLINED, undefined, language)
   }
 
-  return await getMessage(MSG.HALL_INVALID_RESPONSE)
+  return await getMessage(MSG.HALL_INVALID_RESPONSE, undefined, language)
 }
 
 /**
  * Initialize cancel booking flow
  */
-async function initializeCancelBooking(profile: Profile, phoneNumber: string): Promise<string> {
+async function initializeCancelBooking(profile: Profile, phoneNumber: string, language?: string): Promise<string> {
   const bookings = await getUserBookings(profile.id, "confirmed")
 
   if (!bookings || bookings.length === 0) {
-    return await getMessage(MSG.HALL_NO_BOOKINGS_CANCEL)
+    return await getMessage(MSG.HALL_NO_BOOKINGS_CANCEL, undefined, language)
   }
 
   const userState = getState(phoneNumber)
@@ -245,7 +249,7 @@ async function initializeCancelBooking(profile: Profile, phoneNumber: string): P
     .map((b, i) => `${i + 1}. 📅 ${formatDate(b.booking_date)} | ${b.payment_status === "paid" ? "✅ Paid" : "⏳ Pending"}`)
     .join("\n")
 
-  return await getMessage(MSG.HALL_CANCEL_LIST, { list: listText })
+  return await getMessage(MSG.HALL_CANCEL_LIST, { list: listText }, language)
 }
 
 /**
@@ -255,7 +259,8 @@ async function handleCancelSelect(
   choice: string,
   profile: Profile,
   phoneNumber: string,
-  userState: UserState
+  userState: UserState,
+  language?: string
 ): Promise<string> {
   const bookingIndex = parseInt(choice, 10)
   if (isNaN(bookingIndex) || bookingIndex < 1 || bookingIndex > userState.bookingList!.length) {
@@ -273,10 +278,10 @@ async function handleCancelSelect(
     date: formatDate(selectedBooking.booking_date),
     charges: formatCurrency(selectedBooking.booking_charges),
     payment_status: selectedBooking.payment_status === "paid" ? "✅ Paid" : "⏳ Pending",
-  })
+  }, language)
 
   if (selectedBooking.payment_status === "paid") {
-    response += "\n\n" + await getMessage(MSG.HALL_CANCEL_REFUND_NOTE)
+    response += "\n\n" + await getMessage(MSG.HALL_CANCEL_REFUND_NOTE, undefined, language)
   }
 
   response += `
@@ -298,7 +303,8 @@ async function handleCancelConfirm(
   message: string,
   profile: Profile,
   phoneNumber: string,
-  userState: UserState
+  userState: UserState,
+  language?: string
 ): Promise<string> {
   if (isYesResponse(message)) {
     const selectedBooking = (userState as any).selectedBooking
@@ -310,17 +316,17 @@ async function handleCancelConfirm(
 
     if (error) {
       console.error("[Hall] Cancel error:", error)
-      return await getMessage(MSG.HALL_CANCEL_FAILED)
+      return await getMessage(MSG.HALL_CANCEL_FAILED, undefined, language)
     }
 
     clearState(phoneNumber)
 
     let response = await getMessage(MSG.HALL_CANCELLED, {
       date: formatDate(selectedBooking.booking_date),
-    })
+    }, language)
 
     if (selectedBooking.payment_status === "paid") {
-      response += "\n\n" + await getMessage(MSG.HALL_CANCELLED_REFUND)
+      response += "\n\n" + await getMessage(MSG.HALL_CANCELLED_REFUND, undefined, language)
     }
 
     response += "\n\nReply *0* for menu"
@@ -330,20 +336,20 @@ async function handleCancelConfirm(
 
   if (isNoResponse(message)) {
     clearState(phoneNumber)
-    return await getMessage(MSG.HALL_CANCEL_ABORTED)
+    return await getMessage(MSG.HALL_CANCEL_ABORTED, undefined, language)
   }
 
-  return await getMessage(MSG.HALL_INVALID_RESPONSE)
+  return await getMessage(MSG.HALL_INVALID_RESPONSE, undefined, language)
 }
 
 /**
  * Initialize edit booking flow
  */
-async function initializeEditBooking(profile: Profile, phoneNumber: string): Promise<string> {
+async function initializeEditBooking(profile: Profile, phoneNumber: string, language?: string): Promise<string> {
   const bookings = await getUserBookings(profile.id, "confirmed")
 
   if (!bookings || bookings.length === 0) {
-    return await getMessage(MSG.HALL_NO_BOOKINGS_EDIT)
+    return await getMessage(MSG.HALL_NO_BOOKINGS_EDIT, undefined, language)
   }
 
   const userState = getState(phoneNumber)
@@ -353,7 +359,7 @@ async function initializeEditBooking(profile: Profile, phoneNumber: string): Pro
 
   const listText = bookings.map((b, i) => `${i + 1}. 📅 ${formatDate(b.booking_date)}`).join("\n")
 
-  return await getMessage(MSG.HALL_EDIT_LIST, { list: listText })
+  return await getMessage(MSG.HALL_EDIT_LIST, { list: listText }, language)
 }
 
 /**
@@ -363,7 +369,8 @@ async function handleEditSelect(
   choice: string,
   profile: Profile,
   phoneNumber: string,
-  userState: UserState
+  userState: UserState,
+  language?: string
 ): Promise<string> {
   const bookingIndex = parseInt(choice, 10)
   if (isNaN(bookingIndex) || bookingIndex < 1 || bookingIndex > userState.bookingList!.length) {
@@ -379,7 +386,7 @@ async function handleEditSelect(
 
   return await getMessage(MSG.HALL_EDIT_DATE_PROMPT, {
     current_date: formatDate(selectedBooking.booking_date),
-  })
+  }, language)
 }
 
 /**
@@ -389,15 +396,16 @@ async function handleEditDate(
   message: string,
   profile: Profile,
   phoneNumber: string,
-  userState: UserState
+  userState: UserState,
+  language?: string
 ): Promise<string> {
   if (!isDateFormat(message)) {
-    return await getMessage(MSG.HALL_EDIT_INVALID_DATE)
+    return await getMessage(MSG.HALL_EDIT_INVALID_DATE, undefined, language)
   }
 
   const parsedDate = parseDate(message)
   if (!parsedDate) {
-    return await getMessage(MSG.HALL_EDIT_INVALID_DATE_PARSE)
+    return await getMessage(MSG.HALL_EDIT_INVALID_DATE_PARSE, undefined, language)
   }
 
   // Check if date is in the past
@@ -409,7 +417,7 @@ async function handleEditDate(
     "-" +
     String(todayPk.getDate()).padStart(2, "0")
   if (parsedDate < today) {
-    return await getMessage(MSG.HALL_EDIT_DATE_PAST)
+    return await getMessage(MSG.HALL_EDIT_DATE_PAST, undefined, language)
   }
 
   // Check if date is already booked
@@ -422,7 +430,7 @@ async function handleEditDate(
     .neq("id", selectedBooking.id)
 
   if (existingBookings && existingBookings.length > 0) {
-    return await getMessage(MSG.HALL_EDIT_DATE_TAKEN)
+    return await getMessage(MSG.HALL_EDIT_DATE_TAKEN, undefined, language)
   }
 
   // Update booking
@@ -433,24 +441,24 @@ async function handleEditDate(
 
   if (error) {
     console.error("[Hall] Edit error:", error)
-    return await getMessage(MSG.HALL_EDIT_FAILED)
+    return await getMessage(MSG.HALL_EDIT_FAILED, undefined, language)
   }
 
   clearState(phoneNumber)
   return await getMessage(MSG.HALL_EDIT_SUCCESS, {
     old_date: formatDate(selectedBooking.booking_date),
     new_date: formatDate(parsedDate),
-  })
+  }, language)
 }
 
 /**
  * View user's bookings
  */
-async function viewMyBookings(profile: Profile, phoneNumber: string): Promise<string> {
+async function viewMyBookings(profile: Profile, phoneNumber: string, language?: string): Promise<string> {
   const bookings = await getUserBookings(profile.id)
 
   if (!bookings || bookings.length === 0) {
-    return await getMessage(MSG.HALL_NO_BOOKINGS_VIEW)
+    return await getMessage(MSG.HALL_NO_BOOKINGS_VIEW, undefined, language)
   }
 
   const listText = bookings
@@ -465,5 +473,5 @@ async function viewMyBookings(profile: Profile, phoneNumber: string): Promise<st
     .join("\n\n")
 
   clearState(phoneNumber)
-  return await getMessage(MSG.HALL_VIEW_BOOKINGS, { list: listText })
+  return await getMessage(MSG.HALL_VIEW_BOOKINGS, { list: listText }, language)
 }

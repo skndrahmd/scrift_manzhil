@@ -15,13 +15,14 @@ import { MSG } from "../message-keys"
 /**
  * Initialize booking flow
  */
-export async function initializeBookingFlow(phoneNumber: string): Promise<string> {
+export async function initializeBookingFlow(phoneNumber: string, language?: string): Promise<string> {
   setState(phoneNumber, {
     step: "booking_date",
     type: "booking",
+    language,
   })
 
-  return await getMessage(MSG.BOOKING_DATE_PROMPT)
+  return await getMessage(MSG.BOOKING_DATE_PROMPT, undefined, language)
 }
 
 /**
@@ -33,17 +34,19 @@ export async function handleBookingFlow(
   phoneNumber: string,
   userState: UserState
 ): Promise<string> {
+  const language = userState.language
+
   // Handle terms acceptance
   if (userState.step === "booking_policies") {
-    return await handlePoliciesAcceptance(message, profile, phoneNumber, userState)
+    return await handlePoliciesAcceptance(message, profile, phoneNumber, userState, language)
   }
 
   // Handle date input
   if (isDateFormat(message)) {
-    return await handleDateInput(message, profile, phoneNumber)
+    return await handleDateInput(message, profile, phoneNumber, language)
   }
 
-  return await getMessage(MSG.BOOKING_INVALID_DATE)
+  return await getMessage(MSG.BOOKING_INVALID_DATE, undefined, language)
 }
 
 /**
@@ -52,12 +55,13 @@ export async function handleBookingFlow(
 async function handleDateInput(
   message: string,
   profile: Profile,
-  phoneNumber: string
+  phoneNumber: string,
+  language?: string
 ): Promise<string> {
   try {
     const parsedDate = parseDate(message)
     if (!parsedDate) {
-      return await getMessage(MSG.BOOKING_INVALID_DATE_FORMAT)
+      return await getMessage(MSG.BOOKING_INVALID_DATE_FORMAT, undefined, language)
     }
 
     // Check if the date is in the past
@@ -70,7 +74,7 @@ async function handleDateInput(
       String(today.getDate()).padStart(2, "0")
 
     if (parsedDate < todayString) {
-      return await getMessage(MSG.BOOKING_DATE_PAST)
+      return await getMessage(MSG.BOOKING_DATE_PAST, undefined, language)
     }
 
     // Get booking settings to check working days
@@ -78,7 +82,7 @@ async function handleDateInput(
 
     if (settings && !isWorkingDay(parsedDate, settings.working_days)) {
       const dayName = getDayName(parsedDate)
-      return await getMessage(MSG.BOOKING_HALL_UNAVAILABLE, { day_name: dayName })
+      return await getMessage(MSG.BOOKING_HALL_UNAVAILABLE, { day_name: dayName }, language)
     }
 
     // Check if date is already booked (ONE EVENT PER DAY)
@@ -89,7 +93,7 @@ async function handleDateInput(
       .in("status", ["confirmed", "payment_pending"])
 
     if (existingBookings && existingBookings.length > 0) {
-      return await getMessage(MSG.BOOKING_DATE_TAKEN, { date: formatDate(parsedDate) })
+      return await getMessage(MSG.BOOKING_DATE_TAKEN, { date: formatDate(parsedDate) }, language)
     }
 
     // Date is available, show policies
@@ -106,10 +110,10 @@ async function handleDateInput(
       date: formatDate(parsedDate),
       charges: formatCurrency(bookingCharges),
       policies_link: policiesLink,
-    })
+    }, language)
   } catch (error) {
     console.error("[Booking] Date input error:", error)
-    return await getMessage(MSG.ERROR_GENERIC)
+    return await getMessage(MSG.ERROR_GENERIC, undefined, language)
   }
 }
 
@@ -120,7 +124,8 @@ async function handlePoliciesAcceptance(
   message: string,
   profile: Profile,
   phoneNumber: string,
-  userState: UserState
+  userState: UserState,
+  language?: string
 ): Promise<string> {
   try {
     const choice = message.trim()
@@ -140,7 +145,7 @@ async function handlePoliciesAcceptance(
 
       if (checkAgain && checkAgain.length > 0) {
         clearState(phoneNumber)
-        return await getMessage(MSG.BOOKING_DATE_NO_LONGER_AVAILABLE)
+        return await getMessage(MSG.BOOKING_DATE_NO_LONGER_AVAILABLE, undefined, language)
       }
 
       const { data: booking, error: bookingError } = await supabase
@@ -162,9 +167,9 @@ async function handlePoliciesAcceptance(
       if (bookingError) {
         console.error("[Booking] Error:", bookingError)
         if (bookingError.code === "23505") {
-          return await getMessage(MSG.BOOKING_DATE_NO_LONGER_AVAILABLE)
+          return await getMessage(MSG.BOOKING_DATE_NO_LONGER_AVAILABLE, undefined, language)
         }
-        return await getMessage(MSG.BOOKING_FAILED)
+        return await getMessage(MSG.BOOKING_FAILED, undefined, language)
       }
 
       clearState(phoneNumber)
@@ -176,18 +181,18 @@ async function handlePoliciesAcceptance(
         date: formatDate(userState.date!),
         charges: formatCurrency(bookingCharges),
         invoice_url: invoiceUrl,
-      })
+      }, language)
     }
 
     if (choice === "2") {
       // User declined terms
       clearState(phoneNumber)
-      return await getMessage(MSG.BOOKING_DECLINED)
+      return await getMessage(MSG.BOOKING_DECLINED, undefined, language)
     }
 
-    return await getMessage(MSG.BOOKING_INVALID_RESPONSE)
+    return await getMessage(MSG.BOOKING_INVALID_RESPONSE, undefined, language)
   } catch (error) {
     console.error("[Booking] Policies acceptance error:", error)
-    return await getMessage(MSG.ERROR_GENERIC)
+    return await getMessage(MSG.ERROR_GENERIC, undefined, language)
   }
 }

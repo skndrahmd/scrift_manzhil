@@ -18,19 +18,20 @@ import {
 /**
  * Initialize staff management flow
  */
-export async function initializeStaffFlow(phoneNumber: string): Promise<string> {
+export async function initializeStaffFlow(phoneNumber: string, language?: string): Promise<string> {
   setState(phoneNumber, {
     step: "staff_menu",
     type: "staff",
     staff: {},
     staffList: [],
+    language,
   })
 
   const options = STAFF_MENU_OPTIONS.map(
     (opt) => `${opt.key}. ${opt.emoji} ${opt.label}`
   ).join("\n")
 
-  return await getMessage(MSG.STAFF_MENU, { options })
+  return await getMessage(MSG.STAFF_MENU, { options }, language)
 }
 
 /**
@@ -43,38 +44,39 @@ export async function handleStaffFlow(
   userState: UserState
 ): Promise<string> {
   const choice = message.trim()
+  const language = userState.language
 
   // Guard: profile must be linked to a unit
   if (!profile.unit_id) {
     clearState(phoneNumber)
-    return await getMessage(MSG.STAFF_NO_UNIT)
+    return await getMessage(MSG.STAFF_NO_UNIT, undefined, language)
   }
 
   try {
     // Staff menu selection
     if (userState.step === "staff_menu") {
-      return await handleStaffMenuSelection(choice, profile, phoneNumber, userState)
+      return await handleStaffMenuSelection(choice, profile, phoneNumber, userState, language)
     }
 
     // Add staff flow
     if (userState.step?.startsWith("staff_add_")) {
-      return await handleAddStaffFlow(message, profile, phoneNumber, userState)
+      return await handleAddStaffFlow(message, profile, phoneNumber, userState, language)
     }
 
     // Delete staff flow
     if (userState.step?.startsWith("staff_delete_")) {
-      return await handleDeleteStaffFlow(message, profile, phoneNumber, userState)
+      return await handleDeleteStaffFlow(message, profile, phoneNumber, userState, language)
     }
 
     // Edit staff flow
     if (userState.step?.startsWith("staff_edit_")) {
-      return await handleEditStaffFlow(message, profile, phoneNumber, userState)
+      return await handleEditStaffFlow(message, profile, phoneNumber, userState, language)
     }
 
-    return await getMessage(MSG.ERROR_SOMETHING_WRONG)
+    return await getMessage(MSG.ERROR_SOMETHING_WRONG, undefined, language)
   } catch (error) {
     console.error("[Staff] Flow error:", error)
-    return await getMessage(MSG.ERROR_GENERIC)
+    return await getMessage(MSG.ERROR_GENERIC, undefined, language)
   }
 }
 
@@ -85,26 +87,27 @@ async function handleStaffMenuSelection(
   choice: string,
   profile: Profile,
   phoneNumber: string,
-  userState: UserState
+  userState: UserState,
+  language?: string
 ): Promise<string> {
   switch (choice) {
     case "1": // Add new staff
       userState.step = "staff_add_name"
       userState.staff = {}
       setState(phoneNumber, userState)
-      return await getMessage(MSG.STAFF_ADD_NAME)
+      return await getMessage(MSG.STAFF_ADD_NAME, undefined, language)
 
     case "2": // View staff
-      return await viewStaffList(profile, phoneNumber)
+      return await viewStaffList(profile, phoneNumber, language)
 
     case "3": // Edit staff
-      return await initializeEditStaff(profile, phoneNumber)
+      return await initializeEditStaff(profile, phoneNumber, language)
 
     case "4": // Delete staff
-      return await initializeDeleteStaff(profile, phoneNumber)
+      return await initializeDeleteStaff(profile, phoneNumber, language)
 
     default:
-      return await getMessage(MSG.STAFF_INVALID_MENU)
+      return await getMessage(MSG.STAFF_INVALID_MENU, undefined, language)
   }
 }
 
@@ -115,7 +118,8 @@ async function handleAddStaffFlow(
   message: string,
   profile: Profile,
   phoneNumber: string,
-  userState: UserState
+  userState: UserState,
+  language?: string
 ): Promise<string> {
   const choice = message.trim()
 
@@ -128,7 +132,7 @@ async function handleAddStaffFlow(
     userState.staff!.name = message.trim()
     userState.step = "staff_add_phone"
     setState(phoneNumber, userState)
-    return await getMessage(MSG.STAFF_ADD_PHONE)
+    return await getMessage(MSG.STAFF_ADD_PHONE, undefined, language)
   }
 
   if (userState.step === "staff_add_phone") {
@@ -146,13 +150,13 @@ async function handleAddStaffFlow(
       .single()
 
     if (existingStaff) {
-      return await getMessage(MSG.STAFF_DUPLICATE_PHONE)
+      return await getMessage(MSG.STAFF_DUPLICATE_PHONE, undefined, language)
     }
 
     userState.staff!.phone = phoneValidation.normalized!
     userState.step = "staff_add_cnic"
     setState(phoneNumber, userState)
-    return await getMessage(MSG.STAFF_ADD_CNIC)
+    return await getMessage(MSG.STAFF_ADD_CNIC, undefined, language)
   }
 
   if (userState.step === "staff_add_cnic") {
@@ -176,7 +180,7 @@ async function handleAddStaffFlow(
       "8. 📋 Other",
     ].join("\n")
 
-    return await getMessage(MSG.STAFF_ADD_ROLE, { roles, max: "8" })
+    return await getMessage(MSG.STAFF_ADD_ROLE, { roles, max: "8" }, language)
   }
 
   if (userState.step === "staff_add_role_select") {
@@ -184,28 +188,28 @@ async function handleAddStaffFlow(
 
     if (choice >= "1" && choice <= "7") {
       userState.staff!.role = roles[parseInt(choice, 10) - 1]
-      return await createStaffMember(profile, userState, phoneNumber)
+      return await createStaffMember(profile, userState, phoneNumber, language)
     }
 
     if (choice === "8") {
       userState.step = "staff_add_role_custom"
       setState(phoneNumber, userState)
-      return await getMessage(MSG.STAFF_ADD_ROLE_CUSTOM)
+      return await getMessage(MSG.STAFF_ADD_ROLE_CUSTOM, undefined, language)
     }
 
-    return await getMessage(MSG.STAFF_INVALID_ROLE, { max: "8" })
+    return await getMessage(MSG.STAFF_INVALID_ROLE, { max: "8" }, language)
   }
 
   if (userState.step === "staff_add_role_custom") {
     if (message.trim().length < 3 || message.trim().length > 30) {
-      return await getMessage(MSG.STAFF_INVALID_CUSTOM_ROLE)
+      return await getMessage(MSG.STAFF_INVALID_CUSTOM_ROLE, undefined, language)
     }
 
     userState.staff!.role = message.trim()
-    return await createStaffMember(profile, userState, phoneNumber)
+    return await createStaffMember(profile, userState, phoneNumber, language)
   }
 
-  return await getMessage(MSG.ERROR_SOMETHING_WRONG)
+  return await getMessage(MSG.ERROR_SOMETHING_WRONG, undefined, language)
 }
 
 /**
@@ -214,7 +218,8 @@ async function handleAddStaffFlow(
 async function createStaffMember(
   profile: Profile,
   userState: UserState,
-  phoneNumber: string
+  phoneNumber: string,
+  language?: string
 ): Promise<string> {
   try {
     const staff = userState.staff!
@@ -233,7 +238,7 @@ async function createStaffMember(
 
     if (error) {
       console.error("[Staff] Creation error:", error)
-      return await getMessage(MSG.STAFF_ADD_ERROR)
+      return await getMessage(MSG.STAFF_ADD_ERROR, undefined, language)
     }
 
     clearState(phoneNumber)
@@ -242,17 +247,17 @@ async function createStaffMember(
       cnic: staff.cnic || "",
       phone: staff.phone || "",
       role: staff.role || "",
-    })
+    }, language)
   } catch (error) {
     console.error("[Staff] Creation error:", error)
-    return await getMessage(MSG.STAFF_ADD_ERROR)
+    return await getMessage(MSG.STAFF_ADD_ERROR, undefined, language)
   }
 }
 
 /**
  * View staff list
  */
-async function viewStaffList(profile: Profile, phoneNumber: string): Promise<string> {
+async function viewStaffList(profile: Profile, phoneNumber: string, language?: string): Promise<string> {
   try {
     const { data: staffList, error } = await supabase
       .from("staff")
@@ -262,11 +267,11 @@ async function viewStaffList(profile: Profile, phoneNumber: string): Promise<str
 
     if (error) {
       console.error("[Staff] Fetch error:", error)
-      return await getMessage(MSG.STAFF_VIEW_ERROR)
+      return await getMessage(MSG.STAFF_VIEW_ERROR, undefined, language)
     }
 
     if (!staffList || staffList.length === 0) {
-      return await getMessage(MSG.STAFF_VIEW_EMPTY)
+      return await getMessage(MSG.STAFF_VIEW_EMPTY, undefined, language)
     }
 
     const listText = staffList
@@ -278,17 +283,17 @@ async function viewStaffList(profile: Profile, phoneNumber: string): Promise<str
       .join("\n\n")
 
     clearState(phoneNumber)
-    return await getMessage(MSG.STAFF_VIEW_LIST, { list: listText })
+    return await getMessage(MSG.STAFF_VIEW_LIST, { list: listText }, language)
   } catch (error) {
     console.error("[Staff] View error:", error)
-    return await getMessage(MSG.STAFF_VIEW_ERROR)
+    return await getMessage(MSG.STAFF_VIEW_ERROR, undefined, language)
   }
 }
 
 /**
  * Initialize delete staff flow
  */
-async function initializeDeleteStaff(profile: Profile, phoneNumber: string): Promise<string> {
+async function initializeDeleteStaff(profile: Profile, phoneNumber: string, language?: string): Promise<string> {
   try {
     const { data: staffList, error } = await supabase
       .from("staff")
@@ -297,7 +302,7 @@ async function initializeDeleteStaff(profile: Profile, phoneNumber: string): Pro
       .order("created_at", { ascending: false })
 
     if (error || !staffList || staffList.length === 0) {
-      return await getMessage(MSG.STAFF_DELETE_EMPTY)
+      return await getMessage(MSG.STAFF_DELETE_EMPTY, undefined, language)
     }
 
     const userState = getState(phoneNumber)
@@ -307,10 +312,10 @@ async function initializeDeleteStaff(profile: Profile, phoneNumber: string): Pro
 
     const listText = staffList.map((s, i) => `${i + 1}. ${s.name} (${s.role})`).join("\n")
 
-    return await getMessage(MSG.STAFF_DELETE_LIST, { list: listText })
+    return await getMessage(MSG.STAFF_DELETE_LIST, { list: listText }, language)
   } catch (error) {
     console.error("[Staff] Delete init error:", error)
-    return await getMessage(MSG.STAFF_VIEW_ERROR)
+    return await getMessage(MSG.STAFF_VIEW_ERROR, undefined, language)
   }
 }
 
@@ -321,7 +326,8 @@ async function handleDeleteStaffFlow(
   message: string,
   profile: Profile,
   phoneNumber: string,
-  userState: UserState
+  userState: UserState,
+  language?: string
 ): Promise<string> {
   const choice = message.trim()
 
@@ -342,7 +348,7 @@ async function handleDeleteStaffFlow(
       name: selectedStaff.name,
       cnic: selectedStaff.cnic,
       phone: selectedStaff.phone_number,
-    })
+    }, language)
   }
 
   if (userState.step === "staff_delete_confirm") {
@@ -352,28 +358,28 @@ async function handleDeleteStaffFlow(
 
       if (error) {
         console.error("[Staff] Deletion error:", error)
-        return await getMessage(MSG.STAFF_DELETE_FAILED)
+        return await getMessage(MSG.STAFF_DELETE_FAILED, undefined, language)
       }
 
       clearState(phoneNumber)
-      return await getMessage(MSG.STAFF_DELETED, { name: selectedStaff.name })
+      return await getMessage(MSG.STAFF_DELETED, { name: selectedStaff.name }, language)
     }
 
     if (isNoResponse(message)) {
       clearState(phoneNumber)
-      return await getMessage(MSG.STAFF_DELETE_CANCELLED)
+      return await getMessage(MSG.STAFF_DELETE_CANCELLED, undefined, language)
     }
 
-    return await getMessage(MSG.CANCEL_INVALID_RESPONSE)
+    return await getMessage(MSG.CANCEL_INVALID_RESPONSE, undefined, language)
   }
 
-  return await getMessage(MSG.ERROR_SOMETHING_WRONG)
+  return await getMessage(MSG.ERROR_SOMETHING_WRONG, undefined, language)
 }
 
 /**
  * Initialize edit staff flow
  */
-async function initializeEditStaff(profile: Profile, phoneNumber: string): Promise<string> {
+async function initializeEditStaff(profile: Profile, phoneNumber: string, language?: string): Promise<string> {
   try {
     const { data: staffList, error } = await supabase
       .from("staff")
@@ -382,7 +388,7 @@ async function initializeEditStaff(profile: Profile, phoneNumber: string): Promi
       .order("created_at", { ascending: false })
 
     if (error || !staffList || staffList.length === 0) {
-      return await getMessage(MSG.STAFF_EDIT_EMPTY)
+      return await getMessage(MSG.STAFF_EDIT_EMPTY, undefined, language)
     }
 
     const userState = getState(phoneNumber)
@@ -392,10 +398,10 @@ async function initializeEditStaff(profile: Profile, phoneNumber: string): Promi
 
     const listText = staffList.map((s, i) => `${i + 1}. ${s.name} (${s.role})`).join("\n")
 
-    return await getMessage(MSG.STAFF_EDIT_LIST, { list: listText })
+    return await getMessage(MSG.STAFF_EDIT_LIST, { list: listText }, language)
   } catch (error) {
     console.error("[Staff] Edit init error:", error)
-    return await getMessage(MSG.STAFF_VIEW_ERROR)
+    return await getMessage(MSG.STAFF_VIEW_ERROR, undefined, language)
   }
 }
 
@@ -406,7 +412,8 @@ async function handleEditStaffFlow(
   message: string,
   profile: Profile,
   phoneNumber: string,
-  userState: UserState
+  userState: UserState,
+  language?: string
 ): Promise<string> {
   const choice = message.trim()
 
@@ -423,7 +430,7 @@ async function handleEditStaffFlow(
     userState.step = "staff_edit_field"
     setState(phoneNumber, userState)
 
-    return await getMessage(MSG.STAFF_EDIT_FIELD_SELECT, { name: selectedStaff.name })
+    return await getMessage(MSG.STAFF_EDIT_FIELD_SELECT, { name: selectedStaff.name }, language)
   }
 
   if (userState.step === "staff_edit_field") {
@@ -436,15 +443,15 @@ async function handleEditStaffFlow(
 
       const selectedStaff = (userState as any).selectedStaff
       if (choice === "1") {
-        return await getMessage(MSG.STAFF_EDIT_NAME_PROMPT, { name: selectedStaff.name })
+        return await getMessage(MSG.STAFF_EDIT_NAME_PROMPT, { name: selectedStaff.name }, language)
       } else if (choice === "2") {
-        return await getMessage(MSG.STAFF_EDIT_CNIC_PROMPT)
+        return await getMessage(MSG.STAFF_EDIT_CNIC_PROMPT, undefined, language)
       } else {
-        return await getMessage(MSG.STAFF_EDIT_PHONE_PROMPT)
+        return await getMessage(MSG.STAFF_EDIT_PHONE_PROMPT, undefined, language)
       }
     }
 
-    return await getMessage(MSG.STATUS_INVALID_SELECTION, { max: "3" })
+    return await getMessage(MSG.STATUS_INVALID_SELECTION, { max: "3" }, language)
   }
 
   if (userState.step === "staff_edit_value") {
@@ -456,12 +463,12 @@ async function handleEditStaffFlow(
     if (editField === "cnic") {
       newValue = newValue.replace(/[-\s]/g, "")
       if (!/^\d{13}$/.test(newValue)) {
-        return await getMessage(MSG.STAFF_EDIT_INVALID_CNIC)
+        return await getMessage(MSG.STAFF_EDIT_INVALID_CNIC, undefined, language)
       }
     } else if (editField === "phone_number") {
       newValue = newValue.replace(/[-\s]/g, "")
       if (!/^03\d{9}$/.test(newValue)) {
-        return await getMessage(MSG.STAFF_EDIT_INVALID_PHONE)
+        return await getMessage(MSG.STAFF_EDIT_INVALID_PHONE, undefined, language)
       }
     }
 
@@ -473,7 +480,7 @@ async function handleEditStaffFlow(
 
     if (error) {
       console.error("[Staff] Update error:", error)
-      return await getMessage(MSG.STAFF_EDIT_FAILED)
+      return await getMessage(MSG.STAFF_EDIT_FAILED, undefined, language)
     }
 
     const fieldNames: Record<string, string> = {
@@ -486,8 +493,8 @@ async function handleEditStaffFlow(
     return await getMessage(MSG.STAFF_EDIT_SUCCESS, {
       field_name: fieldNames[editField],
       new_value: newValue,
-    })
+    }, language)
   }
 
-  return await getMessage(MSG.ERROR_SOMETHING_WRONG)
+  return await getMessage(MSG.ERROR_SOMETHING_WRONG, undefined, language)
 }

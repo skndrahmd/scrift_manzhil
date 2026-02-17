@@ -17,18 +17,20 @@ import { MSG } from "../message-keys"
  */
 export async function initializeStatusFlow(
   profile: Profile,
-  phoneNumber: string
+  phoneNumber: string,
+  language?: string
 ): Promise<string> {
   const complaints = await getActiveComplaints(profile.id)
 
   if (!complaints || complaints.length === 0) {
-    return await getMessage(MSG.STATUS_NO_COMPLAINTS)
+    return await getMessage(MSG.STATUS_NO_COMPLAINTS, undefined, language)
   }
 
   setState(phoneNumber, {
     step: "status_select",
     type: "status",
     statusItems: complaints,
+    language,
   })
 
   const listText = complaints
@@ -40,7 +42,7 @@ export async function initializeStatusFlow(
     })
     .join("\n\n")
 
-  return await getMessage(MSG.STATUS_LIST, { list: listText })
+  return await getMessage(MSG.STATUS_LIST, { list: listText }, language)
 }
 
 /**
@@ -53,6 +55,7 @@ export async function handleStatusFlow(
   userState: UserState
 ): Promise<string> {
   const choice = message.trim()
+  const language = userState.language
 
   if (userState.step === "status_select") {
     const complaintIndex = parseInt(choice, 10)
@@ -63,7 +66,7 @@ export async function handleStatusFlow(
     ) {
       return await getMessage(MSG.STATUS_INVALID_SELECTION, {
         max: userState.statusItems!.length,
-      })
+      }, language)
     }
 
     const complaint = userState.statusItems![complaintIndex - 1]
@@ -92,7 +95,7 @@ export async function handleStatusFlow(
       description: complaint.description || "No description",
       date: formattedDate,
       status_text: statusText,
-    })
+    }, language)
 
     if ((complaint as any).admin_notes) {
       response += `
@@ -107,7 +110,7 @@ Reply *0* for menu`
     return response
   }
 
-  return await getMessage(MSG.ERROR_SOMETHING_WRONG)
+  return await getMessage(MSG.ERROR_SOMETHING_WRONG, undefined, language)
 }
 
 /**
@@ -115,7 +118,8 @@ Reply *0* for menu`
  */
 export async function initializeCancelFlow(
   profile: Profile,
-  phoneNumber: string
+  phoneNumber: string,
+  language?: string
 ): Promise<string> {
   // Only fetch pending complaints (can't cancel in_progress or completed)
   const { data: complaints, error } = await supabase
@@ -126,13 +130,14 @@ export async function initializeCancelFlow(
     .order("created_at", { ascending: false })
 
   if (error || !complaints || complaints.length === 0) {
-    return await getMessage(MSG.CANCEL_NO_COMPLAINTS)
+    return await getMessage(MSG.CANCEL_NO_COMPLAINTS, undefined, language)
   }
 
   setState(phoneNumber, {
     step: "cancel_select",
     type: "cancel",
     cancelItems: complaints,
+    language,
   })
 
   const listText = complaints
@@ -143,7 +148,7 @@ export async function initializeCancelFlow(
     )
     .join("\n\n")
 
-  return await getMessage(MSG.CANCEL_LIST, { list: listText })
+  return await getMessage(MSG.CANCEL_LIST, { list: listText }, language)
 }
 
 /**
@@ -156,6 +161,7 @@ export async function handleCancelFlow(
   userState: UserState
 ): Promise<string> {
   const choice = message.trim()
+  const language = userState.language
 
   if (userState.step === "cancel_select") {
     const complaintIndex = parseInt(choice, 10)
@@ -166,7 +172,7 @@ export async function handleCancelFlow(
     ) {
       return await getMessage(MSG.STATUS_INVALID_SELECTION, {
         max: userState.cancelItems!.length,
-      })
+      }, language)
     }
 
     const selectedComplaint = userState.cancelItems![complaintIndex - 1]
@@ -178,7 +184,7 @@ export async function handleCancelFlow(
       complaint_id: selectedComplaint.complaint_id,
       subcategory: formatSubcategory(selectedComplaint.subcategory),
       description: selectedComplaint.description || "No description",
-    })
+    }, language)
   }
 
   if (userState.step === "cancel_confirm") {
@@ -195,22 +201,22 @@ export async function handleCancelFlow(
 
       if (error) {
         console.error("[Status] Cancel error:", error)
-        return await getMessage(MSG.CANCEL_FAILED)
+        return await getMessage(MSG.CANCEL_FAILED, undefined, language)
       }
 
       clearState(phoneNumber)
       return await getMessage(MSG.CANCEL_SUCCESS, {
         complaint_id: selectedComplaint.complaint_id,
-      })
+      }, language)
     }
 
     if (isNoResponse(message)) {
       clearState(phoneNumber)
-      return await getMessage(MSG.CANCEL_ABORTED)
+      return await getMessage(MSG.CANCEL_ABORTED, undefined, language)
     }
 
-    return await getMessage(MSG.CANCEL_INVALID_RESPONSE)
+    return await getMessage(MSG.CANCEL_INVALID_RESPONSE, undefined, language)
   }
 
-  return await getMessage(MSG.ERROR_SOMETHING_WRONG)
+  return await getMessage(MSG.ERROR_SOMETHING_WRONG, undefined, language)
 }

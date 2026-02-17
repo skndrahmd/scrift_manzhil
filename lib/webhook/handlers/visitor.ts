@@ -14,14 +14,15 @@ import { MSG } from "../message-keys"
 /**
  * Initialize visitor registration flow
  */
-export async function initializeVisitorFlow(phoneNumber: string): Promise<string> {
+export async function initializeVisitorFlow(phoneNumber: string, language?: string): Promise<string> {
     setState(phoneNumber, {
         step: "visitor_name",
         type: "visitor",
         visitor: {},
+        language,
     })
 
-    return await getMessage(MSG.VISITOR_NAME_PROMPT)
+    return await getMessage(MSG.VISITOR_NAME_PROMPT, undefined, language)
 }
 
 /**
@@ -35,19 +36,20 @@ export async function handleVisitorFlow(
 ): Promise<string> {
     const step = userState.step
     const visitor = userState.visitor || {}
+    const language = userState.language
 
     switch (step) {
         case "visitor_name":
-            return await handleNameInput(message, phoneNumber, visitor)
+            return await handleNameInput(message, phoneNumber, visitor, language)
 
         case "visitor_car_number":
-            return await handleCarNumberInput(message, phoneNumber, visitor)
+            return await handleCarNumberInput(message, phoneNumber, visitor, language)
 
         case "visitor_date":
-            return await handleDateInputAndSave(message, profile, phoneNumber, visitor)
+            return await handleDateInputAndSave(message, profile, phoneNumber, visitor, language)
 
         default:
-            return await initializeVisitorFlow(phoneNumber)
+            return await initializeVisitorFlow(phoneNumber, language)
     }
 }
 
@@ -57,21 +59,23 @@ export async function handleVisitorFlow(
 async function handleNameInput(
     message: string,
     phoneNumber: string,
-    visitor: VisitorData
+    visitor: VisitorData,
+    language?: string
 ): Promise<string> {
     const name = message.trim()
 
     if (name.length < 2) {
-        return await getMessage(MSG.VISITOR_NAME_TOO_SHORT)
+        return await getMessage(MSG.VISITOR_NAME_TOO_SHORT, undefined, language)
     }
 
     setState(phoneNumber, {
         step: "visitor_car_number",
         type: "visitor",
         visitor: { ...visitor, visitor_name: name },
+        language,
     })
 
-    return await getMessage(MSG.VISITOR_CAR_PROMPT, { name })
+    return await getMessage(MSG.VISITOR_CAR_PROMPT, { name }, language)
 }
 
 /**
@@ -80,12 +84,13 @@ async function handleNameInput(
 async function handleCarNumberInput(
     message: string,
     phoneNumber: string,
-    visitor: VisitorData
+    visitor: VisitorData,
+    language?: string
 ): Promise<string> {
     const input = message.trim()
 
     if (input.length < 2) {
-        return await getMessage(MSG.VISITOR_CAR_TOO_SHORT)
+        return await getMessage(MSG.VISITOR_CAR_TOO_SHORT, undefined, language)
     }
 
     const updatedVisitor = {
@@ -97,9 +102,10 @@ async function handleCarNumberInput(
         step: "visitor_date",
         type: "visitor",
         visitor: updatedVisitor,
+        language,
     })
 
-    return await getMessage(MSG.VISITOR_DATE_PROMPT, { car_number: input })
+    return await getMessage(MSG.VISITOR_DATE_PROMPT, { car_number: input }, language)
 }
 
 /**
@@ -109,15 +115,16 @@ async function handleDateInputAndSave(
     message: string,
     profile: Profile,
     phoneNumber: string,
-    visitor: VisitorData
+    visitor: VisitorData,
+    language?: string
 ): Promise<string> {
     if (!isDateFormat(message)) {
-        return await getMessage(MSG.VISITOR_INVALID_DATE)
+        return await getMessage(MSG.VISITOR_INVALID_DATE, undefined, language)
     }
 
     const parsedDateStr = parseDate(message)
     if (!parsedDateStr) {
-        return await getMessage(MSG.VISITOR_INVALID_DATE_PARSE)
+        return await getMessage(MSG.VISITOR_INVALID_DATE_PARSE, undefined, language)
     }
 
     // Convert string to Date for comparison
@@ -127,14 +134,14 @@ async function handleDateInputAndSave(
     const today = getPakistanTime()
     today.setHours(0, 0, 0, 0)
     if (parsedDate < today) {
-        return await getMessage(MSG.VISITOR_DATE_PAST)
+        return await getMessage(MSG.VISITOR_DATE_PAST, undefined, language)
     }
 
     // Check if date is too far in the future (30 days)
     const maxDate = getPakistanTime()
     maxDate.setDate(maxDate.getDate() + 30)
     if (parsedDate > maxDate) {
-        return await getMessage(MSG.VISITOR_DATE_TOO_FAR)
+        return await getMessage(MSG.VISITOR_DATE_TOO_FAR, undefined, language)
     }
 
     try {
@@ -156,7 +163,7 @@ async function handleDateInputAndSave(
 
         if (error) {
             console.error("[Visitor] Error saving visitor pass:", error)
-            return await getMessage(MSG.VISITOR_CREATION_ERROR)
+            return await getMessage(MSG.VISITOR_CREATION_ERROR, undefined, language)
         }
 
         clearState(phoneNumber)
@@ -169,10 +176,10 @@ async function handleDateInputAndSave(
             visitor_name: visitor.visitor_name || "",
             car_line: carLine,
             date: formattedDate,
-        })
+        }, language)
     } catch (error) {
         console.error("[Visitor] Error:", error)
         clearState(phoneNumber)
-        return await getMessage(MSG.VISITOR_UNEXPECTED_ERROR)
+        return await getMessage(MSG.VISITOR_UNEXPECTED_ERROR, undefined, language)
     }
 }
