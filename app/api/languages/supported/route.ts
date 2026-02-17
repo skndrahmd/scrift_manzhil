@@ -6,6 +6,8 @@ import { NextResponse } from "next/server"
 import { isSuperAdmin } from "@/lib/auth/api-auth"
 import { getSupportedLanguages } from "@/lib/google-translate"
 
+export const dynamic = "force-dynamic"
+
 // Cache the supported languages list for 24 hours
 let cachedLanguages: { language: string; name: string }[] | null = null
 let cacheTimestamp = 0

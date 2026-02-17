@@ -9,6 +9,8 @@ import { isSuperAdmin } from "@/lib/auth/api-auth"
 import { supabaseAdmin } from "@/lib/supabase"
 import { translateText } from "@/lib/google-translate"
 
+export const dynamic = "force-dynamic"
+
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ code: string; key: string }> }

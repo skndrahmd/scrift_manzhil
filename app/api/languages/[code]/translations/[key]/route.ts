@@ -8,6 +8,8 @@ import type { NextRequest } from "next/server"
 import { verifyAdminAccess } from "@/lib/auth/api-auth"
 import { supabaseAdmin } from "@/lib/supabase"
 
+export const dynamic = "force-dynamic"
+
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ code: string; key: string }> }
