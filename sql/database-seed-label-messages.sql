@@ -6,46 +6,46 @@
 -- Run this AFTER database-seed-bot-messages.sql
 -- Idempotent: uses ON CONFLICT DO NOTHING
 
-INSERT INTO bot_messages (message_key, default_text, flow_group, description, variables)
+INSERT INTO bot_messages (message_key, flow_group, label, description, default_text, variables, sort_order)
 VALUES
-  ('labels.main_menu_options',
+  ('labels.main_menu_options', 'main_menu', 'Main Menu Options', 'Main menu option labels (one per line)',
    E'Register Complaint\nCheck Complaint Status\nCancel Complaint\nMy Staff Management\nCheck Maintenance Dues\nCommunity Hall\nVisitor Entry Pass\nView My Profile\nSuggestions/Feedback\nEmergency Contacts',
-   'main_menu', 'Main menu option labels (one per line)', '[]'),
+   '[]'::jsonb, 100),
 
-  ('labels.hall_menu_options',
+  ('labels.hall_menu_options', 'booking', 'Hall Menu Options', 'Hall menu option labels (one per line)',
    E'New Booking\nCancel Booking\nEdit Booking\nView My Bookings',
-   'booking', 'Hall menu option labels (one per line)', '[]'),
+   '[]'::jsonb, 101),
 
-  ('labels.staff_menu_options',
+  ('labels.staff_menu_options', 'staff', 'Staff Menu Options', 'Staff menu option labels (one per line)',
    E'Add Staff Member\nView My Staff\nEdit Staff Member\nRemove Staff Member',
-   'staff', 'Staff menu option labels (one per line)', '[]'),
+   '[]'::jsonb, 102),
 
-  ('labels.complaint_categories',
+  ('labels.complaint_categories', 'complaint', 'Complaint Categories', 'Complaint category labels (one per line)',
    E'My Apartment Complaint\nBuilding Complaint',
-   'complaint', 'Complaint category labels (one per line)', '[]'),
+   '[]'::jsonb, 103),
 
-  ('labels.apartment_subcategories',
+  ('labels.apartment_subcategories', 'complaint', 'Apartment Subcategories', 'Apartment complaint subcategory labels (one per line)',
    E'Plumbing\nElectric\nCivil\nMy Parking Complaint\nOther',
-   'complaint', 'Apartment complaint subcategory labels (one per line)', '[]'),
+   '[]'::jsonb, 104),
 
-  ('labels.building_subcategories',
+  ('labels.building_subcategories', 'complaint', 'Building Subcategories', 'Building complaint subcategory labels (one per line)',
    E'Lift/Elevator\nGym\nSnooker Room\nPlay Area\nParking\nSecurity Complaint\nPlumbing\nElectric\nCivil\nCollaboration Corner\nSeating Area\nOther',
-   'complaint', 'Building complaint subcategory labels (one per line)', '[]'),
+   '[]'::jsonb, 105),
 
-  ('labels.staff_roles',
+  ('labels.staff_roles', 'staff', 'Staff Roles', 'Staff role labels (one per line)',
    E'Driver\nCook\nMaid\nPlumber\nElectrician\nMaintenance\nSecurity Guard\nOther',
-   'staff', 'Staff role labels (one per line)', '[]'),
+   '[]'::jsonb, 106),
 
-  ('labels.staff_edit_fields',
+  ('labels.staff_edit_fields', 'staff', 'Staff Edit Fields', 'Staff edit field labels (one per line)',
    E'Name\nCNIC\nPhone',
-   'staff', 'Staff edit field labels (one per line)', '[]'),
+   '[]'::jsonb, 107),
 
-  ('labels.tower_selection',
+  ('labels.tower_selection', 'complaint', 'Tower Selection', 'Tower selection labels (one per line)',
    E'Tower A\nTower B\nTower C\nTower D',
-   'complaint', 'Tower selection labels (one per line)', '[]'),
+   '[]'::jsonb, 108),
 
-  ('labels.reply_menu',
+  ('labels.reply_menu', 'navigation', 'Reply Menu', 'Reply instruction to return to main menu',
    'Reply *0* for menu',
-   'navigation', 'Reply instruction to return to main menu', '[]')
+   '[]'::jsonb, 109)
 
 ON CONFLICT (message_key) DO NOTHING;
