@@ -33,6 +33,26 @@ import {
 } from "./handlers"
 import { getMessage } from "./messages"
 import { MSG } from "./message-keys"
+import { supabaseAdmin } from "@/lib/supabase"
+
+/**
+ * Get enabled languages. Returns empty array if none enabled.
+ */
+async function getEnabledLanguages(): Promise<
+  { language_code: string; language_name: string; native_name: string | null }[]
+> {
+  try {
+    const { data } = await supabaseAdmin
+      .from("enabled_languages")
+      .select("language_code, language_name, native_name")
+      .eq("is_enabled", true)
+      .order("sort_order")
+
+    return data || []
+  } catch {
+    return []
+  }
+}
 
 /**
  * Processes an incoming WhatsApp message and routes it to the correct handler.
@@ -62,12 +82,56 @@ export async function processMessage(
     // Handle main menu command - Universal "0"
     if (isMainMenuCommand(trimmedMessage)) {
       clearState(phoneNumber)
+
+      // Check if any languages are enabled
+      const enabledLanguages = await getEnabledLanguages()
+
+      if (enabledLanguages.length > 0) {
+        // Build language selection menu
+        const options = [
+          "1. English",
+          ...enabledLanguages.map(
+            (lang, i) =>
+              `${i + 2}. ${lang.native_name || lang.language_name} (${lang.language_name})`
+          ),
+        ].join("\n")
+
+        setState(phoneNumber, { step: "language_selection" })
+
+        return `🌐 *Select your language:*\n\n${options}\n\nReply 1-${enabledLanguages.length + 1}`
+      }
+
       return await getMainMenu(profile.name)
+    }
+
+    // Handle language selection
+    if (userState.step === "language_selection") {
+      const enabledLanguages = await getEnabledLanguages()
+      const choice = parseInt(trimmedMessage, 10)
+
+      if (choice === 1) {
+        // English selected — no language in state
+        clearState(phoneNumber)
+        return await getMainMenu(profile.name)
+      }
+
+      const langIndex = choice - 2
+      if (langIndex >= 0 && langIndex < enabledLanguages.length) {
+        const selectedLang = enabledLanguages[langIndex]
+        setState(phoneNumber, {
+          step: "initial",
+          language: selectedLang.language_code,
+        })
+        return await getMainMenu(profile.name, selectedLang.language_code)
+      }
+
+      // Invalid choice
+      return `Please reply with a number between 1 and ${enabledLanguages.length + 1}`
     }
 
     // Route based on current state
     if (userState.step === "initial" || userState.step === "main_menu") {
-      return await handleMainMenu(trimmedMessage, profile, phoneNumber)
+      return await handleMainMenu(trimmedMessage, profile, phoneNumber, userState.language)
     }
 
     // Route to specific flow handlers
@@ -89,11 +153,12 @@ export async function processMessage(
       case "visitor":
         return await handleVisitorFlow(trimmedMessage, profile, phoneNumber, userState)
       default:
-        return await getMainMenu(profile.name)
+        return await getMainMenu(profile.name, userState.language)
     }
   } catch (error) {
     console.error("[Webhook] Process message error:", error)
-    return await getMessage(MSG.ERROR_GENERIC)
+    const userState = getState(phoneNumber)
+    return await getMessage(MSG.ERROR_GENERIC, undefined, userState?.language)
   }
 }
 
@@ -103,44 +168,45 @@ export async function processMessage(
 async function handleMainMenu(
   message: string,
   profile: Profile,
-  phoneNumber: string
+  phoneNumber: string,
+  language?: string
 ): Promise<string> {
   const choice = message.trim()
 
   switch (choice) {
     case "1": // Register Complaint
-      return await initializeComplaintFlow(phoneNumber)
+      return await initializeComplaintFlow(phoneNumber, language)
 
     case "2": // Check Complaint Status
-      return await initializeStatusFlow(profile, phoneNumber)
+      return await initializeStatusFlow(profile, phoneNumber, language)
 
     case "3": // Cancel Complaint
-      return await initializeCancelFlow(profile, phoneNumber)
+      return await initializeCancelFlow(profile, phoneNumber, language)
 
     case "4": // My Staff Management
-      return await initializeStaffFlow(phoneNumber)
+      return await initializeStaffFlow(phoneNumber, language)
 
     case "5": // Check Maintenance Dues
-      return await getMaintenanceStatus(profile)
+      return await getMaintenanceStatus(profile, language)
 
     case "6": // Community Hall
-      return await initializeHallFlow(phoneNumber)
+      return await initializeHallFlow(phoneNumber, language)
 
     case "7": // Visitor Entry Pass
-      return await initializeVisitorFlow(phoneNumber)
+      return await initializeVisitorFlow(phoneNumber, language)
 
     case "8": // View My Profile
-      return await getProfileInfo(profile)
+      return await getProfileInfo(profile, language)
 
     case "9": // Suggestions/Feedback
-      return await initializeFeedbackFlow(phoneNumber)
+      return await initializeFeedbackFlow(phoneNumber, language)
 
     case "10": // Emergency Contacts
-      return await getEmergencyContacts()
+      return await getEmergencyContacts(language)
 
     default:
-      const menu = await getMainMenu(profile.name)
-      return await getMessage(MSG.INVALID_MAIN_MENU, { menu })
+      const menu = await getMainMenu(profile.name, language)
+      return await getMessage(MSG.INVALID_MAIN_MENU, { menu }, language)
   }
 }
 
@@ -152,6 +218,8 @@ async function handleBackCommand(
   userState: any,
   profile: Profile
 ): Promise<string> {
+  const language = userState.language
+
   // Define back navigation based on current step
   const backNavigation: Record<string, { step: string; messageKey: typeof MSG[keyof typeof MSG] }> = {
     // Complaint flow
@@ -225,13 +293,13 @@ async function handleBackCommand(
         apartment_label: COMPLAINT_CATEGORIES.apartment.label,
         building_emoji: COMPLAINT_CATEGORIES.building.emoji,
         building_label: COMPLAINT_CATEGORIES.building.label,
-      })
+      }, language)
     }
 
-    return await getMessage(nav.messageKey)
+    return await getMessage(nav.messageKey, undefined, language)
   }
 
   // Default: return to main menu
   clearState(phoneNumber)
-  return await getMainMenu(profile.name)
+  return await getMainMenu(profile.name, language)
 }
