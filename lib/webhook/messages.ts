@@ -44,27 +44,53 @@ async function loadMessages(): Promise<Map<string, CachedMessage>> {
 }
 
 /**
- * Get a message by key with variable interpolation.
- * Priority: custom_text (from DB) > default_text (from DB) > hardcoded default.
+ * Get a message by key with variable interpolation and optional language.
+ * Priority:
+ *   1. If language provided: bot_message_translations for that language
+ *   2. custom_text (from bot_messages)
+ *   3. default_text (from bot_messages)
+ *   4. Hardcoded MESSAGE_DEFAULTS fallback
  *
  * @param key - The message key (use MSG constants)
  * @param variables - Optional key-value pairs for {variable} interpolation
+ * @param language - Optional language code (e.g., "ur", "ar"). Undefined = English.
  * @returns The resolved message string
  */
 export async function getMessage(
   key: MessageKey,
-  variables?: Record<string, string | number | undefined>
+  variables?: Record<string, string | number | undefined>,
+  language?: string
 ): Promise<string> {
-  const cache = await loadMessages()
-  const cached = cache.get(key)
+  let text: string | undefined
 
-  let text: string
+  // If a non-English language is requested, try the translations table
+  if (language) {
+    try {
+      const { data } = await supabaseAdmin
+        .from("bot_message_translations")
+        .select("translated_text")
+        .eq("message_key", key)
+        .eq("language_code", language)
+        .single()
 
-  if (cached) {
-    text = cached.custom_text ?? cached.default_text
-  } else {
-    // Fall back to hardcoded defaults
-    text = MESSAGE_DEFAULTS[key] ?? key
+      if (data?.translated_text) {
+        text = data.translated_text
+      }
+    } catch {
+      // Fall through to English
+    }
+  }
+
+  // Fall back to English (existing logic)
+  if (!text) {
+    const cache = await loadMessages()
+    const cached = cache.get(key)
+
+    if (cached) {
+      text = cached.custom_text ?? cached.default_text
+    } else {
+      text = MESSAGE_DEFAULTS[key] ?? key
+    }
   }
 
   // Interpolate variables
