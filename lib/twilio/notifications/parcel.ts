@@ -60,3 +60,41 @@ Hi ${residentName || "Resident"} (${apartmentNumber}), your parcel is at recepti
 
     return sendWithFallback(phone, templateSid, templateVariables, fallbackMessage)
 }
+
+export interface ParcelCollectionParams {
+    phone: string
+    residentName: string
+    collectorName: string
+    collectorPhone: string
+    collectorCnic: string
+}
+
+/**
+ * Send parcel collection notification to resident
+ * Sent when admin records who collected the parcel
+ */
+export async function sendParcelCollectionNotification(
+    params: ParcelCollectionParams
+): Promise<TwilioResult> {
+    const { phone, residentName, collectorName, collectorPhone, collectorCnic } = params
+
+    const templateSid = await getTemplateSid("parcel_collection")
+    const templateVariables = {
+        "1": residentName || "Resident",
+        "2": collectorName,
+        "3": collectorCnic,
+        "4": collectorPhone,
+    }
+
+    const fallbackMessage = `📦 *Parcel Collected*
+
+Hi ${residentName || "Resident"}, your parcel has been collected by:
+
+Name: ${collectorName}
+Phone: ${collectorPhone}
+CNIC: ${collectorCnic}
+
+— Manzhil`
+
+    return sendWithFallback(phone, templateSid, templateVariables, fallbackMessage)
+}
