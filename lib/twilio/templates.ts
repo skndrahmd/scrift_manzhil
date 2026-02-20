@@ -35,6 +35,7 @@ export const TEMPLATE_SIDS: Record<TemplateType, string | undefined> = {
 
   // Parcel templates
   parcel_arrival: process.env.TWILIO_PARCEL_ARRIVAL_TEMPLATE_SID,
+  parcel_collection: process.env.TWILIO_PARCEL_COLLECTION_TEMPLATE_SID,
 
   // Visitor templates
   visitor_arrival: process.env.TWILIO_VISITOR_ARRIVAL_TEMPLATE_SID,

@@ -27,6 +27,7 @@ export type TemplateType =
   | "account_reactivated"
   | "broadcast_announcement"
   | "parcel_arrival"
+  | "parcel_collection"
   | "visitor_arrival"
   | "otp_message"
   | "staff_invitation"

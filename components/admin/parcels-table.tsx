@@ -685,6 +685,16 @@ export function ParcelsTable() {
                                         </div>
                                     )}
                                 </div>
+                                {selectedParcel.collector_name && (
+                                    <div className="pt-3 border-t border-gray-100">
+                                        <p className="text-xs font-medium text-gray-700 mb-2">Collected By</p>
+                                        <div className="space-y-1 text-sm">
+                                            <p className="text-manzhil-dark"><span className="text-gray-500">Name: </span>{selectedParcel.collector_name}</p>
+                                            <p className="text-manzhil-dark"><span className="text-gray-500">Phone: </span>{selectedParcel.collector_phone}</p>
+                                            <p className="text-manzhil-dark"><span className="text-gray-500">CNIC: </span>{selectedParcel.collector_cnic}</p>
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     )}
