@@ -57,6 +57,12 @@ export function ParcelsTable() {
     const [isRegisterModalOpen, setIsRegisterModalOpen] = useState(false)
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [isNotifying, setIsNotifying] = useState(false)
+    const [isCollectModalOpen, setIsCollectModalOpen] = useState(false)
+    const [collectingParcel, setCollectingParcel] = useState<Parcel | null>(null)
+    const [collectorName, setCollectorName] = useState("")
+    const [collectorPhone, setCollectorPhone] = useState("")
+    const [collectorCnic, setCollectorCnic] = useState("")
+    const [isCollecting, setIsCollecting] = useState(false)
 
     // Register form state
     const [selectedResidentId, setSelectedResidentId] = useState<string>("")
@@ -262,33 +268,53 @@ export function ParcelsTable() {
         }
     }
 
-    // Handle mark as collected
-    const handleMarkCollected = async (parcel: Parcel) => {
+    // Open the collect & notify modal
+    const openCollectModal = (parcel: Parcel) => {
+        setCollectingParcel(parcel)
+        setCollectorName("")
+        setCollectorPhone("")
+        setCollectorCnic("")
+        setIsCollectModalOpen(true)
+    }
+
+    // Handle collect & notify submission
+    const handleCollectAndNotify = async () => {
+        if (!collectingParcel) return
+        if (!collectorName.trim() || !collectorPhone.trim() || !collectorCnic.trim()) {
+            toast({ title: "All fields are required", variant: "destructive" })
+            return
+        }
+
+        setIsCollecting(true)
         try {
-            const response = await fetch("/api/parcels/update-status", {
+            const response = await fetch("/api/parcels/collect", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ parcelId: parcel.id, status: "collected" }),
+                body: JSON.stringify({
+                    parcelId: collectingParcel.id,
+                    collectorName: collectorName.trim(),
+                    collectorPhone: collectorPhone.trim(),
+                    collectorCnic: collectorCnic.trim(),
+                }),
             })
-
             const data = await response.json()
 
             if (data.success) {
                 toast({
-                    title: "Parcel Collected",
-                    description: "Parcel has been marked as collected",
+                    title: data.notificationFailed ? "Parcel Collected (notification failed)" : "Parcel Collected",
+                    description: data.notificationFailed
+                        ? "Parcel marked as collected but WhatsApp notification could not be sent."
+                        : "Resident has been notified of the collection.",
                 })
+                setIsCollectModalOpen(false)
                 fetchParcels()
             } else {
-                throw new Error(data.error || "Failed to update status")
+                toast({ title: "Error", description: data.error || "Failed to process collection", variant: "destructive" })
             }
-        } catch (error) {
-            console.error("Error updating status:", error)
-            toast({
-                title: "Error",
-                description: "Failed to update parcel status",
-                variant: "destructive",
-            })
+        } catch {
+            toast({ title: "Error", description: "Something went wrong", variant: "destructive" })
+        } finally {
+            setIsCollecting(false)
         }
     }
 
@@ -462,9 +488,9 @@ export function ParcelsTable() {
                                                                 <Button
                                                                     variant="outline"
                                                                     size="sm"
-                                                                    onClick={() => handleMarkCollected(parcel)}
+                                                                    onClick={() => openCollectModal(parcel)}
                                                                     className="h-8 px-3 border-green-300 hover:bg-green-50 text-green-600"
-                                                                    title="Mark as Collected"
+                                                                    title="Collect & Notify"
                                                                 >
                                                                     <CheckCircle className="h-4 w-4" />
                                                                 </Button>
@@ -545,11 +571,11 @@ export function ParcelsTable() {
                                                         <Button
                                                             variant="outline"
                                                             size="sm"
-                                                            onClick={() => handleMarkCollected(parcel)}
+                                                            onClick={() => openCollectModal(parcel)}
                                                             className="h-8 text-xs border-green-300 text-green-600"
                                                         >
                                                             <CheckCircle className="h-3.5 w-3.5 mr-1" />
-                                                            Collected
+                                                            Collect
                                                         </Button>
                                                     </>
                                                 )}
@@ -848,6 +874,77 @@ export function ParcelsTable() {
                                     <Package className="h-4 w-4 mr-2" />
                                     Register & Notify
                                 </>
+                            )}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+            {/* Collect & Notify Modal */}
+            <Dialog open={isCollectModalOpen} onOpenChange={(open) => { if (!isCollecting) setIsCollectModalOpen(open) }}>
+                <DialogContent className="sm:max-w-[440px]">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2 text-manzhil-dark">
+                            <CheckCircle className="h-5 w-5 text-green-600" />
+                            Collect &amp; Notify
+                        </DialogTitle>
+                        <DialogDescription>
+                            Enter the details of the person collecting this parcel. The resident will be notified via WhatsApp.
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <div className="space-y-4 py-2">
+                        <div className="space-y-2">
+                            <Label htmlFor="collector-name">Collector Name <span className="text-red-500">*</span></Label>
+                            <Input
+                                id="collector-name"
+                                placeholder="Full name"
+                                value={collectorName}
+                                onChange={(e) => setCollectorName(e.target.value)}
+                                disabled={isCollecting}
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="collector-phone">Collector Phone <span className="text-red-500">*</span></Label>
+                            <Input
+                                id="collector-phone"
+                                placeholder="+92300..."
+                                value={collectorPhone}
+                                onChange={(e) => setCollectorPhone(e.target.value)}
+                                disabled={isCollecting}
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="collector-cnic">Collector CNIC <span className="text-red-500">*</span></Label>
+                            <Input
+                                id="collector-cnic"
+                                placeholder="42101-1234567-1"
+                                value={collectorCnic}
+                                onChange={(e) => setCollectorCnic(e.target.value)}
+                                disabled={isCollecting}
+                            />
+                        </div>
+                    </div>
+
+                    <DialogFooter>
+                        <Button
+                            variant="outline"
+                            onClick={() => setIsCollectModalOpen(false)}
+                            disabled={isCollecting}
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            onClick={handleCollectAndNotify}
+                            disabled={isCollecting || !collectorName.trim() || !collectorPhone.trim() || !collectorCnic.trim()}
+                            className="bg-green-600 hover:bg-green-700 text-white"
+                        >
+                            {isCollecting ? (
+                                <>
+                                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                    Processing...
+                                </>
+                            ) : (
+                                "Confirm Collection"
                             )}
                         </Button>
                     </DialogFooter>
