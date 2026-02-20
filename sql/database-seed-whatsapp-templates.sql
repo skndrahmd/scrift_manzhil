@@ -47,10 +47,11 @@ VALUES
   ('complaint_rejected', 'Complaint Rejected', 'Notification sent when a complaint is rejected or cancelled', 'complaint', 'TWILIO_COMPLAINT_REJECTED_TEMPLATE_SID', '[{"key":"1","label":"Resident Name","description":"Full name of the resident","example":"Ahmed Khan"},{"key":"2","label":"Subcategory","description":"Formatted complaint type","example":"Water Leakage"},{"key":"3","label":"Complaint ID","description":"Unique complaint identifier","example":"CMP-001"},{"key":"4","label":"Registered Time","description":"Time when complaint was registered","example":"January 15, 2026 10:30 AM"}]'::jsonb, 'Sent when admin changes complaint status to cancelled/rejected', 'lib/twilio/notifications/complaint.ts', NULL, 4)
 ON CONFLICT (template_key) DO NOTHING;
 
--- Parcel Templates (1)
+-- Parcel Templates (2)
 INSERT INTO whatsapp_templates (template_key, name, description, category, env_var_name, variables, trigger_description, trigger_source, fallback_message, sort_order)
 VALUES
-  ('parcel_arrival', 'Parcel Arrival', 'Notification sent to residents when a parcel/delivery arrives at reception', 'parcel', 'TWILIO_PARCEL_ARRIVAL_TEMPLATE_SID', '[{"key":"1","label":"Resident Name","description":"Full name of the resident","example":"Ahmed Khan"},{"key":"2","label":"Description","description":"Parcel description or Package","example":"Amazon Delivery"},{"key":"3","label":"Image URL","description":"Photo of the parcel","example":"https://storage.supabase.co/parcels/img.jpg"}]'::jsonb, 'Sent when admin registers a new parcel from the parcels page', 'lib/twilio/notifications/parcel.ts', NULL, 1)
+  ('parcel_arrival', 'Parcel Arrival', 'Notification sent to residents when a parcel/delivery arrives at reception', 'parcel', 'TWILIO_PARCEL_ARRIVAL_TEMPLATE_SID', '[{"key":"1","label":"Resident Name","description":"Full name of the resident","example":"Ahmed Khan"},{"key":"2","label":"Description","description":"Parcel description or Package","example":"Amazon Delivery"},{"key":"3","label":"Image URL","description":"Photo of the parcel","example":"https://storage.supabase.co/parcels/img.jpg"}]'::jsonb, 'Sent when admin registers a new parcel from the parcels page', 'lib/twilio/notifications/parcel.ts', NULL, 1),
+  ('parcel_collection', 'Parcel Collection', 'Notification sent to residents when someone collects their parcel at reception', 'parcel', 'TWILIO_PARCEL_COLLECTION_TEMPLATE_SID', '[{"key":"1","label":"Resident Name","description":"Full name of the resident","example":"Ahmed Khan"},{"key":"2","label":"Collector Name","description":"Name of the person who collected the parcel","example":"Ali Khan"},{"key":"3","label":"Collector CNIC","description":"CNIC of the collector","example":"42101-1234567-1"},{"key":"4","label":"Collector Phone","description":"Phone number of the collector","example":"+923001234567"}]'::jsonb, 'Sent when admin records parcel collection via the Collect & Notify flow', 'lib/twilio/notifications/parcel.ts', NULL, 2)
 ON CONFLICT (template_key) DO NOTHING;
 
 -- Visitor Templates (1)
@@ -136,6 +137,9 @@ WHERE template_key = 'complaint_rejected' AND message_body_draft IS NULL;
 -- Parcel Template
 UPDATE whatsapp_templates SET message_body_draft = E'Hello, this is Manzhil by Scrift.\n\nHi {{1}}, a parcel has arrived for you at reception.\n\nDescription: {{2}}\n\nPhoto: {{3}}\n\nPlease collect it at your earliest convenience.'
 WHERE template_key = 'parcel_arrival' AND message_body_draft IS NULL;
+
+UPDATE whatsapp_templates SET message_body_draft = E'Hello, this is Manzhil by Scrift.\n\nHi {{1}}, your parcel has been collected by {{2}} (CNIC: {{3}}, Phone: {{4}}).\n\nIf you did not authorize this collection, please contact building management immediately.'
+WHERE template_key = 'parcel_collection' AND message_body_draft IS NULL;
 
 -- Visitor Template
 UPDATE whatsapp_templates SET message_body_draft = E'Hello, this is Manzhil by Scrift.\n\nHi {{1}}, a visitor has arrived for you.\n\nApartment: {{2}}\nDate: {{3}}\n\nPlease confirm at reception.'
