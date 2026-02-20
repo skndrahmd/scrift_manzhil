@@ -8,7 +8,7 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { createServerClient } from "@supabase/ssr"
 import { createClient } from "@supabase/supabase-js"
-import { encodeAdminCache, decodeAdminCache, ADMIN_CACHE_COOKIE } from "@/lib/auth/cache"
+import { ADMIN_CACHE_COOKIE } from "@/lib/auth/cache"
 
 // Page key mapping for route -> permission check
 const ROUTE_TO_PAGE_KEY: Record<string, string> = {
@@ -49,7 +49,7 @@ function getPageKeyFromPath(pathname: string): string | null {
 
 /**
  * Next.js middleware that authenticates requests and enforces RBAC.
- * Checks Supabase auth, resolves admin role/permissions (with HMAC cookie cache),
+ * Checks Supabase auth, resolves admin role/permissions (always from DB),
  * and redirects unauthorized users to login or the first permitted page.
  * @param request - Incoming Next.js request
  * @returns NextResponse (pass-through, redirect, or with updated cache cookie)
@@ -126,75 +126,47 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL("/admin/unauthorized", request.url))
   }
 
-  // Try to read admin cache cookie
-  const cachedValue = request.cookies.get(ADMIN_CACHE_COOKIE)?.value
-  const cached = await decodeAdminCache(cachedValue, user.id, serviceRoleKey)
+  // Always query DB directly — no cache
+  const supabaseAdmin = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    serviceRoleKey,
+    {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+      },
+    }
+  )
 
-  let adminRole: string
-  let adminId: string
-  let isActive: boolean
+  // Check if user exists in admin_users and is active
+  const { data: adminUser, error: adminError } = await supabaseAdmin
+    .from("admin_users")
+    .select("id, role, is_active")
+    .eq("auth_user_id", user.id)
+    .single()
+
+  // If no admin user found for this auth user, redirect to unauthorized
+  if (adminError || !adminUser) {
+    const unauthorizedUrl = new URL("/admin/unauthorized", request.url)
+    return NextResponse.redirect(unauthorizedUrl)
+  }
+
+  const adminRole = adminUser.role
+  const adminId = adminUser.id
+  const isActive = adminUser.is_active
+
   let permissionKeys: string[]
 
-  if (cached) {
-    // Cache hit — skip DB queries
-    adminRole = cached.role
-    adminId = cached.adminId
-    isActive = cached.isActive
-    permissionKeys = cached.permissionKeys
+  if (adminRole !== "super_admin") {
+    const { data: allPerms } = await supabaseAdmin
+      .from("admin_permissions")
+      .select("page_key")
+      .eq("admin_user_id", adminId)
+      .eq("can_access", true)
+
+    permissionKeys = allPerms?.map(p => p.page_key) ?? []
   } else {
-    // Cache miss — query DB
-    const supabaseAdmin = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      serviceRoleKey,
-      {
-        auth: {
-          autoRefreshToken: false,
-          persistSession: false,
-        },
-      }
-    )
-
-    // Check if user exists in admin_users and is active
-    const { data: adminUser, error: adminError } = await supabaseAdmin
-      .from("admin_users")
-      .select("id, role, is_active")
-      .eq("auth_user_id", user.id)
-      .single()
-
-    // If no admin user found for this auth user, redirect to unauthorized
-    if (adminError || !adminUser) {
-      const unauthorizedUrl = new URL("/admin/unauthorized", request.url)
-      return NextResponse.redirect(unauthorizedUrl)
-    }
-
-    adminRole = adminUser.role
-    adminId = adminUser.id
-    isActive = adminUser.is_active
-
-    // Fetch all permissions for staff (fetch once, cache all)
-    if (adminRole !== "super_admin") {
-      const { data: allPerms } = await supabaseAdmin
-        .from("admin_permissions")
-        .select("page_key")
-        .eq("admin_user_id", adminId)
-        .eq("can_access", true)
-
-      permissionKeys = allPerms?.map(p => p.page_key) ?? []
-    } else {
-      permissionKeys = []
-    }
-
-    // Set cache cookie on the response
-    const cookieValue = await encodeAdminCache(
-      user.id, adminRole, isActive, adminId, permissionKeys, serviceRoleKey
-    )
-    response.cookies.set(ADMIN_CACHE_COOKIE, cookieValue, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      path: "/",
-      maxAge: 300,
-    })
+    permissionKeys = []
   }
 
   // If admin is inactive, redirect to unauthorized
@@ -216,53 +188,10 @@ export async function middleware(request: NextRequest) {
     return response
   }
 
-  // Check permission for staff using cached permission keys
   const permittedKeySet = new Set(permissionKeys)
 
   // Settings is super_admin only, or staff lacks permission for current page
   if (pageKey === "settings" || !permittedKeySet.has(pageKey)) {
-    // Before redirecting, re-verify permissions from DB in case cache is stale
-    // (e.g. super admin just granted this staff member a new permission)
-    if (pageKey !== "settings") {
-      const supabaseAdmin = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        serviceRoleKey,
-        {
-          auth: {
-            autoRefreshToken: false,
-            persistSession: false,
-          },
-        }
-      )
-
-      const { data: freshPerms } = await supabaseAdmin
-        .from("admin_permissions")
-        .select("page_key")
-        .eq("admin_user_id", adminId)
-        .eq("can_access", true)
-
-      const freshKeys = freshPerms?.map(p => p.page_key) ?? []
-
-      if (freshKeys.includes(pageKey)) {
-        // Permission was granted since cache was built — allow access and refresh cache
-        const freshCookieValue = await encodeAdminCache(
-          user.id, adminRole, isActive, adminId, freshKeys, serviceRoleKey
-        )
-        response.cookies.set(ADMIN_CACHE_COOKIE, freshCookieValue, {
-          httpOnly: true,
-          secure: process.env.NODE_ENV === "production",
-          sameSite: "lax",
-          path: "/",
-          maxAge: 300,
-        })
-        return response
-      }
-
-      // Update permittedKeySet with fresh data for redirect logic below
-      permittedKeySet.clear()
-      freshKeys.forEach(k => permittedKeySet.add(k))
-    }
-
     // Find first permitted page to redirect to
     const PAGE_ORDER = ["dashboard", "residents", "units", "bookings", "complaints", "visitors", "parcels", "analytics", "feedback", "accounting", "broadcast", "settings"]
     const PAGE_KEY_TO_ROUTE: Record<string, string> = {
