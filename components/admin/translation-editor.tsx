@@ -269,7 +269,7 @@ export function TranslationEditor({ languageCode }: { languageCode: string }) {
         </Card>
       ) : (
         <Tabs defaultValue={sortedGroups[0]} className="w-full">
-          <TabsList className="flex flex-wrap h-auto gap-1 bg-transparent p-0">
+          <TabsList className="flex flex-wrap h-auto gap-1 p-1">
             {sortedGroups.map((group) => (
               <TabsTrigger
                 key={group}

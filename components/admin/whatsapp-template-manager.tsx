@@ -268,7 +268,7 @@ export function WhatsAppTemplateManager() {
       </Collapsible>
 
       {/* Action Bar */}
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3 flex-wrap">
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
           <Input
@@ -280,7 +280,7 @@ export function WhatsAppTemplateManager() {
         </div>
         <Button
           onClick={() => setCreateDialog(true)}
-          className="bg-gradient-to-r from-manzhil-dark to-manzhil-teal hover:shadow-lg hover:shadow-manzhil-teal/30 transition-all"
+          className="bg-gradient-to-r from-manzhil-dark to-manzhil-teal hover:shadow-lg hover:shadow-manzhil-teal/30 transition-all shrink-0"
         >
           <Plus className="h-4 w-4 mr-2" />
           Create Template

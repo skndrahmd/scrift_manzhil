@@ -283,49 +283,79 @@ export default function ResidentProfilePage({ params }: { params: { id: string }
               </CardTitle>
             </CardHeader>
             <CardContent className="p-0">
-              <Table>
-                <TableHeader>
-                  <TableRow className="bg-gradient-to-r from-manzhil-teal/5 to-transparent">
-                    <TableHead>Customer</TableHead>
-                    <TableHead>Apartment</TableHead>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Time Slot</TableHead>
-                    <TableHead>Amount</TableHead>
-                    <TableHead>Payment</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Created At</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {bookingsDisplay.map((row) => (
-                    <TableRow key={row.id} className="hover:bg-manzhil-teal/5 transition-colors">
-                      <TableCell className="font-medium text-gray-900">
-                        {row.profiles?.name || profile?.name || "N/A"}
-                      </TableCell>
-                      <TableCell>{row.profiles?.apartment_number || profile?.apartment_number || "N/A"}</TableCell>
-                      <TableCell>{formatDateForDisplay(row.booking_date)}</TableCell>
-                      <TableCell>
-                        {formatTime(row.start_time)} - {formatTime(row.end_time)}
-                      </TableCell>
-                      <TableCell>Rs. {Number(row.booking_charges).toLocaleString()}</TableCell>
-                      <TableCell>
-                        <Badge variant={getStatusBadgeVariant(row.payment_status)}>{row.payment_status}</Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={getStatusBadgeVariant(row.status)}>{row.status}</Badge>
-                      </TableCell>
-                      <TableCell>{formatDateTime(row.created_at)}</TableCell>
+              {/* Desktop */}
+              <div className="hidden md:block overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-gradient-to-r from-manzhil-teal/5 to-transparent">
+                      <TableHead>Customer</TableHead>
+                      <TableHead>Apartment</TableHead>
+                      <TableHead>Date</TableHead>
+                      <TableHead>Time Slot</TableHead>
+                      <TableHead>Amount</TableHead>
+                      <TableHead>Payment</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Created At</TableHead>
                     </TableRow>
-                  ))}
-                  {bookingsDisplay.length === 0 && (
-                    <TableRow>
-                      <TableCell colSpan={8} className="text-center text-gray-500 py-8">
-                        No booking records for this period
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {bookingsDisplay.map((row) => (
+                      <TableRow key={row.id} className="hover:bg-manzhil-teal/5 transition-colors">
+                        <TableCell className="font-medium text-gray-900">
+                          {row.profiles?.name || profile?.name || "N/A"}
+                        </TableCell>
+                        <TableCell>{row.profiles?.apartment_number || profile?.apartment_number || "N/A"}</TableCell>
+                        <TableCell>{formatDateForDisplay(row.booking_date)}</TableCell>
+                        <TableCell>
+                          {formatTime(row.start_time)} - {formatTime(row.end_time)}
+                        </TableCell>
+                        <TableCell>Rs. {Number(row.booking_charges).toLocaleString()}</TableCell>
+                        <TableCell>
+                          <Badge variant={getStatusBadgeVariant(row.payment_status)}>{row.payment_status}</Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={getStatusBadgeVariant(row.status)}>{row.status}</Badge>
+                        </TableCell>
+                        <TableCell>{formatDateTime(row.created_at)}</TableCell>
+                      </TableRow>
+                    ))}
+                    {bookingsDisplay.length === 0 && (
+                      <TableRow>
+                        <TableCell colSpan={8} className="text-center text-gray-500 py-8">
+                          No booking records for this period
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+              {/* Mobile */}
+              <div className="md:hidden p-4 space-y-4">
+                {bookingsDisplay.length === 0 ? (
+                  <p className="text-center text-gray-500 py-8">No booking records for this period</p>
+                ) : (
+                  bookingsDisplay.map((row) => (
+                    <Card key={row.id} className="border-manzhil-teal/10 shadow-sm">
+                      <CardContent className="p-4 space-y-2">
+                        <div className="flex items-center justify-between">
+                          <p className="font-medium text-gray-900">
+                            {row.profiles?.name || profile?.name || "N/A"}
+                          </p>
+                          <Badge variant={getStatusBadgeVariant(row.status)}>{row.status}</Badge>
+                        </div>
+                        <p className="text-sm text-gray-500">
+                          {formatDateForDisplay(row.booking_date)} &bull; {formatTime(row.start_time)} - {formatTime(row.end_time)}
+                        </p>
+                        <p className="text-sm">Rs. {Number(row.booking_charges).toLocaleString()}</p>
+                        <div className="flex items-center gap-2">
+                          <Badge variant={getStatusBadgeVariant(row.payment_status)} className="text-xs">{row.payment_status}</Badge>
+                          <span className="text-xs text-gray-400">{row.profiles?.apartment_number || profile?.apartment_number || ""}</span>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))
+                )}
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
@@ -391,6 +421,7 @@ export default function ResidentProfilePage({ params }: { params: { id: string }
               </CardTitle>
             </CardHeader>
             <CardContent className="p-0">
+              <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow className="bg-gradient-to-r from-manzhil-teal/5 to-transparent">
@@ -434,6 +465,7 @@ export default function ResidentProfilePage({ params }: { params: { id: string }
                   )}
                 </TableBody>
               </Table>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>

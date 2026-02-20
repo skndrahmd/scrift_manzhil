@@ -528,116 +528,217 @@ export function StaffManagement() {
                             <p className="text-sm">Add your first staff member to get started</p>
                         </div>
                     ) : (
-                        <Table>
-                            <TableHeader>
-                                <TableRow className="bg-gray-50/50">
-                                    <TableHead>Name</TableHead>
-                                    <TableHead>Contact</TableHead>
-                                    <TableHead>Role</TableHead>
-                                    <TableHead>Pages</TableHead>
-                                    <TableHead>Notifications</TableHead>
-                                    <TableHead>Status</TableHead>
-                                    <TableHead className="text-right">Actions</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {staff.map((member) => (
-                                    <TableRow key={member.id}>
-                                        <TableCell className="font-medium">{member.name}</TableCell>
-                                        <TableCell>
-                                            <div className="text-sm">
-                                                <div className="flex items-center gap-1 text-gray-600">
-                                                    <Phone className="h-3 w-3" />
-                                                    {member.phone_number || "—"}
-                                                </div>
-                                            </div>
-                                        </TableCell>
-                                        <TableCell>
-                                            <Badge variant={member.role === "super_admin" ? "default" : "secondary"}>
-                                                {member.role === "super_admin" ? (
-                                                    <><ShieldCheck className="h-3 w-3 mr-1" /> Super Admin</>
-                                                ) : (
-                                                    <><Shield className="h-3 w-3 mr-1" /> Staff</>
-                                                )}
-                                            </Badge>
-                                        </TableCell>
-                                        <TableCell>
-                                            <Badge variant="outline">
-                                                {countPermissions(member)} {typeof countPermissions(member) === "number" ? "pages" : ""}
-                                            </Badge>
-                                        </TableCell>
-                                        <TableCell>
-                                            <div className="flex gap-1 flex-wrap">
-                                                {member.receive_complaint_notifications && (
-                                                    <Badge variant="outline" className="text-xs">
-                                                        <BellRing className="h-3 w-3 mr-1" /> Complaints
+                        <>
+                            {/* Desktop table — hidden on mobile */}
+                            <div className="hidden md:block overflow-x-auto">
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow className="bg-gray-50/50">
+                                            <TableHead>Name</TableHead>
+                                            <TableHead>Contact</TableHead>
+                                            <TableHead>Role</TableHead>
+                                            <TableHead>Pages</TableHead>
+                                            <TableHead>Notifications</TableHead>
+                                            <TableHead>Status</TableHead>
+                                            <TableHead className="text-right">Actions</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {staff.map((member) => (
+                                            <TableRow key={member.id}>
+                                                <TableCell className="font-medium">{member.name}</TableCell>
+                                                <TableCell>
+                                                    <div className="text-sm">
+                                                        <div className="flex items-center gap-1 text-gray-600">
+                                                            <Phone className="h-3 w-3" />
+                                                            {member.phone_number || "—"}
+                                                        </div>
+                                                    </div>
+                                                </TableCell>
+                                                <TableCell>
+                                                    <Badge variant={member.role === "super_admin" ? "default" : "secondary"}>
+                                                        {member.role === "super_admin" ? (
+                                                            <><ShieldCheck className="h-3 w-3 mr-1" /> Super Admin</>
+                                                        ) : (
+                                                            <><Shield className="h-3 w-3 mr-1" /> Staff</>
+                                                        )}
                                                     </Badge>
-                                                )}
-                                                {member.receive_reminder_notifications && (
-                                                    <Badge variant="outline" className="text-xs">
-                                                        <Bell className="h-3 w-3 mr-1" /> Reminders
+                                                </TableCell>
+                                                <TableCell>
+                                                    <Badge variant="outline">
+                                                        {countPermissions(member)} {typeof countPermissions(member) === "number" ? "pages" : ""}
                                                     </Badge>
-                                                )}
-                                                {member.receive_daily_reports && (
-                                                    <Badge variant="outline" className="text-xs">
-                                                        <FileText className="h-3 w-3 mr-1" /> Reports
-                                                    </Badge>
-                                                )}
-                                                {!member.receive_complaint_notifications && !member.receive_reminder_notifications && !member.receive_daily_reports && (
-                                                    <span className="text-gray-400 text-sm">None</span>
-                                                )}
-                                            </div>
-                                        </TableCell>
-                                        <TableCell>
-                                            <Switch
-                                                checked={member.is_active}
-                                                onCheckedChange={() => toggleActive(member)}
-                                            />
-                                        </TableCell>
-                                        <TableCell className="text-right">
-                                            <div className="flex justify-end gap-2">
-                                                <Button
-                                                    variant="ghost"
-                                                    size="icon"
-                                                    onClick={() => openEditDialog(member)}
-                                                    className="h-8 w-8"
-                                                >
-                                                    <Edit className="h-4 w-4" />
-                                                </Button>
-                                                <AlertDialog>
-                                                    <AlertDialogTrigger asChild>
+                                                </TableCell>
+                                                <TableCell>
+                                                    <div className="flex gap-1 flex-wrap">
+                                                        {member.receive_complaint_notifications && (
+                                                            <Badge variant="outline" className="text-xs">
+                                                                <BellRing className="h-3 w-3 mr-1" /> Complaints
+                                                            </Badge>
+                                                        )}
+                                                        {member.receive_reminder_notifications && (
+                                                            <Badge variant="outline" className="text-xs">
+                                                                <Bell className="h-3 w-3 mr-1" /> Reminders
+                                                            </Badge>
+                                                        )}
+                                                        {member.receive_daily_reports && (
+                                                            <Badge variant="outline" className="text-xs">
+                                                                <FileText className="h-3 w-3 mr-1" /> Reports
+                                                            </Badge>
+                                                        )}
+                                                        {!member.receive_complaint_notifications && !member.receive_reminder_notifications && !member.receive_daily_reports && (
+                                                            <span className="text-gray-400 text-sm">None</span>
+                                                        )}
+                                                    </div>
+                                                </TableCell>
+                                                <TableCell>
+                                                    <Switch
+                                                        checked={member.is_active}
+                                                        onCheckedChange={() => toggleActive(member)}
+                                                    />
+                                                </TableCell>
+                                                <TableCell className="text-right">
+                                                    <div className="flex justify-end gap-2">
                                                         <Button
                                                             variant="ghost"
                                                             size="icon"
-                                                            className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-50"
+                                                            onClick={() => openEditDialog(member)}
+                                                            className="h-8 w-8"
                                                         >
-                                                            <Trash2 className="h-4 w-4" />
+                                                            <Edit className="h-4 w-4" />
                                                         </Button>
-                                                    </AlertDialogTrigger>
-                                                    <AlertDialogContent>
-                                                        <AlertDialogHeader>
-                                                            <AlertDialogTitle>Delete Staff Member</AlertDialogTitle>
-                                                            <AlertDialogDescription>
-                                                                Are you sure you want to delete {member.name}? This will also remove their login access. This action cannot be undone.
-                                                            </AlertDialogDescription>
-                                                        </AlertDialogHeader>
-                                                        <AlertDialogFooter>
-                                                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                                            <AlertDialogAction
-                                                                onClick={() => handleDelete(member)}
-                                                                className="bg-red-500 hover:bg-red-600"
-                                                            >
-                                                                Delete
-                                                            </AlertDialogAction>
-                                                        </AlertDialogFooter>
-                                                    </AlertDialogContent>
-                                                </AlertDialog>
+                                                        <AlertDialog>
+                                                            <AlertDialogTrigger asChild>
+                                                                <Button
+                                                                    variant="ghost"
+                                                                    size="icon"
+                                                                    className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-50"
+                                                                >
+                                                                    <Trash2 className="h-4 w-4" />
+                                                                </Button>
+                                                            </AlertDialogTrigger>
+                                                            <AlertDialogContent>
+                                                                <AlertDialogHeader>
+                                                                    <AlertDialogTitle>Delete Staff Member</AlertDialogTitle>
+                                                                    <AlertDialogDescription>
+                                                                        Are you sure you want to delete {member.name}? This will also remove their login access. This action cannot be undone.
+                                                                    </AlertDialogDescription>
+                                                                </AlertDialogHeader>
+                                                                <AlertDialogFooter>
+                                                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                                    <AlertDialogAction
+                                                                        onClick={() => handleDelete(member)}
+                                                                        className="bg-red-500 hover:bg-red-600"
+                                                                    >
+                                                                        Delete
+                                                                    </AlertDialogAction>
+                                                                </AlertDialogFooter>
+                                                            </AlertDialogContent>
+                                                        </AlertDialog>
+                                                    </div>
+                                                </TableCell>
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                </Table>
+                            </div>
+
+                            {/* Mobile card view — hidden on md and above */}
+                            <div className="md:hidden p-4 space-y-4">
+                                {staff.map((member) => (
+                                    <Card key={member.id} className="border-manzhil-teal/10 shadow-sm">
+                                        <CardContent className="p-4 space-y-3">
+                                            {/* Row 1: Name + contact info on left, role badge + active switch on right */}
+                                            <div className="flex items-start justify-between gap-2">
+                                                <div className="min-w-0">
+                                                    <p className="font-medium text-manzhil-dark truncate">{member.name}</p>
+                                                    <p className="text-sm text-gray-500">{member.phone_number || "No phone"}</p>
+                                                    <p className="text-xs text-gray-400">{member.email}</p>
+                                                </div>
+                                                <div className="flex items-center gap-2 shrink-0">
+                                                    <Badge variant={member.role === "super_admin" ? "default" : "secondary"} className="text-xs">
+                                                        {member.role === "super_admin" ? "Super Admin" : "Staff"}
+                                                    </Badge>
+                                                    <Switch
+                                                        checked={member.is_active}
+                                                        onCheckedChange={() => toggleActive(member)}
+                                                    />
+                                                </div>
                                             </div>
-                                        </TableCell>
-                                    </TableRow>
+
+                                            {/* Row 2: Notification preference badges */}
+                                            <div className="flex flex-wrap gap-1.5">
+                                                {member.receive_complaint_notifications && (
+                                                    <Badge variant="outline" className="text-xs gap-1">
+                                                        <BellRing className="h-3 w-3" /> Complaints
+                                                    </Badge>
+                                                )}
+                                                {member.receive_reminder_notifications && (
+                                                    <Badge variant="outline" className="text-xs gap-1">
+                                                        <Bell className="h-3 w-3" /> Reminders
+                                                    </Badge>
+                                                )}
+                                                {member.receive_daily_reports && (
+                                                    <Badge variant="outline" className="text-xs gap-1">
+                                                        <FileText className="h-3 w-3" /> Reports
+                                                    </Badge>
+                                                )}
+                                                {!member.receive_complaint_notifications && !member.receive_reminder_notifications && !member.receive_daily_reports && (
+                                                    <span className="text-xs text-gray-400">No notifications</span>
+                                                )}
+                                            </div>
+
+                                            {/* Row 3: Page access count + action buttons */}
+                                            <div className="flex items-center justify-between pt-2 border-t border-gray-100">
+                                                <span className="text-xs text-gray-500">
+                                                    {member.role === "super_admin"
+                                                        ? "All pages"
+                                                        : `${countPermissions(member)} pages`}
+                                                </span>
+                                                <div className="flex gap-1">
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        onClick={() => openEditDialog(member)}
+                                                        className="h-8 w-8"
+                                                    >
+                                                        <Edit className="h-4 w-4" />
+                                                    </Button>
+                                                    <AlertDialog>
+                                                        <AlertDialogTrigger asChild>
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="icon"
+                                                                className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-50"
+                                                            >
+                                                                <Trash2 className="h-4 w-4" />
+                                                            </Button>
+                                                        </AlertDialogTrigger>
+                                                        <AlertDialogContent>
+                                                            <AlertDialogHeader>
+                                                                <AlertDialogTitle>Delete Staff Member</AlertDialogTitle>
+                                                                <AlertDialogDescription>
+                                                                    Are you sure you want to delete {member.name}? This will also remove their login access. This action cannot be undone.
+                                                                </AlertDialogDescription>
+                                                            </AlertDialogHeader>
+                                                            <AlertDialogFooter>
+                                                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                                <AlertDialogAction
+                                                                    onClick={() => handleDelete(member)}
+                                                                    className="bg-red-500 hover:bg-red-600"
+                                                                >
+                                                                    Delete
+                                                                </AlertDialogAction>
+                                                            </AlertDialogFooter>
+                                                        </AlertDialogContent>
+                                                    </AlertDialog>
+                                                </div>
+                                            </div>
+                                        </CardContent>
+                                    </Card>
                                 ))}
-                            </TableBody>
-                        </Table>
+                            </div>
+                        </>
                     )}
                 </CardContent>
             </Card>

@@ -250,13 +250,13 @@ export function ResidentsTable() {
                                 placeholder="Search residents..."
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
-                                className="pl-9 w-[200px] border-manzhil-teal/20 focus:border-manzhil-teal"
+                                className="pl-9 w-full sm:w-[200px] border-manzhil-teal/20 focus:border-manzhil-teal"
                             />
                         </div>
 
                         {/* Status Filter */}
                         <Select value={maintenanceFilter} onValueChange={setMaintenanceFilter}>
-                            <SelectTrigger className="w-[130px] border-manzhil-teal/20">
+                            <SelectTrigger className="w-full sm:w-[130px] border-manzhil-teal/20">
                                 <Filter className="h-4 w-4 mr-2" />
                                 <SelectValue />
                             </SelectTrigger>
@@ -269,7 +269,7 @@ export function ResidentsTable() {
 
                         {/* Period Filter */}
                         <Select value={residentsPeriod} onValueChange={(v) => setResidentsPeriod(v as Period)}>
-                            <SelectTrigger className="w-[130px] border-manzhil-teal/20">
+                            <SelectTrigger className="w-full sm:w-[130px] border-manzhil-teal/20">
                                 <SelectValue placeholder="Period" />
                             </SelectTrigger>
                             <SelectContent>

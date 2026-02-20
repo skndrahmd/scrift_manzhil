@@ -356,7 +356,7 @@ export function AnalyticsDashboard() {
                     <p className="text-gray-500 text-sm mt-1">Data-driven insights for building management</p>
                 </div>
                 <Select value={period} onValueChange={(v) => setPeriod(v as Period)}>
-                    <SelectTrigger className="w-[180px] border-manzhil-teal/30">
+                    <SelectTrigger className="w-full sm:w-[180px] border-manzhil-teal/30">
                         <SelectValue placeholder="Select period" />
                     </SelectTrigger>
                     <SelectContent>
@@ -486,7 +486,7 @@ export function AnalyticsDashboard() {
                                 </CardTitle>
                             </CardHeader>
                             <CardContent>
-                                <div className="h-[280px]">
+                                <div className="h-[220px] sm:h-[280px]">
                                     <ResponsiveContainer width="100%" height="100%">
                                         <PieChart>
                                             <Pie
@@ -527,7 +527,7 @@ export function AnalyticsDashboard() {
                                 </CardTitle>
                             </CardHeader>
                             <CardContent>
-                                <div className="h-[280px]">
+                                <div className="h-[220px] sm:h-[280px]">
                                     <ResponsiveContainer width="100%" height="100%">
                                         <BarChart data={financialData.collectionStatus} layout="vertical">
                                             <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} />
@@ -623,7 +623,7 @@ export function AnalyticsDashboard() {
                                 <CardTitle className="text-lg">Complaints Trend (Last 6 Months)</CardTitle>
                             </CardHeader>
                             <CardContent>
-                                <div className="h-[280px]">
+                                <div className="h-[220px] sm:h-[280px]">
                                     <ResponsiveContainer width="100%" height="100%">
                                         <AreaChart data={complaintData.trendData}>
                                             <CartesianGrid strokeDasharray="3 3" />
@@ -684,7 +684,7 @@ export function AnalyticsDashboard() {
                             <CardTitle className="text-lg">Top Issue Types</CardTitle>
                         </CardHeader>
                         <CardContent>
-                            <div className="h-[300px]">
+                            <div className="h-[220px] sm:h-[300px]">
                                 <ResponsiveContainer width="100%" height="100%">
                                     <BarChart data={complaintData.topSubcategories} layout="vertical">
                                         <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} />
@@ -750,7 +750,7 @@ export function AnalyticsDashboard() {
                                 <CardTitle className="text-lg">Bookings (Last 30 Days)</CardTitle>
                             </CardHeader>
                             <CardContent>
-                                <div className="h-[280px]">
+                                <div className="h-[220px] sm:h-[280px]">
                                     <ResponsiveContainer width="100%" height="100%">
                                         <AreaChart data={bookingData.last30Days}>
                                             <CartesianGrid strokeDasharray="3 3" />
@@ -777,7 +777,7 @@ export function AnalyticsDashboard() {
                                 <CardTitle className="text-lg">Peak Booking Hours</CardTitle>
                             </CardHeader>
                             <CardContent>
-                                <div className="h-[280px]">
+                                <div className="h-[220px] sm:h-[280px]">
                                     <ResponsiveContainer width="100%" height="100%">
                                         <BarChart data={bookingData.peakHours}>
                                             <CartesianGrid strokeDasharray="3 3" vertical={false} />
@@ -805,7 +805,7 @@ export function AnalyticsDashboard() {
                                 </CardTitle>
                             </CardHeader>
                             <CardContent>
-                                <div className="h-[280px]">
+                                <div className="h-[220px] sm:h-[280px]">
                                     <ResponsiveContainer width="100%" height="100%">
                                         <BarChart data={residentData.tenureData}>
                                             <CartesianGrid strokeDasharray="3 3" vertical={false} />

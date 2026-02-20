@@ -273,7 +273,7 @@ export function LanguageSettings() {
         <div className="space-y-3">
           {languages.map((lang) => (
             <Card key={lang.language_code} className="border-0 shadow-md shadow-manzhil-teal/5">
-              <CardContent className="flex items-center justify-between py-4 px-6">
+              <CardContent className="flex items-center justify-between flex-wrap gap-3 py-4 px-6">
                 <div className="flex items-center gap-4">
                   <Languages className="h-5 w-5 text-manzhil-teal" />
                   <div>
@@ -286,7 +286,7 @@ export function LanguageSettings() {
                     <p className="text-xs text-gray-400">Code: {lang.language_code}</p>
                   </div>
                 </div>
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3 shrink-0">
                   <Button
                     variant="outline"
                     size="sm"
@@ -358,7 +358,7 @@ export function LanguageSettings() {
                 placeholder="Search languages (e.g. Urdu, Arabic, Hindi...)"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10"
+                className="pl-10 w-full"
                 autoFocus
               />
             </div>

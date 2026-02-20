@@ -177,13 +177,13 @@ export function VisitorsTable() {
                                 placeholder="Search name, car #, resident..."
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
-                                className="pl-9 w-[240px] border-manzhil-teal/20 focus:border-manzhil-teal"
+                                className="pl-9 w-full sm:w-[240px] border-manzhil-teal/20 focus:border-manzhil-teal"
                             />
                         </div>
 
                         {/* Status Filter */}
                         <Select value={statusFilter} onValueChange={setStatusFilter}>
-                            <SelectTrigger className="w-[130px] border-manzhil-teal/20">
+                            <SelectTrigger className="w-full sm:w-[130px] border-manzhil-teal/20">
                                 <SelectValue placeholder="Status" />
                             </SelectTrigger>
                             <SelectContent>
@@ -196,7 +196,7 @@ export function VisitorsTable() {
 
                         {/* Date Filter */}
                         <Select value={dateFilter} onValueChange={setDateFilter}>
-                            <SelectTrigger className="w-[130px] border-manzhil-teal/20">
+                            <SelectTrigger className="w-full sm:w-[130px] border-manzhil-teal/20">
                                 <SelectValue placeholder="Date" />
                             </SelectTrigger>
                             <SelectContent>

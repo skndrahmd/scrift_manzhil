@@ -267,7 +267,7 @@ export function ExpensesManager({
                                 <DialogTitle>Add New Expense</DialogTitle>
                             </DialogHeader>
                             <div className="grid gap-4 py-4">
-                                <div className="grid grid-cols-2 gap-4">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                     <div className="space-y-2">
                                         <Label htmlFor="add-category">Category</Label>
                                         <Select
@@ -310,7 +310,7 @@ export function ExpensesManager({
                                     />
                                 </div>
 
-                                <div className="grid grid-cols-2 gap-4">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                     <div className="space-y-2">
                                         <Label htmlFor="add-expense_date">Date *</Label>
                                         <Input
@@ -332,7 +332,7 @@ export function ExpensesManager({
                                     </div>
                                 </div>
 
-                                <div className="grid grid-cols-2 gap-4">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                     <div className="space-y-2">
                                         <Label htmlFor="add-payment_method">Payment Method</Label>
                                         <Select
@@ -630,7 +630,7 @@ export function ExpensesManager({
                         <DialogTitle>Edit Expense</DialogTitle>
                     </DialogHeader>
                     <div className="grid gap-4 py-4">
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div className="space-y-2">
                                 <Label htmlFor="edit-category">Category</Label>
                                 <Select
@@ -673,7 +673,7 @@ export function ExpensesManager({
                             />
                         </div>
 
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div className="space-y-2">
                                 <Label htmlFor="edit-expense_date">Date *</Label>
                                 <Input
@@ -695,7 +695,7 @@ export function ExpensesManager({
                             </div>
                         </div>
 
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div className="space-y-2">
                                 <Label htmlFor="edit-payment_method">Payment Method</Label>
                                 <Select

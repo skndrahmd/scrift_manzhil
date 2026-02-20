@@ -259,7 +259,7 @@ export function BookingsTable() {
                                 placeholder="Search bookings..."
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
-                                className="pl-9 w-[180px] border-manzhil-teal/20 focus:border-manzhil-teal"
+                                className="pl-9 w-full sm:w-[180px] border-manzhil-teal/20 focus:border-manzhil-teal"
                             />
                         </div>
 
@@ -268,12 +268,12 @@ export function BookingsTable() {
                             type="date"
                             value={dateFilter}
                             onChange={(e) => setDateFilter(e.target.value)}
-                            className="w-[150px] border-manzhil-teal/20"
+                            className="w-full sm:w-[150px] border-manzhil-teal/20"
                         />
 
                         {/* Status Filter */}
                         <Select value={statusFilter} onValueChange={setStatusFilter}>
-                            <SelectTrigger className="w-[130px] border-manzhil-teal/20">
+                            <SelectTrigger className="w-full sm:w-[130px] border-manzhil-teal/20">
                                 <Filter className="h-4 w-4 mr-2" />
                                 <SelectValue />
                             </SelectTrigger>
@@ -286,7 +286,7 @@ export function BookingsTable() {
 
                         {/* Period Filter */}
                         <Select value={bookingsPeriod} onValueChange={(v) => setBookingsPeriod(v as Period)}>
-                            <SelectTrigger className="w-[130px] border-manzhil-teal/20">
+                            <SelectTrigger className="w-full sm:w-[130px] border-manzhil-teal/20">
                                 <SelectValue placeholder="Period" />
                             </SelectTrigger>
                             <SelectContent>

@@ -31,7 +31,7 @@ export function MonthlyRevenueChart({ summary, loading }: RevenueChartProps) {
                     <CardTitle>Monthly Revenue & Expenses</CardTitle>
                 </CardHeader>
                 <CardContent>
-                    <div className="h-[300px] flex items-center justify-center bg-gray-50 rounded animate-pulse">
+                    <div className="h-[220px] sm:h-[300px] flex items-center justify-center bg-gray-50 rounded animate-pulse">
                         <span className="text-muted-foreground">Loading chart...</span>
                     </div>
                 </CardContent>
@@ -74,7 +74,7 @@ export function MonthlyRevenueChart({ summary, loading }: RevenueChartProps) {
                 </CardTitle>
             </CardHeader>
             <CardContent>
-                <div className="h-[300px]">
+                <div className="h-[220px] sm:h-[300px]">
                     <ResponsiveContainer width="100%" height="100%">
                         <BarChart data={data} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
                             <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
@@ -116,7 +116,7 @@ export function RevenueBreakdownPieChart({ summary, loading }: RevenueChartProps
                     <CardTitle>Revenue Breakdown</CardTitle>
                 </CardHeader>
                 <CardContent>
-                    <div className="h-[250px] flex items-center justify-center bg-gray-50 rounded animate-pulse">
+                    <div className="h-[200px] sm:h-[250px] flex items-center justify-center bg-gray-50 rounded animate-pulse">
                         <span className="text-muted-foreground">Loading chart...</span>
                     </div>
                 </CardContent>
@@ -152,7 +152,7 @@ export function RevenueBreakdownPieChart({ summary, loading }: RevenueChartProps
                     <CardTitle>Revenue Breakdown</CardTitle>
                 </CardHeader>
                 <CardContent>
-                    <div className="h-[250px] flex items-center justify-center text-muted-foreground">
+                    <div className="h-[200px] sm:h-[250px] flex items-center justify-center text-muted-foreground">
                         No revenue data available
                     </div>
                 </CardContent>
@@ -166,7 +166,7 @@ export function RevenueBreakdownPieChart({ summary, loading }: RevenueChartProps
                 <CardTitle>Revenue Breakdown</CardTitle>
             </CardHeader>
             <CardContent>
-                <div className="h-[250px]">
+                <div className="h-[200px] sm:h-[250px]">
                     <ResponsiveContainer width="100%" height="100%">
                         <PieChart>
                             <Pie
@@ -177,8 +177,6 @@ export function RevenueBreakdownPieChart({ summary, loading }: RevenueChartProps
                                 outerRadius={90}
                                 paddingAngle={5}
                                 dataKey="value"
-                                label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                                labelLine={false}
                             >
                                 {data.map((entry, index) => (
                                     <Cell key={`cell-${index}`} fill={entry.color} />

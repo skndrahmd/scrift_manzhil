@@ -350,13 +350,13 @@ export function ParcelsTable() {
                                     placeholder="Search parcels..."
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
-                                    className="pl-9 w-[200px] border-manzhil-teal/20 focus:border-manzhil-teal"
+                                    className="pl-9 w-full sm:w-[200px] border-manzhil-teal/20 focus:border-manzhil-teal"
                                 />
                             </div>
 
                             {/* Status Filter */}
                             <Select value={statusFilter} onValueChange={setStatusFilter}>
-                                <SelectTrigger className="w-[130px] border-manzhil-teal/20">
+                                <SelectTrigger className="w-full sm:w-[130px] border-manzhil-teal/20">
                                     <SelectValue placeholder="Status" />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -834,7 +834,7 @@ export function ParcelsTable() {
                         </div>
 
                         {/* Sender and Courier */}
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div className="space-y-2">
                                 <Label htmlFor="sender">Sender Name (optional)</Label>
                                 <Input

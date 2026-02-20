@@ -1130,6 +1130,7 @@ export default function UnitDetailPage({ params }: { params: { id: string } }) {
                                     </p>
                                 </div>
                             ) : (
+                                <div className="overflow-x-auto">
                                 <Table>
                                     <TableHeader>
                                         <TableRow className="bg-gradient-to-r from-manzhil-teal/5 to-transparent">
@@ -1162,6 +1163,7 @@ export default function UnitDetailPage({ params }: { params: { id: string } }) {
                                         ))}
                                     </TableBody>
                                 </Table>
+                                </div>
                             )}
                         </CardContent>
                     </Card>
@@ -1180,6 +1182,7 @@ export default function UnitDetailPage({ params }: { params: { id: string } }) {
                                 </CardTitle>
                             </CardHeader>
                             <CardContent className="p-0">
+                                <div className="overflow-x-auto">
                                 <Table>
                                     <TableHeader>
                                         <TableRow className="bg-gradient-to-r from-manzhil-teal/5 to-transparent">
@@ -1222,6 +1225,7 @@ export default function UnitDetailPage({ params }: { params: { id: string } }) {
                                         )}
                                     </TableBody>
                                 </Table>
+                                </div>
                             </CardContent>
                         </Card>
 
@@ -1235,6 +1239,7 @@ export default function UnitDetailPage({ params }: { params: { id: string } }) {
                                 </CardTitle>
                             </CardHeader>
                             <CardContent className="p-0">
+                                <div className="overflow-x-auto">
                                 <Table>
                                     <TableHeader>
                                         <TableRow className="bg-gradient-to-r from-manzhil-teal/5 to-transparent">
@@ -1260,6 +1265,7 @@ export default function UnitDetailPage({ params }: { params: { id: string } }) {
                                         )}
                                     </TableBody>
                                 </Table>
+                                </div>
                             </CardContent>
                         </Card>
 
@@ -1273,6 +1279,7 @@ export default function UnitDetailPage({ params }: { params: { id: string } }) {
                                 </CardTitle>
                             </CardHeader>
                             <CardContent className="p-0">
+                                <div className="overflow-x-auto">
                                 <Table>
                                     <TableHeader>
                                         <TableRow className="bg-gradient-to-r from-manzhil-teal/5 to-transparent">
@@ -1300,6 +1307,7 @@ export default function UnitDetailPage({ params }: { params: { id: string } }) {
                                         )}
                                     </TableBody>
                                 </Table>
+                                </div>
                             </CardContent>
                         </Card>
                     </div>
