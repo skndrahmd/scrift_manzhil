@@ -237,7 +237,7 @@ export default function UnitsPage() {
                     <h1 className="text-2xl font-medium text-manzhil-dark">Units</h1>
                     <Badge variant="outline" className="text-sm">{totalUnits} total</Badge>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                     <Button
                         variant="outline"
                         size="sm"
