@@ -323,7 +323,7 @@ function AdminLayoutContent({
     // Always render sidebar layout for all admin pages
     return (
         <AdminContext.Provider value={contextValue}>
-            <div className="flex h-screen bg-gradient-to-br from-gray-50 via-white to-manzhil-teal/5">
+            <div className="flex h-dvh bg-gradient-to-br from-gray-50 via-white to-manzhil-teal/5">
                 {/* Sidebar */}
                 <AdminSidebar
                     newBookingsCount={newBookingsCount}
