@@ -242,6 +242,9 @@ export type Parcel = {
   collected_at: string | null
   created_at: string
   updated_at: string
+  collector_name: string | null
+  collector_phone: string | null
+  collector_cnic: string | null
   profiles?: Profile
 }
 
