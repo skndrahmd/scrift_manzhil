@@ -332,6 +332,7 @@ All API routes are in `app/api/`. Protected admin routes use `verifyAdminAccess(
 | `/api/parcels/upload` | POST | Upload a parcel record with optional image | `parcels` |
 | `/api/parcels/notify` | POST | Notify a resident about a parcel arrival | `parcels`, `profiles` |
 | `/api/parcels/update-status` | POST | Update parcel delivery status | `parcels` |
+| `/api/parcels/collect` | POST | Record parcel collection with collector name, phone, and CNIC | `parcels` |
 
 #### Admin Staff
 
@@ -447,7 +448,7 @@ HARD_RECIPIENT_LIMIT: 100    // Confirmation required
   - `isSuperAdmin()` — checks if the current user is a super admin.
 - **`server.ts`** — Server-side auth utilities. Uses `getUser()` (not `getSession()`) for secure verification.
 - **`client.ts`** — Client-side auth utilities for browser-side operations.
-- **`cache.ts`** — HMAC-signed cookie encoding/decoding for the permission cache (used by middleware).
+- **`cache.ts`** — HMAC-signed cookie encoding/decoding utilities (currently unused — middleware queries DB directly).
 - **`context.tsx`** — React context provider that makes the current user and admin info available throughout the component tree.
 - **`index.ts`** — Re-exports.
 
@@ -481,7 +482,7 @@ Handles all outbound WhatsApp messages via Twilio's Content Template API.
 - **`booking.ts`** — Booking confirmation, payment confirmed, cancellation, reminder
 - **`maintenance.ts`** — Invoice sent, payment reminder, payment confirmed
 - **`complaint.ts`** — Complaint registered, in progress, completed, rejected (+ admin notification)
-- **`parcel.ts`** — Parcel arrival notification
+- **`parcel.ts`** — Parcel arrival and collection notifications
 - **`visitor.ts`** — Visitor arrival notification
 - **`broadcast.ts`** — Broadcast announcement message
 
@@ -694,34 +695,16 @@ These routes skip all middleware checks:
 
 1. **Check session** — Uses Supabase `getUser()` to verify the JWT. If no valid session, redirect to `/login`. If `SUPABASE_SERVICE_ROLE_KEY` is not set, redirect to `/admin/unauthorized` (this env var is required for RBAC).
 
-2. **Check cache** — Looks for an `x-admin-cache` cookie. This is an HMAC-signed JSON payload containing the admin's role and permissions, with a 5-minute TTL.
+2. **Query permissions** — Queries the `admin_users` table to get the user's role and active status. Queries `admin_permissions` for their page access rights. Permissions are checked directly from the database on every request (no caching).
 
-3. **Cache hit** — If valid and not expired, use the cached role and permissions. Skip database queries.
-
-4. **Cache miss** — Query the `admin_users` table to get the user's role and active status. Query `admin_permissions` for their page access rights. Write a new cache cookie.
-
-5. **Authorize** — Map the current URL to a page key (e.g., `/admin/bookings` → `"bookings"`):
+3. **Authorize** — Map the current URL to a page key (e.g., `/admin/bookings` → `"bookings"`):
    - **Super admin**: Access everything.
    - **Staff**: Check if the page key is in their permission list.
    - **Settings page**: Always super admin only, regardless of permissions.
 
-6. **Denied** — If staff lacks access, re-verify from DB (cache might be stale). If still denied, redirect to their first permitted page, or `/admin/unauthorized` if they have no permissions at all.
+4. **Denied** — If staff lacks access, redirect to their first permitted page, or `/admin/unauthorized` if they have no permissions at all.
 
-### The Cache Cookie
-
-The `x-admin-cache` cookie stores:
-```json
-{
-  "userId": "uuid",
-  "role": "super_admin" | "staff",
-  "isActive": true,
-  "adminId": "uuid",
-  "permissionKeys": ["dashboard", "bookings", "complaints"],
-  "expiresAt": 1708000000000
-}
-```
-
-This payload is HMAC-signed with the `SUPABASE_SERVICE_ROLE_KEY` to prevent tampering. The cookie is `httpOnly`, `secure` (in production), and `sameSite: "lax"`.
+> **Note:** `lib/auth/cache.ts` contains HMAC-signed cookie utilities that were previously used for permission caching. The middleware no longer uses these — it queries the database directly on every request.
 
 ---
 
@@ -741,7 +724,7 @@ User visits /login
     → Validates OTP against admin_otp table
     → Creates Supabase auth session
     → Redirects to /admin/dashboard
-  → Middleware sets HMAC permission cache cookie
+  → Middleware verifies admin permissions from DB
 ```
 
 ### Adding a Resident

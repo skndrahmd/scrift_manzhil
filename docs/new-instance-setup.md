@@ -32,7 +32,7 @@ Before starting, ensure you have access to:
 1. Go to **SQL Editor** in Supabase Dashboard
 2. Open `database-complete-schema.sql` from the repo
 3. Paste the entire contents and click **Run**
-4. This creates all 20 tables, RLS policies, indexes, and triggers
+4. This creates all 22 tables, RLS policies, indexes, and triggers
 
 ### 2.3 Run Seed Data
 
@@ -40,8 +40,9 @@ Run these SQL files in order in the SQL Editor:
 
 1. `database-seed-bot-messages.sql` — Seeds ~115 bot message templates
 2. `database-seed-whatsapp-templates.sql` — Seeds 20 WhatsApp template records
+3. `sql/database-seed-label-messages.sql` — Seeds 10 translatable label message keys
 
-Both use `ON CONFLICT DO NOTHING`, so they're safe to re-run.
+All use `ON CONFLICT DO NOTHING`, so they're safe to re-run.
 
 ### 2.4 Create Storage Buckets
 
@@ -111,6 +112,7 @@ Each template returns an `HX` SID. You need templates for:
 | Pending Complaint (Admin) | `TWILIO_PENDING_COMPLAINT_TEMPLATE_SID` | `complaint_id`, `category` |
 | Daily Report (Admin) | `TWILIO_DAILY_REPORT_TEMPLATE_SID` | `date`, `summary` |
 | Parcel Arrival | `TWILIO_PARCEL_ARRIVAL_TEMPLATE_SID` | `resident_name`, `apartment_number`, `description`, `sender_name` |
+| Parcel Collection | `TWILIO_PARCEL_COLLECTION_TEMPLATE_SID` | `resident_name`, `apartment_number`, `collector_name` |
 | Visitor Arrival | `TWILIO_VISITOR_ARRIVAL_TEMPLATE_SID` | `resident_name`, `apartment_number`, `visit_date` |
 | Broadcast Announcement | `TWILIO_BROADCAST_ANNOUNCEMENT_TEMPLATE_SID` | `variable1`, `variable2` |
 | OTP Code | `TWILIO_OTP_TEMPLATE_SID` | `otp_code` |
@@ -423,6 +425,11 @@ POLICIES_PDF_URL=https://xxxx.supabase.co/storage/...
 CRON_SECRET=random_secret_string
 
 # ============================================
+# GOOGLE TRANSLATE (optional - for multilingual bot features)
+# ============================================
+GOOGLE_TRANSLATE_API_KEY=your_google_translate_api_key
+
+# ============================================
 # TWILIO TEMPLATE SIDs (20 total)
 # ============================================
 TWILIO_WELCOME_TEMPLATE_SID=HXxxxx
@@ -442,6 +449,7 @@ TWILIO_NEW_COMPLAINT_TEMPLATE_SID=HXxxxx
 TWILIO_PENDING_COMPLAINT_TEMPLATE_SID=HXxxxx
 TWILIO_DAILY_REPORT_TEMPLATE_SID=HXxxxx
 TWILIO_PARCEL_ARRIVAL_TEMPLATE_SID=HXxxxx
+TWILIO_PARCEL_COLLECTION_TEMPLATE_SID=HXxxxx
 TWILIO_VISITOR_ARRIVAL_TEMPLATE_SID=HXxxxx
 TWILIO_BROADCAST_ANNOUNCEMENT_TEMPLATE_SID=HXxxxx
 TWILIO_OTP_TEMPLATE_SID=HXxxxx
@@ -474,6 +482,8 @@ TWILIO_STAFF_INVITATION_TEMPLATE_SID=HXxxxx
 | 18 | `bot_messages` | Customizable bot messages |
 | 19 | `whatsapp_templates` | Twilio template SID management |
 | 20 | `admin_otp` | WhatsApp OTP codes |
+| 21 | `enabled_languages` | Enabled languages for multilingual bot |
+| 22 | `bot_message_translations` | Per-language translated bot messages |
 
 ---
 
@@ -482,7 +492,7 @@ TWILIO_STAFF_INVITATION_TEMPLATE_SID=HXxxxx
 For experienced developers, here's the condensed version:
 
 1. [ ] Create Supabase project, run `database-complete-schema.sql`
-2. [ ] Run `database-seed-bot-messages.sql` and `database-seed-whatsapp-templates.sql`
+2. [ ] Run `database-seed-bot-messages.sql`, `database-seed-whatsapp-templates.sql`, and `sql/database-seed-label-messages.sql`
 3. [ ] Create storage buckets: `cnic-images`, `parcel-images`, `parcels`, `policies`
 4. [ ] Upload policies PDF, get signed URL
 5. [ ] Set up Twilio WhatsApp sender, create 20 templates, collect SIDs

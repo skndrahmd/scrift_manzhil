@@ -130,7 +130,8 @@ app/
 │   │   ├── list/
 │   │   ├── upload/
 │   │   ├── notify/
-│   │   └── update-status/
+│   │   ├── update-status/
+│   │   └── collect/        # Collect parcel with handoff info
 │   ├── visitors/           # Visitor APIs
 │   │   └── notify-arrival/
 │   ├── cron/               # Scheduled job endpoints
@@ -167,13 +168,48 @@ app/
 └── policies/               # Privacy/terms route
 
 lib/
-├── supabase.ts             # Database clients, types & constants
-├── api-auth.ts             # API route authentication helpers
-├── auth-server.ts          # Server-side auth utilities
-├── auth-client.ts          # Client-side auth utilities
-├── auth-context.tsx        # Auth React context provider
-├── middleware-cache.ts     # HMAC-signed permission cookie cache
-├── google-translate.ts    # Google Translate API v2 with placeholder protection
+├── admin/
+│   └── notifications.ts    # Dynamic admin notification recipients
+├── auth/                   # Authentication & authorization
+│   ├── api-auth.ts         # API route authentication helpers
+│   ├── cache.ts            # HMAC cache utilities (currently unused by middleware)
+│   ├── client.ts           # Client-side auth utilities
+│   ├── context.tsx         # Auth React context provider
+│   ├── index.ts            # Re-exports
+│   └── server.ts           # Server-side auth utilities
+├── bulk-import/            # Resident CSV import logic
+│   ├── index.ts
+│   ├── parser.ts
+│   └── validation.ts
+├── bulk-import-units/      # Unit CSV import logic
+│   ├── index.ts
+│   ├── parser.ts
+│   └── validation.ts
+├── date/                   # Pakistan timezone utilities
+│   ├── constants.ts        # PST timezone constant and locale settings
+│   ├── formatting.ts       # formatDateTimePK(), getPakistanTime()
+│   ├── index.ts            # Re-exports
+│   ├── parsing.ts          # Date parsing utilities
+│   └── time-slots.ts       # Booking time slot generation
+├── google-translate.ts     # Google Translate API v2 with placeholder protection
+├── pdf/                    # PDF generation & CSV export
+│   ├── csv-export.ts       # CSV export for all report types
+│   ├── index.ts            # Re-exports
+│   ├── invoice.ts          # Invoice PDF generation
+│   ├── reporting.ts        # Period filtering (all, daily, weekly, monthly, yearly)
+│   ├── reports.ts          # PDF report generation (5 report types)
+│   ├── theme.ts            # Shared PDF styling & helpers
+│   └── utils.ts            # PDF utility functions
+├── services/               # Shared business logic (service layer)
+│   ├── booking.ts          # Booking payment status updates & confirmations
+│   ├── broadcast.ts        # Broadcast message sending with rate limiting
+│   ├── complaint.ts        # Complaint status updates & notifications
+│   └── maintenance.ts      # Maintenance payment processing & confirmations
+├── supabase/               # Database clients, types & constants
+│   ├── client.ts           # supabase (anon) and supabaseAdmin (service role) clients
+│   ├── constants.ts        # PAGE_KEYS, BROADCAST_LIMITS
+│   ├── index.ts            # Re-exports
+│   └── types.ts            # TypeScript type definitions
 ├── twilio/                 # Twilio WhatsApp integration
 │   ├── client.ts           # Twilio client singleton
 │   ├── send.ts             # Message sending logic
@@ -187,49 +223,31 @@ lib/
 │       ├── broadcast.ts    # Broadcast announcements
 │       ├── complaint.ts    # Complaint status updates
 │       ├── maintenance.ts  # Invoice & payment confirmations
-│       ├── parcel.ts       # Parcel arrival notifications
+│       ├── parcel.ts       # Parcel arrival & collection notifications
 │       ├── visitor.ts      # Visitor arrival notifications
 │       └── index.ts        # Re-exports
-├── webhook/                # WhatsApp conversational bot system
-│   ├── index.ts            # Module re-exports
-│   ├── router.ts           # Message routing logic
-│   ├── state.ts            # Conversation state management
-│   ├── menu.ts             # Menu display builders
-│   ├── profile.ts          # Profile lookup & data queries
-│   ├── config.ts           # Bot configuration & constants
-│   ├── types.ts            # Webhook-specific types
-│   ├── utils.ts            # Formatting & validation helpers
-│   ├── messages.ts         # DB-backed message loader with 5-min cache; getLabels() for translated menu labels
-│   ├── message-keys.ts     # TypeScript constants for all ~125 message keys (includes 10 label keys)
-│   ├── message-defaults.ts # Hardcoded fallback defaults for all messages (includes 10 label defaults)
-│   └── handlers/           # Conversation flow handlers
-│       ├── index.ts
-│       ├── booking.ts      # Hall booking flow
-│       ├── complaint.ts    # Complaint registration flow
-│       ├── feedback.ts     # Feedback submission flow
-│       ├── hall.ts         # Hall info & availability
-│       ├── staff.ts        # Staff management flow
-│       ├── status.ts       # Status check flow
-│       └── visitor.ts      # Visitor pass flow
-├── admin/
-│   └── notifications.ts    # Dynamic admin notification recipients
-├── bulk-import/            # Resident CSV import logic
-│   ├── index.ts
-│   ├── parser.ts
-│   └── validation.ts
-├── bulk-import-units/      # Unit CSV import logic
-│   ├── index.ts
-│   ├── parser.ts
-│   └── validation.ts
-├── accounting-reports.ts   # PDF report generation (5 report types)
-├── csv-export.ts           # CSV export for all report types
-├── reporting.ts            # Period filtering (all, daily, weekly, monthly, yearly)
-├── pdf-theme.ts            # Shared PDF styling & helpers
-├── pdf.ts                  # PDF utility functions
-├── invoice.ts              # Invoice PDF generation
-├── dateUtils.ts            # Date/time formatting (Pakistan timezone)
-├── time-utils.ts           # Additional time utilities
-└── utils.ts                # General utility functions
+├── utils.ts                # General utility functions
+└── webhook/                # WhatsApp conversational bot system
+    ├── index.ts            # Module re-exports
+    ├── router.ts           # Message routing logic
+    ├── state.ts            # Conversation state management
+    ├── menu.ts             # Menu display builders
+    ├── profile.ts          # Profile lookup & data queries
+    ├── config.ts           # Bot configuration & constants
+    ├── types.ts            # Webhook-specific types
+    ├── utils.ts            # Formatting & validation helpers
+    ├── messages.ts         # DB-backed message loader with 5-min cache; getLabels() for translated menu labels
+    ├── message-keys.ts     # TypeScript constants for all ~125 message keys (includes 10 label keys)
+    ├── message-defaults.ts # Hardcoded fallback defaults for all messages (includes 10 label defaults)
+    └── handlers/           # Conversation flow handlers
+        ├── index.ts
+        ├── booking.ts      # Hall booking flow
+        ├── complaint.ts    # Complaint registration flow
+        ├── feedback.ts     # Feedback submission flow
+        ├── hall.ts         # Hall info & availability
+        ├── staff.ts        # Staff management flow
+        ├── status.ts       # Status check flow
+        └── visitor.ts      # Visitor pass flow
 
 components/
 ├── ui/                     # Radix UI components (50+ components)
@@ -287,7 +305,7 @@ middleware.ts               # Authentication & RBAC route protection
 **3. Admin RBAC**
 - Two roles: `super_admin` (full access) and `staff` (permission-based)
 - Permissions stored in `admin_permissions` table per page
-- API routes use `verifyAdminAccess(pageKey)` from `lib/api-auth.ts`
+- API routes use `verifyAdminAccess(pageKey)` from `lib/auth`
 - Page keys (12 total):
   ```typescript
   PageKey = "dashboard" | "residents" | "units" | "bookings" | "complaints" |
@@ -296,17 +314,16 @@ middleware.ts               # Authentication & RBAC route protection
   ```
 - Settings page restricted to super admins only
 
-**4. Middleware Permission Caching**
-- Permission results are cached in an HMAC-signed cookie (`x-admin-cache`) with 5-minute TTL
-- Uses Web Crypto API (Edge Runtime compatible)
-- Cookie payload: `{ userId, role, isActive, adminId, permissionKeys, expiresAt }`
-- Signed with `SUPABASE_SERVICE_ROLE_KEY` as HMAC secret
-- On cache miss or expiry, middleware queries DB and sets a fresh cookie
-- On permission denial, middleware re-verifies from DB before redirecting (handles stale cache)
+**4. Middleware Permission Checks**
+- Permissions are queried directly from the database on every request (no caching)
+- Middleware queries `admin_users` and `admin_permissions` tables
+- Super admins bypass all permission checks
+- Staff members are checked against their `admin_permissions` entries
+- Note: `lib/auth/cache.ts` contains HMAC cache utilities (currently unused)
 
 **5. Database Architecture**
 - **Row Level Security (RLS)** enabled on all tables
-- Service role client (`supabaseAdmin` from `lib/supabase.ts`) bypasses RLS for admin operations
+- Service role client (`supabaseAdmin` from `lib/supabase/`) bypasses RLS for admin operations
 - Regular client (`supabase`) for user-facing operations
 
 **6. WhatsApp Integration**
@@ -320,7 +337,7 @@ middleware.ts               # Authentication & RBAC route protection
 
 **7. Broadcast Messaging System**
 - Located in `app/api/broadcast/`
-- Rate limiting constants in `BROADCAST_LIMITS` object in `lib/supabase.ts`:
+- Rate limiting constants in `BROADCAST_LIMITS` object in `lib/supabase/constants.ts`:
   - `DAILY_MESSAGE_LIMIT`: 250 messages/day
   - `MESSAGE_DELAY_MS`: 3 seconds between messages
   - `BATCH_SIZE`: 20 messages per batch
@@ -352,16 +369,23 @@ middleware.ts               # Authentication & RBAC route protection
 - All functions query `admin_users` for active admins with non-null phone numbers
 - Returns empty array if no recipients are configured
 
-**10. PDF Generation & Reports**
-- Uses jsPDF for server-side PDF rendering with shared theme (`lib/pdf-theme.ts`)
-- `lib/accounting-reports.ts` — 5 PDF report types:
+**10. Service Layer (`lib/services/`)**
+- Shared business logic used by both API routes and cron jobs
+- `booking.ts` — Booking payment status updates, WhatsApp confirmations, transaction creation
+- `broadcast.ts` — Broadcast message sending with rate limiting
+- `complaint.ts` — Complaint status updates and notifications; exports `ServiceError` class
+- `maintenance.ts` — Maintenance payment processing and confirmations
+
+**11. PDF Generation & Reports**
+- Uses jsPDF for server-side PDF rendering with shared theme (`lib/pdf/theme.ts`)
+- `lib/pdf/reports.ts` — 5 PDF report types:
   - Income Statement
   - Collection Report
   - Expense Report
   - Outstanding Dues Report
   - Annual Summary
-- `lib/csv-export.ts` — CSV export for all report types
-- `lib/reporting.ts` — Period filtering: `"all" | "daily" | "weekly" | "monthly" | "yearly"`
+- `lib/pdf/csv-export.ts` — CSV export for all report types
+- `lib/pdf/reporting.ts` — Period filtering: `"all" | "daily" | "weekly" | "monthly" | "yearly"`
 - Invoice generation: `lib/pdf/invoice.ts`
   - `generateMaintenanceInvoicePdf(payment, summary?)` — returns `{ blob, fileName }`
   - `generateBookingInvoicePdf(booking)` — returns `{ blob, fileName }`
@@ -369,22 +393,22 @@ middleware.ts               # Authentication & RBAC route protection
 - Public routes for PDF access (no auth required)
 - **Admin inline downloads:** Unit detail page (`/admin/units/[id]`) has download buttons for maintenance and booking invoices (client-side PDF generation via `lib/pdf/invoice.ts`)
 
-**11. Accounting Module**
+**12. Accounting Module**
 - Unified transaction tracking system
 - Types: booking income, maintenance income, other income, expenses, refunds
-- Financial summaries and reports in `lib/accounting-reports.ts`
+- Financial summaries and reports in `lib/pdf/reports.ts`
 - Expense categories with icons and colors
 - CSV export functionality for all report types
 - Transactions table includes an Invoice column — for `booking_income` and `maintenance_income` rows with a `reference_id`, a button opens the public invoice page (`/maintenance-invoice/[id]` or `/booking-invoice/[id]`) in a new tab
 
-**12. Realtime Features**
+**13. Realtime Features**
 - Supabase Realtime configured for:
   - Complaints dashboard (live status updates)
   - Booking availability (live slot updates)
   - Resident profile changes
-- Configuration in `lib/supabase.ts`: `eventsPerSecond: 10`
+- Configuration in `lib/supabase/client.ts`: `eventsPerSecond: 10`
 
-**13. Bot Message Customization**
+**14. Bot Message Customization**
 - All ~115 WhatsApp bot messages are stored in the `bot_messages` database table
 - Admin UI at `/admin/settings/bot-messages` (super_admin only) allows editing all messages without code changes
 - Core module: `lib/webhook/messages.ts` with `getMessage(key, variables?)` function
@@ -396,7 +420,7 @@ middleware.ts               # Authentication & RBAC route protection
 - API routes: `GET /api/bot-messages` (list all), `PATCH /api/bot-messages/[key]` (update/reset)
 - Seed data: `database-seed-bot-messages.sql` (idempotent, uses `ON CONFLICT DO NOTHING`)
 
-**14. WhatsApp Template Management**
+**15. WhatsApp Template Management**
 - All 20 Twilio Content Template SIDs are managed via the `whatsapp_templates` database table
 - Admin UI at `/admin/settings/whatsapp-templates` (super_admin only) — view triggers, edit SIDs, test send, create drafts
 - `getTemplateSid()` in `lib/twilio/templates.ts` queries DB first, falls back to env vars
@@ -406,7 +430,7 @@ middleware.ts               # Authentication & RBAC route protection
 - API routes: `GET/POST /api/whatsapp-templates`, `PATCH/DELETE /api/whatsapp-templates/[key]`, `POST /api/whatsapp-templates/test-send`
 - Seed data: `database-seed-whatsapp-templates.sql` (idempotent, uses `ON CONFLICT DO NOTHING`)
 
-**15. Multilingual Translation System**
+**16. Multilingual Translation System**
 - WhatsApp bot supports multilingual responses; residents select preferred language via menu option "0"
 - Translations stored in `bot_message_translations` table, keyed by `(message_key, language_code)`
 - Enabled languages managed in `enabled_languages` table with sort order and toggle
@@ -430,7 +454,7 @@ middleware.ts               # Authentication & RBAC route protection
 **Always use the correct client:**
 ```typescript
 // For user-facing operations (respects RLS)
-import { supabase } from '@/lib/supabase'
+import { supabase } from '@/lib/supabase'   // barrel re-export from lib/supabase/index.ts
 
 // For admin operations (bypasses RLS)
 import { supabaseAdmin } from '@/lib/supabase'
@@ -454,7 +478,7 @@ if (error) {
 
 **For protected admin routes:**
 ```typescript
-import { verifyAdminAccess, isSuperAdmin } from '@/lib/api-auth'
+import { verifyAdminAccess, isSuperAdmin } from '@/lib/auth'
 
 export async function GET() {
   // Check page-specific access
@@ -491,10 +515,10 @@ Common template variables:
 ### Date and Time Handling
 
 **CRITICAL:** This system uses **PST (Pakistan Standard Time, UTC+5)**
-- All date conversions in `lib/dateUtils.ts` and `lib/time-utils.ts`
+- All date conversions in `lib/date/formatting.ts` and `lib/date/parsing.ts`
 - Always use `formatDateTimePK()` for display formatting
 - Database stores timestamps in UTC, convert for Pakistan timezone when displaying
-- Booking slots calculated in local time (`lib/dateUtils.ts:generateTimeSlots()`)
+- Booking slots calculated in local time (`lib/date/time-slots.ts:generateTimeSlots()`)
 
 ## Environment Variables
 
@@ -571,10 +595,8 @@ Complete schema in `database-complete-schema.sql` — all 22 tables, RLS policie
 - See `vercel.json` for cron schedules
 
 **Alternative: Hostinger VPS + Docker**
-- Docker compose file archived at `docs-archive/docker-compose.yml`
-- Nginx config: `docs-archive/nginx.conf`
-- Cron setup script: `docs-archive/setup-cron.sh`
-- Setup guides in `docs-archive/setup-guides/`
+- `Dockerfile` at project root for containerized deployment
+- See `docs/` directory for setup guides and configuration references
 
 ## Common Tasks
 
@@ -644,7 +666,7 @@ Complete schema in `database-complete-schema.sql` — all 22 tables, RLS policie
 
 ### Modifying Booking Slots
 1. Update `booking_settings` table in database
-2. Slot calculations automatically update (see `lib/dateUtils.ts:generateTimeSlots()`)
+2. Slot calculations automatically update (see `lib/date/time-slots.ts:generateTimeSlots()`)
 
 ## Path Aliases
 
@@ -661,7 +683,7 @@ import { Button } from '@/components/ui/button'
 3. **Timezone handling** — Always use `getPakistanTime()` from `lib/date` instead of `new Date()` for any date comparisons or "today" calculations. `new Date()` returns UTC on Vercel, which is wrong for Pakistan (UTC+5).
 4. **PDF generation** — Memory-intensive, may need optimization for large reports
 5. **Broadcast rate limits** — 250 messages/day, soft limit at 50 recipients, hard limit at 100
-6. **Permission cache** — HMAC-signed cookie with 5-min TTL; on denial, middleware re-verifies from DB
+6. **Permission checks** — Middleware queries DB directly on every request (no caching)
 7. **SUPABASE_SERVICE_ROLE_KEY is required** — Middleware redirects to `/admin/unauthorized` if this env var is missing. It is not optional.
 8. **Supabase storage** — CNIC and parcel images stored in Supabase Storage buckets
 9. **Schema completeness** — `database-complete-schema.sql` contains all 22 tables for a fresh install
@@ -669,7 +691,7 @@ import { Button } from '@/components/ui/button'
 
 ## Additional Documentation
 
-- `docs-archive/` — Setup guides, troubleshooting, Docker configs, template examples
+- `docs/` — Developer guide, new instance setup guide, and other documentation
 - `database-complete-schema.sql` — Complete database setup (all 22 tables)
 - `database-seed-bot-messages.sql` — Seed data for all ~125 bot messages (includes 10 label keys)
 - `database-seed-whatsapp-templates.sql` — Seed data for all 20 WhatsApp templates
