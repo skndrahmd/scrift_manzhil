@@ -87,6 +87,7 @@ const CATEGORY_LABELS: Record<string, string> = {
   parcel: "Parcels",
   visitor: "Visitors",
   broadcast: "Broadcast",
+  payment: "Payment",
   auth: "Auth",
   admin: "Admin",
 }
@@ -99,6 +100,7 @@ const CATEGORY_ORDER = [
   "parcel",
   "visitor",
   "broadcast",
+  "payment",
   "auth",
   "admin",
 ]

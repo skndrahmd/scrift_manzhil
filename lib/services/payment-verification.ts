@@ -5,7 +5,8 @@
  */
 import { supabaseAdmin } from "@/lib/supabase"
 import { getPakistanISOString } from "@/lib/date"
-import { sendMessage } from "@/lib/twilio/send"
+import { sendWithFallback } from "@/lib/twilio/send"
+import { getTemplateSid } from "@/lib/twilio/templates"
 import { getMessage } from "@/lib/webhook/messages"
 import { MSG } from "@/lib/webhook/message-keys"
 import { updateMaintenancePaymentStatus } from "./maintenance"
@@ -120,8 +121,14 @@ export async function updatePaymentVerificationStatus(
     // but we also send our custom approval message)
     if (profile?.phone_number) {
       try {
-        const msg = await getMessage(MSG.PAYMENT_APPROVED, { description, amount: String(amount) })
-        await sendMessage(profile.phone_number, msg)
+        const templateSid = await getTemplateSid("payment_approved")
+        const fallback = await getMessage(MSG.PAYMENT_APPROVED, { description, amount: String(amount) })
+        await sendWithFallback(
+          profile.phone_number,
+          templateSid,
+          { "1": profile.name || "Resident", "2": description, "3": String(amount) },
+          fallback
+        )
       } catch (notifyError) {
         console.error("[PaymentVerification] Failed to send approval notification:", notifyError)
       }
@@ -130,11 +137,17 @@ export async function updatePaymentVerificationStatus(
     // Send rejection WhatsApp
     if (profile?.phone_number) {
       try {
-        const msg = await getMessage(MSG.PAYMENT_REJECTED, {
+        const templateSid = await getTemplateSid("payment_rejected")
+        const fallback = await getMessage(MSG.PAYMENT_REJECTED, {
           description,
           reason: rejectionReason!.trim(),
         })
-        await sendMessage(profile.phone_number, msg)
+        await sendWithFallback(
+          profile.phone_number,
+          templateSid,
+          { "1": profile.name || "Resident", "2": description, "3": rejectionReason!.trim() },
+          fallback
+        )
       } catch (notifyError) {
         console.error("[PaymentVerification] Failed to send rejection notification:", notifyError)
       }

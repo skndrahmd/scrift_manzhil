@@ -83,6 +83,14 @@ VALUES
 ON CONFLICT (template_key) DO NOTHING;
 
 
+-- Payment Templates (2)
+INSERT INTO whatsapp_templates (template_key, name, description, category, env_var_name, variables, trigger_description, trigger_source, fallback_message, sort_order)
+VALUES
+  ('payment_approved', 'Payment Approved', 'Confirmation sent to resident when admin approves a payment receipt', 'payment', 'TWILIO_PAYMENT_APPROVED_TEMPLATE_SID', '[{"key":"1","label":"Resident Name","description":"Full name of the resident","example":"Ahmed Khan"},{"key":"2","label":"Description","description":"Payment description (e.g. Maintenance - January 2026)","example":"Maintenance - January 2026"},{"key":"3","label":"Amount","description":"Formatted payment amount","example":"5,000"}]'::jsonb, 'Sent when admin approves a payment receipt from the Accounting > Verifications tab', 'lib/services/payment-verification.ts', E'Hello, this is Manzhil by Scrift.\n\nHi {{1}}, your payment for {{2}} (Rs. {{3}}) has been verified and marked as paid.\n\nThank you for your timely payment.', 1),
+
+  ('payment_rejected', 'Payment Rejected', 'Notification sent to resident when admin rejects a payment receipt', 'payment', 'TWILIO_PAYMENT_REJECTED_TEMPLATE_SID', '[{"key":"1","label":"Resident Name","description":"Full name of the resident","example":"Ahmed Khan"},{"key":"2","label":"Description","description":"Payment description (e.g. Maintenance - January 2026)","example":"Maintenance - January 2026"},{"key":"3","label":"Reason","description":"Reason for rejection provided by admin","example":"Receipt image is unclear"}]'::jsonb, 'Sent when admin rejects a payment receipt from the Accounting > Verifications tab', 'lib/services/payment-verification.ts', E'Hello, this is Manzhil by Scrift.\n\nHi {{1}}, your receipt for {{2}} was not accepted.\n\nReason: {{3}}\n\nPlease submit a valid receipt again.', 2)
+ON CONFLICT (template_key) DO NOTHING;
+
 -- ============================================
 -- Suggested Template Bodies (message_body_draft)
 -- ============================================
@@ -162,3 +170,10 @@ WHERE template_key = 'daily_report' AND message_body_draft IS NULL;
 
 UPDATE whatsapp_templates SET message_body_draft = E'Hello, this is Manzhil by Scrift.\n\nPending Complaint Alert\n\nComplaint ID: {{1}}\nResident: {{2}} (Apt {{3}})\nCategory: {{4}}\nType: {{5}}\nDescription: {{6}}\n\nRegistered: {{7}}\nPending for: {{8}} hours\n\nView in admin panel:\n{{9}}'
 WHERE template_key = 'pending_complaint' AND message_body_draft IS NULL;
+
+-- Payment Templates
+UPDATE whatsapp_templates SET message_body_draft = E'Hello, this is Manzhil by Scrift.\n\nHi {{1}}, your payment for {{2}} (Rs. {{3}}) has been verified and marked as paid.\n\nThank you for your timely payment.'
+WHERE template_key = 'payment_approved' AND message_body_draft IS NULL;
+
+UPDATE whatsapp_templates SET message_body_draft = E'Hello, this is Manzhil by Scrift.\n\nHi {{1}}, your receipt for {{2}} was not accepted.\n\nReason: {{3}}\n\nPlease submit a valid receipt again.'
+WHERE template_key = 'payment_rejected' AND message_body_draft IS NULL;

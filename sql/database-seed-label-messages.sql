@@ -9,7 +9,7 @@
 INSERT INTO bot_messages (message_key, flow_group, label, description, default_text, variables, sort_order)
 VALUES
   ('labels.main_menu_options', 'main_menu', 'Main Menu Options', 'Main menu option labels (one per line)',
-   E'Register Complaint\nCheck Complaint Status\nCancel Complaint\nMy Staff Management\nCheck Maintenance Dues\nCommunity Hall\nVisitor Entry Pass\nView My Profile\nSuggestions/Feedback\nEmergency Contacts',
+   E'Register Complaint\nCheck Complaint Status\nCancel Complaint\nMy Staff Management\nCheck Maintenance Dues\nCommunity Hall\nVisitor Entry Pass\nView My Profile\nSuggestions/Feedback\nEmergency Contacts\nSubmit Payment',
    '[]'::jsonb, 100),
 
   ('labels.hall_menu_options', 'booking', 'Hall Menu Options', 'Hall menu option labels (one per line)',
@@ -49,3 +49,9 @@ VALUES
    '[]'::jsonb, 109)
 
 ON CONFLICT (message_key) DO NOTHING;
+
+-- Fix existing installs where labels.main_menu_options was seeded with only 10 items
+UPDATE bot_messages
+SET default_text = E'Register Complaint\nCheck Complaint Status\nCancel Complaint\nMy Staff Management\nCheck Maintenance Dues\nCommunity Hall\nVisitor Entry Pass\nView My Profile\nSuggestions/Feedback\nEmergency Contacts\nSubmit Payment'
+WHERE message_key = 'labels.main_menu_options'
+  AND default_text NOT LIKE '%Submit Payment%';

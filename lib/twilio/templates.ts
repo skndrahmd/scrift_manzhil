@@ -50,6 +50,10 @@ export const TEMPLATE_SIDS: Record<TemplateType, string | undefined> = {
   // Admin templates
   daily_report: process.env.TWILIO_DAILY_REPORT_TEMPLATE_SID,
   pending_complaint: process.env.TWILIO_PENDING_COMPLAINT_TEMPLATE_SID,
+
+  // Payment verification templates
+  payment_approved: process.env.TWILIO_PAYMENT_APPROVED_TEMPLATE_SID,
+  payment_rejected: process.env.TWILIO_PAYMENT_REJECTED_TEMPLATE_SID,
 }
 
 /**

@@ -1317,7 +1317,7 @@ ON CONFLICT (message_key) DO NOTHING;
 INSERT INTO bot_messages (message_key, flow_group, label, description, default_text, variables, sort_order)
 VALUES
   ('labels.main_menu_options', 'main_menu', 'Main Menu Options', 'Main menu option labels (one per line)',
-   E'Register Complaint\nCheck Complaint Status\nCancel Complaint\nMy Staff Management\nCheck Maintenance Dues\nCommunity Hall\nVisitor Entry Pass\nView My Profile\nSuggestions/Feedback\nEmergency Contacts',
+   E'Register Complaint\nCheck Complaint Status\nCancel Complaint\nMy Staff Management\nCheck Maintenance Dues\nCommunity Hall\nVisitor Entry Pass\nView My Profile\nSuggestions/Feedback\nEmergency Contacts\nSubmit Payment',
    '[]'::jsonb, 100),
 
   ('labels.hall_menu_options', 'booking', 'Hall Menu Options', 'Hall menu option labels (one per line)',

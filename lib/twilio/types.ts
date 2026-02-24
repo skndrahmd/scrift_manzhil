@@ -33,6 +33,8 @@ export type TemplateType =
   | "staff_invitation"
   | "daily_report"
   | "pending_complaint"
+  | "payment_approved"
+  | "payment_rejected"
 
 // Base notification params (common to all)
 export interface BaseNotificationParams {
