@@ -33,6 +33,7 @@ interface SidebarProps {
     newFeedbackCount?: number
     newVisitorsCount?: number
     newParcelsCount?: number
+    pendingVerificationsCount?: number
     userRole?: "super_admin" | "staff" | null
     permissions?: Map<PageKey, boolean>
 }
@@ -101,6 +102,7 @@ const navItems = [
         title: "Accounting",
         href: "/admin/accounting",
         icon: Wallet,
+        badgeKey: "accounting" as const,
         pageKey: "accounting" as PageKey,
     },
     {
@@ -123,6 +125,7 @@ export function AdminSidebar({
     newFeedbackCount = 0,
     newVisitorsCount = 0,
     newParcelsCount = 0,
+    pendingVerificationsCount = 0,
     userRole = null,
     permissions = new Map(),
 }: SidebarProps) {
@@ -143,7 +146,7 @@ export function AdminSidebar({
         localStorage.setItem("admin-sidebar-collapsed", String(newState))
     }
 
-    const getBadgeCount = (badgeKey?: "bookings" | "complaints" | "feedback" | "visitors" | "parcels") => {
+    const getBadgeCount = (badgeKey?: "bookings" | "complaints" | "feedback" | "visitors" | "parcels" | "accounting") => {
         if (!badgeKey) return 0
         switch (badgeKey) {
             case "bookings":
@@ -156,6 +159,8 @@ export function AdminSidebar({
                 return newVisitorsCount
             case "parcels":
                 return newParcelsCount
+            case "accounting":
+                return pendingVerificationsCount
             default:
                 return 0
         }

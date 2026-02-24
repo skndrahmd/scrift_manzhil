@@ -9,10 +9,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Settings, Save, Users, Calendar, MessageSquare, Send, Globe } from "lucide-react"
+import { Settings, Save, Users, Calendar, MessageSquare, Send, Globe, CreditCard } from "lucide-react"
 import Link from "next/link"
 import { useToast } from "@/hooks/use-toast"
 import { StaffManagement } from "./staff-management"
+import { PaymentMethodsManager } from "./payment-methods-manager"
 
 const WEEKDAYS = [
     { label: "Monday", value: 1 },
@@ -78,7 +79,7 @@ export function SettingsForm() {
 
             {isSuperAdmin ? (
                 <Tabs defaultValue="booking" className="w-full">
-                    <TabsList className="flex w-full max-w-3xl">
+                    <TabsList className="flex w-full max-w-4xl">
                         <TabsTrigger value="booking" className="flex flex-1 items-center gap-2">
                             <Calendar className="h-4 w-4 shrink-0" />
                             <span className="hidden sm:inline">Booking Settings</span>
@@ -98,6 +99,10 @@ export function SettingsForm() {
                         <TabsTrigger value="languages" className="flex flex-1 items-center gap-2">
                             <Globe className="h-4 w-4 shrink-0" />
                             <span className="hidden sm:inline">Languages</span>
+                        </TabsTrigger>
+                        <TabsTrigger value="payments" className="flex flex-1 items-center gap-2">
+                            <CreditCard className="h-4 w-4 shrink-0" />
+                            <span className="hidden sm:inline">Payments</span>
                         </TabsTrigger>
                     </TabsList>
 
@@ -171,6 +176,10 @@ export function SettingsForm() {
                                 </Link>
                             </CardContent>
                         </Card>
+                    </TabsContent>
+
+                    <TabsContent value="payments" className="mt-6">
+                        <PaymentMethodsManager />
                     </TabsContent>
                 </Tabs>
             ) : (

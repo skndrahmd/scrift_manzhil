@@ -15,6 +15,7 @@ export type FlowType =
   | "feedback"
   | "hall"
   | "visitor"
+  | "payment"
 
 /**
  * Complaint data structure during conversation
@@ -56,6 +57,17 @@ export interface VisitorData {
 }
 
 /**
+ * Payment data structure during conversation
+ */
+export interface PaymentData {
+  payment_type?: 'maintenance' | 'booking'
+  selected_payment_id?: string
+  amount?: number
+  description?: string
+  unit_id?: string
+}
+
+/**
  * Media info from WhatsApp/Twilio
  */
 export interface MediaInfo {
@@ -79,6 +91,7 @@ export interface UserState {
   booking?: any
   bookingList?: any[]
   visitor?: VisitorData
+  payment?: PaymentData
   language?: string
 }
 

@@ -30,6 +30,8 @@ import {
   handleCancelFlow,
   initializeVisitorFlow,
   handleVisitorFlow,
+  initializePaymentFlow,
+  handlePaymentFlow,
 } from "./handlers"
 import { getMessage } from "./messages"
 import { MSG } from "./message-keys"
@@ -152,6 +154,8 @@ export async function processMessage(
         return await handleCancelFlow(trimmedMessage, profile, phoneNumber, userState)
       case "visitor":
         return await handleVisitorFlow(trimmedMessage, profile, phoneNumber, userState)
+      case "payment":
+        return await handlePaymentFlow(trimmedMessage, profile, phoneNumber, userState, mediaInfo)
       default:
         return await getMainMenu(profile.name, userState.language)
     }
@@ -203,6 +207,9 @@ async function handleMainMenu(
 
     case "10": // Emergency Contacts
       return await getEmergencyContacts(language)
+
+    case "11": // Submit Payment
+      return await initializePaymentFlow(profile, phoneNumber, language)
 
     default:
       const menu = await getMainMenu(profile.name, language)
@@ -276,6 +283,16 @@ async function handleBackCommand(
     visitor_date: {
       step: "visitor_car_number",
       messageKey: MSG.BACK_VISITOR_CAR,
+    },
+
+    // Payment flow
+    payment_selection: {
+      step: "payment_type_selection",
+      messageKey: MSG.BACK_PAYMENT_TYPE,
+    },
+    payment_receipt_upload: {
+      step: "payment_type_selection",
+      messageKey: MSG.BACK_PAYMENT_TYPE,
     },
   }
 

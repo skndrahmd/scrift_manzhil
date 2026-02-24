@@ -3,3 +3,4 @@ export { FinancialSummaryCards, RevenueBreakdownCards } from "./financial-summar
 export { MonthlyRevenueChart, RevenueBreakdownPieChart } from "./revenue-charts"
 export { TransactionsTable } from "./transactions-table"
 export { ExpensesManager } from "./expenses-manager"
+export { PaymentVerificationsTable } from "./payment-verifications-table"

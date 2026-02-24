@@ -816,6 +816,69 @@ CREATE INDEX idx_broadcast_logs_sent_at ON broadcast_logs(sent_at);
 
 COMMENT ON TABLE broadcast_logs IS 'Tracks broadcast messages for rate limiting and usage analytics';
 
+-- --------------------------------------------
+-- 6.5 PAYMENT METHODS TABLE
+-- Configurable payment methods (JazzCash, EasyPaisa, Bank Transfer)
+-- for the payment receipt system.
+-- --------------------------------------------
+CREATE TABLE payment_methods (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  type TEXT NOT NULL CHECK (type IN ('jazzcash', 'easypaisa', 'bank_transfer')),
+  account_title TEXT NOT NULL,
+  account_number TEXT NOT NULL,
+  bank_name TEXT,
+  is_enabled BOOLEAN NOT NULL DEFAULT true,
+  sort_order INTEGER NOT NULL DEFAULT 0,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+ALTER TABLE payment_methods ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Service role full access on payment_methods"
+  ON payment_methods FOR ALL
+  USING (true)
+  WITH CHECK (true);
+
+CREATE INDEX idx_payment_methods_is_enabled ON payment_methods(is_enabled);
+CREATE INDEX idx_payment_methods_sort_order ON payment_methods(sort_order);
+
+COMMENT ON TABLE payment_methods IS 'Configurable payment methods for the payment receipt system';
+
+-- --------------------------------------------
+-- 6.7 PAYMENT VERIFICATIONS TABLE
+-- Tracks resident-submitted payment receipts for admin verification.
+-- --------------------------------------------
+CREATE TABLE IF NOT EXISTS payment_verifications (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  payment_type TEXT NOT NULL CHECK (payment_type IN ('maintenance', 'booking')),
+  maintenance_payment_id UUID REFERENCES maintenance_payments(id),
+  booking_id UUID REFERENCES bookings(id),
+  unit_id UUID NOT NULL REFERENCES units(id),
+  resident_id UUID NOT NULL REFERENCES profiles(id),
+  payment_method_id UUID REFERENCES payment_methods(id),
+  amount DECIMAL NOT NULL,
+  receipt_image_url TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected')),
+  rejection_reason TEXT,
+  reviewed_by UUID REFERENCES admin_users(id),
+  reviewed_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+ALTER TABLE payment_verifications ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Service role full access on payment_verifications"
+  ON payment_verifications FOR ALL
+  USING (true)
+  WITH CHECK (true);
+
+CREATE INDEX idx_payment_verifications_status ON payment_verifications(status);
+CREATE INDEX idx_payment_verifications_resident ON payment_verifications(resident_id);
+CREATE INDEX idx_payment_verifications_unit ON payment_verifications(unit_id);
+
+COMMENT ON TABLE payment_verifications IS 'Resident-submitted payment receipts pending admin verification';
+
 
 -- ============================================
 -- PART 7: BOT & TEMPLATE TABLES

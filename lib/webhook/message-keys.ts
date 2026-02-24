@@ -151,6 +151,19 @@ export const MSG = {
   ERROR_EMPTY_MESSAGE: "error.empty_message",
   ERROR_UNEXPECTED: "error.unexpected",
 
+  // === Payment Receipt Flow ===
+  PAYMENT_MENU: "payment.menu",
+  PAYMENT_NO_METHODS: "payment.no_methods",
+  PAYMENT_NO_PENDING: "payment.no_pending",
+  PAYMENT_SELECT: "payment.select",
+  PAYMENT_ALREADY_SUBMITTED: "payment.already_submitted",
+  PAYMENT_METHODS_LIST: "payment.methods_list",
+  PAYMENT_SEND_IMAGE: "payment.send_image",
+  PAYMENT_RECEIPT_RECEIVED: "payment.receipt_received",
+  PAYMENT_UPLOAD_ERROR: "payment.upload_error",
+  PAYMENT_APPROVED: "payment.approved",
+  PAYMENT_REJECTED: "payment.rejected",
+
   // === Translatable Labels (newline-delimited for getLabels()) ===
   LABELS_MAIN_MENU_OPTIONS: "labels.main_menu_options",
   LABELS_HALL_MENU_OPTIONS: "labels.hall_menu_options",
@@ -161,6 +174,7 @@ export const MSG = {
   LABELS_STAFF_ROLES: "labels.staff_roles",
   LABELS_STAFF_EDIT_FIELDS: "labels.staff_edit_fields",
   LABELS_TOWER_SELECTION: "labels.tower_selection",
+  LABELS_PAYMENT_MENU_OPTIONS: "labels.payment_menu_options",
   LABELS_REPLY_MENU: "labels.reply_menu",
 
   // === Back Navigation ===
@@ -175,6 +189,7 @@ export const MSG = {
   BACK_HALL_BOOKING_DATE: "nav.back_hall_booking_date",
   BACK_VISITOR_NAME: "nav.back_visitor_name",
   BACK_VISITOR_CAR: "nav.back_visitor_car",
+  BACK_PAYMENT_TYPE: "nav.back_payment_type",
 } as const
 
 export type MessageKey = (typeof MSG)[keyof typeof MSG]

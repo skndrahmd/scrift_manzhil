@@ -5,8 +5,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { RefreshCw, Download, BarChart3, Receipt, Wallet, FileText, Loader2 } from "lucide-react"
+import { RefreshCw, Download, BarChart3, Receipt, Wallet, FileText, Loader2, CreditCard } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
+import { PaymentVerificationsTable } from "./payment-verifications-table"
 import { FinancialSummaryCards, RevenueBreakdownCards } from "./financial-summary-cards"
 import { MonthlyRevenueChart, RevenueBreakdownPieChart } from "./revenue-charts"
 import { TransactionsTable, type TransactionFilters } from "./transactions-table"
@@ -313,7 +314,7 @@ export function AccountingTab() {
 
             {/* Sub-tabs */}
             <Tabs value={activeSubTab} onValueChange={setActiveSubTab}>
-                <TabsList className="grid w-full grid-cols-4">
+                <TabsList className="grid w-full grid-cols-5">
                     <TabsTrigger value="dashboard" className="flex items-center gap-2 whitespace-nowrap px-3 sm:px-4">
                         <BarChart3 className="h-4 w-4" />
                         <span className="hidden sm:inline">Dashboard</span>
@@ -329,6 +330,10 @@ export function AccountingTab() {
                     <TabsTrigger value="reports" className="flex items-center gap-2 whitespace-nowrap px-3 sm:px-4">
                         <FileText className="h-4 w-4" />
                         <span className="hidden sm:inline">Reports</span>
+                    </TabsTrigger>
+                    <TabsTrigger value="verifications" className="flex items-center gap-2 whitespace-nowrap px-3 sm:px-4">
+                        <CreditCard className="h-4 w-4" />
+                        <span className="hidden sm:inline">Verifications</span>
                     </TabsTrigger>
                 </TabsList>
 
@@ -460,6 +465,18 @@ export function AccountingTab() {
                                     Select report format to download financial data for {selectedYear}
                                 </p>
                             </div>
+                        </CardContent>
+                    </Card>
+                </TabsContent>
+
+                {/* Verifications Tab */}
+                <TabsContent value="verifications">
+                    <Card className="border-0 shadow-lg shadow-manzhil-teal/5">
+                        <CardHeader>
+                            <CardTitle>Payment Verifications</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <PaymentVerificationsTable />
                         </CardContent>
                     </Card>
                 </TabsContent>

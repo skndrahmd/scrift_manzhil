@@ -15,7 +15,7 @@ Welcome to *Manzhil*
 
 {options}
 
-Reply 1-10`,
+Reply 1-11`,
 
   "menu.profile_info": `👤 *Your Profile*
 
@@ -50,7 +50,7 @@ Reply *0* for menu`,
 
   "menu.invalid_selection": `❓ *Invalid Selection*
 
-Please reply 1-10.
+Please reply 1-11.
 
 {menu}`,
 
@@ -880,7 +880,8 @@ Community Hall
 Visitor Entry Pass
 View My Profile
 Suggestions/Feedback
-Emergency Contacts`,
+Emergency Contacts
+Submit Payment`,
 
   "labels.hall_menu_options": `New Booking
 Cancel Booking
@@ -932,7 +933,93 @@ Tower B
 Tower C
 Tower D`,
 
+  "labels.payment_menu_options": `Maintenance
+Hall Booking`,
+
   "labels.reply_menu": `Reply *0* for menu`,
+
+  // === Payment Receipt Flow ===
+  "payment.menu": `💳 *Submit Payment*
+
+What are you paying for?
+
+{options}
+
+Reply 1-2, or *0* for menu`,
+
+  "payment.no_methods": `❌ *Online Payment Not Available*
+
+No payment methods are currently configured. Please contact your building admin.
+
+Reply *0* for menu`,
+
+  "payment.no_pending": `✅ *No Pending Payments*
+
+You don't have any unpaid {type} payments.
+
+Reply *0* for menu`,
+
+  "payment.select": `💰 *Select Payment*
+
+{list}
+
+Reply with number, or *0* for menu`,
+
+  "payment.already_submitted": `⏳ *Receipt Already Submitted*
+
+You already submitted a receipt for this payment. It's being verified by admin.
+
+Reply *0* for menu`,
+
+  "payment.methods_list": `💳 *Payment Details*
+
+💰 Amount: *{amount}*
+📝 For: {description}
+
+Please send payment to one of these accounts:
+
+{methods}
+
+After paying, send a *screenshot* of your receipt.
+
+Reply *0* for menu`,
+
+  "payment.send_image": `📸 *Send Receipt*
+
+Please send a *photo/screenshot* of your payment receipt.
+
+Reply *0* for menu`,
+
+  "payment.receipt_received": `✅ *Receipt Received!*
+
+📝 {description}
+💰 Amount: {amount}
+
+Your receipt has been submitted for verification. We'll notify you once it's reviewed.
+
+Reply *0* for menu`,
+
+  "payment.upload_error": `❌ *Upload Failed*
+
+We couldn't upload your receipt. Please try again.
+
+Reply *0* for menu`,
+
+  "payment.approved": `✅ *Payment Verified!*
+
+Your payment for {description} (PKR {amount}) has been verified and marked as paid.
+
+Reply *0* for menu`,
+
+  "payment.rejected": `❌ *Receipt Not Accepted*
+
+Your receipt for {description} was not accepted.
+
+📝 Reason: {reason}
+
+Please submit a valid receipt again.
+
+Reply *0* for menu`,
 
   // === Back Navigation ===
   "nav.back_complaint_sub_building": `🔙 *Going Back*
@@ -1035,4 +1122,15 @@ Enter the *visitor's name* ✍️
 🚗 Enter the visitor's *car number* (license plate).
 
 *B* to go back, *0* for menu`,
+
+  "nav.back_payment_type": `🔙 *Going Back*
+
+💳 *Submit Payment*
+
+What are you paying for?
+
+1. 💰 Maintenance
+2. 🏛️ Hall Booking
+
+Reply 1-2, or *0* for menu`,
 }

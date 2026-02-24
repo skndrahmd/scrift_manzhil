@@ -53,6 +53,7 @@ interface AdminContextType {
     newFeedbackCount: number
     newVisitorsCount: number
     newParcelsCount: number
+    pendingVerificationsCount: number
 
     // Auth data
     adminUser: AdminUser | null
@@ -102,6 +103,7 @@ function AdminLayoutContent({
     const [settings, setSettings] = useState<BookingSettings | null>(null)
     const [loading, setLoading] = useState(true)
     const [refreshing, setRefreshing] = useState(false)
+    const [pendingVerificationsCount, setPendingVerificationsCount] = useState(0)
     const [lastViewedBookings, setLastViewedBookings] = useState<number>(Date.now())
     const [lastViewedComplaints, setLastViewedComplaints] = useState<number>(Date.now())
     const [lastViewedFeedback, setLastViewedFeedback] = useState<number>(Date.now())
@@ -206,9 +208,21 @@ function AdminLayoutContent({
         if (data) setParcels(data)
     }
 
+    const fetchPendingVerifications = async () => {
+        try {
+            const { count } = await supabase
+                .from("payment_verifications")
+                .select("id", { count: "exact", head: true })
+                .eq("status", "pending")
+            setPendingVerificationsCount(count || 0)
+        } catch (err) {
+            console.error("Error fetching pending verifications count:", err)
+        }
+    }
+
     const refreshData = async () => {
         setRefreshing(true)
-        await Promise.all([fetchBookings(), fetchComplaints(), fetchProfiles(), fetchUnits(), fetchFeedback(), fetchVisitors(), fetchParcels(), fetchSettings()])
+        await Promise.all([fetchBookings(), fetchComplaints(), fetchProfiles(), fetchUnits(), fetchFeedback(), fetchVisitors(), fetchParcels(), fetchSettings(), fetchPendingVerifications()])
         setRefreshing(false)
         toast({
             title: "Data Refreshed",
@@ -219,7 +233,7 @@ function AdminLayoutContent({
     useEffect(() => {
         const fetchAllData = async () => {
             setLoading(true)
-            await Promise.all([fetchBookings(), fetchComplaints(), fetchProfiles(), fetchUnits(), fetchFeedback(), fetchVisitors(), fetchParcels(), fetchSettings()])
+            await Promise.all([fetchBookings(), fetchComplaints(), fetchProfiles(), fetchUnits(), fetchFeedback(), fetchVisitors(), fetchParcels(), fetchSettings(), fetchPendingVerifications()])
             setLoading(false)
         }
         fetchAllData()
@@ -302,6 +316,7 @@ function AdminLayoutContent({
         newFeedbackCount,
         newVisitorsCount,
         newParcelsCount,
+        pendingVerificationsCount,
         adminUser,
         userRole: role,
         permissions,
@@ -331,6 +346,7 @@ function AdminLayoutContent({
                     newFeedbackCount={newFeedbackCount}
                     newVisitorsCount={newVisitorsCount}
                     newParcelsCount={newParcelsCount}
+                    pendingVerificationsCount={pendingVerificationsCount}
                     userRole={role}
                     permissions={permissions}
                 />

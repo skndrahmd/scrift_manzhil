@@ -46,3 +46,9 @@ export {
   initializeVisitorFlow,
   handleVisitorFlow,
 } from "./visitor"
+
+// Payment receipt flow
+export {
+  initializePaymentFlow,
+  handlePaymentFlow,
+} from "./payment"

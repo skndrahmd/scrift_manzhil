@@ -248,6 +248,45 @@ export type Parcel = {
   profiles?: Profile
 }
 
+// Payment Method Types
+
+export type PaymentMethodType = 'jazzcash' | 'easypaisa' | 'bank_transfer'
+
+export type PaymentMethod = {
+  id: string
+  type: PaymentMethodType
+  account_title: string
+  account_number: string
+  bank_name: string | null
+  is_enabled: boolean
+  sort_order: number
+  created_at: string
+  updated_at: string
+}
+
+// Payment Verification Types
+
+export type PaymentVerificationStatus = 'pending' | 'approved' | 'rejected'
+
+export type PaymentVerification = {
+  id: string
+  payment_type: 'maintenance' | 'booking'
+  maintenance_payment_id: string | null
+  booking_id: string | null
+  unit_id: string
+  resident_id: string
+  payment_method_id: string | null
+  amount: number
+  receipt_image_url: string
+  status: PaymentVerificationStatus
+  rejection_reason: string | null
+  reviewed_by: string | null
+  reviewed_at: string | null
+  created_at: string
+  profiles?: Profile
+  units?: Unit
+}
+
 // Admin RBAC Types
 
 export type AdminUser = {
