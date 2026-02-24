@@ -57,6 +57,10 @@ function decodeHtmlEntities(text: string): string {
 /**
  * Translate a single text string to the target language.
  * Placeholders like {name} are automatically preserved.
+ *
+ * For multi-line texts (e.g. \n-delimited label lists), each line is
+ * translated as a separate segment so Google Translate cannot reorder
+ * or merge lines — this prevents garbled translations for menu labels.
  */
 export async function translateText(
   text: string,
@@ -65,6 +69,14 @@ export async function translateText(
 ): Promise<string> {
   if (!GOOGLE_TRANSLATE_API_KEY) {
     throw new Error("GOOGLE_TRANSLATE_API_KEY is not set")
+  }
+
+  // For multi-line texts (label lists), translate each line individually
+  // so Google Translate cannot reorder or merge them
+  const lines = text.split("\n")
+  if (lines.length > 1) {
+    const translated = await translateBatch(lines, targetLanguage, sourceLanguage)
+    return translated.join("\n")
   }
 
   const protected_text = prepareForTranslation(text)
@@ -94,6 +106,10 @@ export async function translateText(
  * Translate multiple texts in a single API call (batch).
  * Google Translate v2 supports up to 128 texts per request.
  * Placeholders like {name} are automatically preserved.
+ *
+ * Multi-line texts (e.g. \n-delimited label lists) are expanded into
+ * individual lines for translation, then recombined. This prevents
+ * Google Translate from garbling line order in menu labels.
  */
 export async function translateBatch(
   texts: string[],
@@ -104,12 +120,24 @@ export async function translateBatch(
     throw new Error("GOOGLE_TRANSLATE_API_KEY is not set")
   }
 
+  // Expand multi-line texts into individual lines for accurate translation.
+  // Track which original index each flattened segment belongs to, and how
+  // many lines it was split into, so we can recombine after translation.
+  const flatSegments: string[] = []
+  const lineCountPerText: number[] = []
+
+  for (const text of texts) {
+    const lines = text.split("\n")
+    lineCountPerText.push(lines.length)
+    flatSegments.push(...lines)
+  }
+
   // Google Translate v2 supports up to 128 segments per request
   const BATCH_SIZE = 128
-  const results: string[] = []
+  const flatResults: string[] = []
 
-  for (let i = 0; i < texts.length; i += BATCH_SIZE) {
-    const batch = texts.slice(i, i + BATCH_SIZE).map(prepareForTranslation)
+  for (let i = 0; i < flatSegments.length; i += BATCH_SIZE) {
+    const batch = flatSegments.slice(i, i + BATCH_SIZE).map(prepareForTranslation)
 
     const response = await fetch(`${BASE_URL}?key=${GOOGLE_TRANSLATE_API_KEY}`, {
       method: "POST",
@@ -131,7 +159,16 @@ export async function translateBatch(
     const translated = data.data.translations.map(
       (t: TranslateResult) => decodeHtmlEntities(restoreFromTranslation(t.translatedText))
     )
-    results.push(...translated)
+    flatResults.push(...translated)
+  }
+
+  // Recombine: group flat results back into multi-line strings
+  const results: string[] = []
+  let offset = 0
+  for (const count of lineCountPerText) {
+    const lines = flatResults.slice(offset, offset + count)
+    results.push(lines.join("\n"))
+    offset += count
   }
 
   return results
