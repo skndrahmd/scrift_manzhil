@@ -17,15 +17,38 @@ import { getMessage, getLabels } from "./messages"
 import { MSG } from "./message-keys"
 
 /**
+ * Ensure labels array matches config length exactly.
+ * If labels are corrupted (wrong count), fall back to config labels entirely
+ * to prevent shifted menus. Logs a warning for debugging.
+ */
+function safeLabels(
+  labels: string[],
+  config: { label: string }[],
+  menuName: string
+): string[] {
+  if (labels.length === config.length) return labels
+
+  console.warn(
+    `[${menuName}] Label count mismatch: expected ${config.length}, got ${labels.length}. Using fallback labels.`
+  )
+  return config.map((item, i) => labels[i] || item.label)
+}
+
+/**
  * Get main menu display
  */
 export async function getMainMenu(name: string, language?: string): Promise<string> {
-  const labels = await getLabels(MSG.LABELS_MAIN_MENU_OPTIONS, language)
+  const rawLabels = await getLabels(MSG.LABELS_MAIN_MENU_OPTIONS, language)
+  const labels = safeLabels(rawLabels, MAIN_MENU_OPTIONS, "MainMenu")
   const options = MAIN_MENU_OPTIONS.map(
-    (opt, i) => `${opt.key}. ${opt.emoji} ${labels[i] || opt.label}`
+    (opt, i) => `${opt.key}. ${opt.emoji} ${labels[i]}`
   ).join("\n")
 
-  return await getMessage(MSG.MAIN_MENU, { name, options }, language)
+  return await getMessage(MSG.MAIN_MENU, {
+    name,
+    options,
+    max_option: String(MAIN_MENU_OPTIONS.length),
+  }, language)
 }
 
 /**
@@ -89,9 +112,10 @@ export async function getEmergencyContacts(language?: string): Promise<string> {
  * Get hall booking menu
  */
 export async function getHallMenu(language?: string): Promise<string> {
-  const labels = await getLabels(MSG.LABELS_HALL_MENU_OPTIONS, language)
+  const rawLabels = await getLabels(MSG.LABELS_HALL_MENU_OPTIONS, language)
+  const labels = safeLabels(rawLabels, HALL_MENU_OPTIONS, "HallMenu")
   const options = HALL_MENU_OPTIONS.map(
-    (opt, i) => `${opt.key}. ${opt.emoji} ${labels[i] || opt.label}`
+    (opt, i) => `${opt.key}. ${opt.emoji} ${labels[i]}`
   ).join("\n")
 
   return await getMessage(MSG.HALL_MENU, { options }, language)
@@ -101,9 +125,10 @@ export async function getHallMenu(language?: string): Promise<string> {
  * Get staff management menu
  */
 export async function getStaffMenu(language?: string): Promise<string> {
-  const labels = await getLabels(MSG.LABELS_STAFF_MENU_OPTIONS, language)
+  const rawLabels = await getLabels(MSG.LABELS_STAFF_MENU_OPTIONS, language)
+  const labels = safeLabels(rawLabels, STAFF_MENU_OPTIONS, "StaffMenu")
   const options = STAFF_MENU_OPTIONS.map(
-    (opt, i) => `${opt.key}. ${opt.emoji} ${labels[i] || opt.label}`
+    (opt, i) => `${opt.key}. ${opt.emoji} ${labels[i]}`
   ).join("\n")
 
   return await getMessage(MSG.STAFF_MENU, { options }, language)

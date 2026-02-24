@@ -3,6 +3,8 @@ import { verifyAdminAccess } from "@/lib/auth"
 import { updatePaymentVerificationStatus } from "@/lib/services/payment-verification"
 import { ServiceError } from "@/lib/services/complaint"
 
+export const dynamic = "force-dynamic"
+
 export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> }

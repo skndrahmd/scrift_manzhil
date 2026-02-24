@@ -2,6 +2,8 @@ import { NextResponse } from "next/server"
 import { verifyAdminAccess } from "@/lib/auth"
 import { supabaseAdmin } from "@/lib/supabase"
 
+export const dynamic = "force-dynamic"
+
 export async function GET(request: Request) {
   const { authenticated, error } = await verifyAdminAccess("accounting")
   if (!authenticated) {

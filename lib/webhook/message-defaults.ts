@@ -15,7 +15,7 @@ Welcome to *Manzhil*
 
 {options}
 
-Reply 1-11`,
+Reply 1-{max_option}`,
 
   "menu.profile_info": `👤 *Your Profile*
 
