@@ -44,6 +44,17 @@ export async function updateMaintenancePaymentStatus(paymentId: string, isPaid: 
     throw new ServiceError("Payment record not found", 404)
   }
 
+  // Look up current primary resident for the unit (don't rely on stale profile_id)
+  const { data: currentPrimary } = await supabaseAdmin
+    .from("profiles")
+    .select("id, name, phone_number, apartment_number")
+    .eq("unit_id", (payment as any).unit_id)
+    .eq("is_primary_resident", true)
+    .eq("is_active", true)
+    .single()
+
+  const confirmationRecipient = currentPrimary || payment.profiles
+
   // Store original updated_at for optimistic locking
   const originalUpdatedAt = payment.updated_at
 
@@ -113,14 +124,14 @@ export async function updateMaintenancePaymentStatus(paymentId: string, isPaid: 
     }
   }
 
-  if (isPaid && payment.profiles?.phone_number) {
+  if (isPaid && confirmationRecipient?.phone_number) {
     const monthYear = formatMonthYear(payment.year, payment.month)
     const invoiceLink = `${APP_BASE_URL}/maintenance-invoice/${payment.id}?snapshot=paid`
 
     try {
       await sendMaintenancePaymentConfirmed({
-        phone: payment.profiles.phone_number,
-        name: payment.profiles.name || "Resident",
+        phone: confirmationRecipient.phone_number,
+        name: confirmationRecipient.name || "Resident",
         monthYear,
         amount: Number(payment.amount ?? 0),
         receiptUrl: invoiceLink,
@@ -143,12 +154,12 @@ export async function updateMaintenancePaymentStatus(paymentId: string, isPaid: 
         await supabaseAdmin.from("transactions").insert({
           transaction_type: "maintenance_income",
           reference_id: payment.id,
-          profile_id: payment.profiles?.id || (payment as any).profile_id,
+          profile_id: confirmationRecipient?.id || (payment as any).profile_id,
           amount: Number(payment.amount),
           description: `Maintenance - ${monthName} ${payment.year}`,
           transaction_date: new Date().toISOString().split('T')[0],
           payment_method: "cash",
-          notes: `Apartment: ${payment.profiles?.apartment_number || 'N/A'}`
+          notes: `Apartment: ${confirmationRecipient?.apartment_number || 'N/A'}`
         })
         console.log("Transaction record created for maintenance payment:", payment.id)
       } else {
