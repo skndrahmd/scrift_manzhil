@@ -201,6 +201,16 @@ export default function UnitDetailPage({ params }: { params: { id: string } }) {
     }, [unit, contextLoading])
 
     async function ensureMaintenanceRecords(unitId: string, amount: number, createdAt: string) {
+        // Query current primary resident from DB instead of relying on component state
+        const { data: primaryRes } = await supabase
+            .from("profiles")
+            .select("id")
+            .eq("unit_id", unitId)
+            .eq("is_primary_resident", true)
+            .eq("is_active", true)
+            .single()
+        const primaryProfileId = primaryRes?.id || null
+
         const createdDate = new Date(createdAt)
         const now = new Date()
         const items: { year: number; month: number }[] = []
@@ -222,7 +232,7 @@ export default function UnitDetailPage({ params }: { params: { id: string } }) {
             .filter((i) => !key.has(`${i.year}-${i.month}`))
             .map((i) => ({
                 unit_id: unitId,
-                profile_id: residents.find((r) => r.is_primary_resident)?.id || residents[0]?.id || null,
+                profile_id: primaryProfileId,
                 year: i.year,
                 month: i.month,
                 amount,

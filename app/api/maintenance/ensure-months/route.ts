@@ -24,6 +24,17 @@ export async function POST(request: NextRequest) {
 
     const amount = unit.maintenance_charges || 0
 
+    // Fetch primary resident for this unit
+    const { data: primaryResident } = await supabaseAdmin
+      .from("profiles")
+      .select("id")
+      .eq("unit_id", unitId)
+      .eq("is_primary_resident", true)
+      .eq("is_active", true)
+      .single()
+
+    const primaryProfileId = primaryResident?.id || null
+
     const now = new Date()
 
     // Generate all year-month combinations we need to check
@@ -52,7 +63,7 @@ export async function POST(request: NextRequest) {
     const toInsert: any[] = []
     for (const { year, month } of monthsToCheck) {
       if (!existingSet.has(`${year}-${month}`)) {
-        toInsert.push({ unit_id: unitId, year, month, amount, status: "unpaid" })
+        toInsert.push({ unit_id: unitId, profile_id: primaryProfileId, year, month, amount, status: "unpaid" })
       }
     }
 
