@@ -72,7 +72,7 @@ export async function POST(request: NextRequest) {
             throw setError
         }
 
-        // Reassign all unpaid maintenance payments for this unit to the new primary resident
+        // Reassign all maintenance payments for this unit to the new primary resident
         const { error: reassignError } = await supabaseAdmin
             .from("maintenance_payments")
             .update({
@@ -80,7 +80,6 @@ export async function POST(request: NextRequest) {
                 updated_at: getPakistanISOString(),
             })
             .eq("unit_id", unitId)
-            .eq("status", "unpaid")
 
         if (reassignError) {
             console.error("[TOGGLE PRIMARY] Failed to reassign maintenance payments:", reassignError)
