@@ -54,6 +54,12 @@ Please reply 1-11.
 
 {menu}`,
 
+  "menu.session_expired": `⏳ *Session Expired*
+
+Your previous session has timed out due to inactivity.
+
+Reply *0* to open the main menu.`,
+
   "menu.welcome_unregistered": `👋 Hello! This is Manzhil.
 
 ❌ This number is not registered. Please contact administration to register.

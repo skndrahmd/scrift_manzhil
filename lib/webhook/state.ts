@@ -5,6 +5,7 @@
  */
 
 import type { UserState } from "./types"
+import { SESSION_TIMEOUT_MS } from "./config"
 
 /**
  * In-memory state storage for user conversations
@@ -23,23 +24,25 @@ export function getState(phoneNumber: string): UserState {
 
 /**
  * Replaces the conversation state for a user.
+ * Automatically stamps `lastActivity` with the current time.
  * @param phoneNumber - User's phone number key
  * @param state - New state to store
  */
 export function setState(phoneNumber: string, state: UserState): void {
-  userStates.set(phoneNumber, state)
+  userStates.set(phoneNumber, { ...state, lastActivity: Date.now() })
 }
 
 /**
  * Merges partial updates into the user's existing conversation state.
+ * Automatically stamps `lastActivity` with the current time.
  * @param phoneNumber - User's phone number key
  * @param updates - Partial state fields to merge
  * @returns The merged UserState after update
  */
 export function updateState(phoneNumber: string, updates: Partial<UserState>): UserState {
   const current = getState(phoneNumber)
-  const newState = { ...current, ...updates }
-  setState(phoneNumber, newState)
+  const newState = { ...current, ...updates, lastActivity: Date.now() }
+  userStates.set(phoneNumber, newState)
   return newState
 }
 
@@ -59,6 +62,19 @@ export function clearState(phoneNumber: string): void {
 export function hasActiveFlow(phoneNumber: string): boolean {
   const state = userStates.get(phoneNumber)
   return state !== undefined && state.step !== "initial"
+}
+
+/**
+ * Checks whether a user's session has expired due to inactivity.
+ * A session is expired if the last activity was more than SESSION_TIMEOUT_MS ago.
+ * Returns false if the user has no state or no recorded lastActivity.
+ * @param phoneNumber - User's phone number key
+ * @returns True if the session has expired
+ */
+export function isSessionExpired(phoneNumber: string): boolean {
+  const state = userStates.get(phoneNumber)
+  if (!state?.lastActivity) return false
+  return Date.now() - state.lastActivity > SESSION_TIMEOUT_MS
 }
 
 /**

@@ -5,7 +5,7 @@
  */
 
 import type { Profile, MediaInfo } from "./types"
-import { getState, setState, clearState } from "./state"
+import { getState, setState, clearState, isSessionExpired } from "./state"
 import { isBackCommand, isMainMenuCommand } from "./utils"
 import {
   getMainMenu,
@@ -76,12 +76,7 @@ export async function processMessage(
 
     console.log("[Webhook] Processing:", { message: trimmedMessage, step: userState.step, type: userState.type, hasMedia: !!mediaInfo })
 
-    // Handle back command
-    if (isBackCommand(trimmedMessage)) {
-      return await handleBackCommand(phoneNumber, userState, profile)
-    }
-
-    // Handle main menu command - Universal "0"
+    // Handle main menu command - Universal "0" (checked first so it always works)
     if (isMainMenuCommand(trimmedMessage)) {
       clearState(phoneNumber)
 
@@ -104,6 +99,23 @@ export async function processMessage(
       }
 
       return await getMainMenu(profile.name)
+    }
+
+    // Check session timeout — expire active flows after 5 minutes of inactivity
+    if (
+      userState.step !== "initial" &&
+      userState.step !== "main_menu" &&
+      userState.step !== "language_selection" &&
+      isSessionExpired(phoneNumber)
+    ) {
+      const language = userState.language
+      clearState(phoneNumber)
+      return await getMessage(MSG.SESSION_EXPIRED, undefined, language)
+    }
+
+    // Handle back command
+    if (isBackCommand(trimmedMessage)) {
+      return await handleBackCommand(phoneNumber, userState, profile)
     }
 
     // Handle language selection

@@ -93,6 +93,8 @@ export interface UserState {
   visitor?: VisitorData
   payment?: PaymentData
   language?: string
+  /** Epoch timestamp (ms) of the last user interaction, set automatically by setState/updateState */
+  lastActivity?: number
 }
 
 /**

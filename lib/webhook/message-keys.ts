@@ -12,6 +12,7 @@ export const MSG = {
   MAINTENANCE_PAYMENT_DUE: "menu.maintenance_payment_due",
   EMERGENCY_CONTACTS: "menu.emergency_contacts",
   INVALID_MAIN_MENU: "menu.invalid_selection",
+  SESSION_EXPIRED: "menu.session_expired",
   WELCOME_UNREGISTERED: "menu.welcome_unregistered",
   ACCOUNT_INACTIVE: "menu.account_inactive",
 

@@ -30,6 +30,13 @@ export const TEMPLATE_SIDS = {
 export const SETTINGS_CACHE_DURATION = 5 * 60 * 1000
 
 /**
+ * Session timeout for WhatsApp bot conversations (5 minutes).
+ * If a user is mid-flow and doesn't respond within this duration,
+ * their session expires and they must reply "0" to restart.
+ */
+export const SESSION_TIMEOUT_MS = 5 * 60 * 1000
+
+/**
  * Complaint categories and their subcategories
  */
 export const COMPLAINT_CATEGORIES = {

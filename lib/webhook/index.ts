@@ -28,6 +28,7 @@ export {
   updateState,
   clearState,
   hasActiveFlow,
+  isSessionExpired,
   getAllStates,
   clearAllStates,
 } from "./state"
@@ -78,6 +79,7 @@ export {
 export {
   TEMPLATE_SIDS,
   SETTINGS_CACHE_DURATION,
+  SESSION_TIMEOUT_MS,
   COMPLAINT_CATEGORIES,
   BUILDING_TOWERS,
   STAFF_ROLES,

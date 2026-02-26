@@ -16,7 +16,8 @@ VALUES
 ('menu.emergency_contacts', 'main_menu', 'Emergency Contacts', 'Displays emergency contact numbers', E'🆘 *Emergency Contacts*\n\n{contacts}\n\nReply *0* for menu', '["contacts"]'::jsonb, 5),
 ('menu.invalid_selection', 'main_menu', 'Invalid Menu Selection', 'Shown when user enters invalid main menu option', E'❓ *Invalid Selection*\n\nPlease reply 1-10.\n\n{menu}', '["menu"]'::jsonb, 6),
 ('menu.welcome_unregistered', 'main_menu', 'Unregistered User', 'Shown to unregistered phone numbers', E'👋 Hello! This is Manzhil.\n\n❌ This number is not registered. Please contact administration to register.\n\n📞 Contact Admin', '[]'::jsonb, 7),
-('menu.account_inactive', 'main_menu', 'Account Inactive', 'Shown to deactivated accounts', E'⚠️ *Account Inactive*\n\nPlease contact administration if this is an error.\n\n📞 Contact Admin', '[]'::jsonb, 8)
+('menu.account_inactive', 'main_menu', 'Account Inactive', 'Shown to deactivated accounts', E'⚠️ *Account Inactive*\n\nPlease contact administration if this is an error.\n\n📞 Contact Admin', '[]'::jsonb, 8),
+('menu.session_expired', 'main_menu', 'Session Expired', 'Shown when a user''s session times out after 5 minutes of inactivity', E'⏳ *Session Expired*\n\nYour previous session has timed out due to inactivity.\n\nReply *0* to open the main menu.', '[]'::jsonb, 9)
 ON CONFLICT (message_key) DO NOTHING;
 
 -- === Complaint Flow ===

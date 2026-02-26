@@ -7,11 +7,12 @@
     "render": "remotion render src/index.ts ManzhilIntro out/ManzhilIntro.mp4 --codec h264 --crf 18"
   },
   "dependencies": {
+    "@remotion/cli": "^4.0.0",
+    "@remotion/google-fonts": "^4.0.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "remotion": "^4.0.0",
-    "@remotion/cli": "^4.0.0",
-    "@remotion/google-fonts": "^4.0.0"
+    "sharp": "^0.34.5"
   },
   "devDependencies": {
     "typescript": "^5.5.0"
