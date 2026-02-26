@@ -32,7 +32,7 @@ export async function initializePaymentFlow(
     return await getMessage(MSG.PAYMENT_NO_METHODS, undefined, language)
   }
 
-  setState(phoneNumber, {
+  await setState(phoneNumber, {
     step: "payment_type_selection",
     type: "payment",
     payment: {},
@@ -129,7 +129,7 @@ async function handleMaintenancePending(
     .order("month", { ascending: true })
 
   if (!payments || payments.length === 0) {
-    clearState(phoneNumber)
+    await clearState(phoneNumber)
     return await getMessage(MSG.PAYMENT_NO_PENDING, { type: "maintenance" }, language)
   }
 
@@ -147,7 +147,7 @@ async function handleMaintenancePending(
       unit_id: profile.unit_id,
     }
     userState.step = "payment_receipt_upload"
-    setState(phoneNumber, userState)
+    await setState(phoneNumber, userState)
 
     return await showPaymentMethods(p.amount, description, language)
   }
@@ -166,7 +166,7 @@ async function handleMaintenancePending(
   userState.step = "payment_selection"
   // Store the payments list data for later reference
   userState.statusItems = payments
-  setState(phoneNumber, userState)
+  await setState(phoneNumber, userState)
 
   return await getMessage(MSG.PAYMENT_SELECT, { list }, language)
 }
@@ -188,7 +188,7 @@ async function handleBookingPending(
     .order("booking_date", { ascending: true })
 
   if (!bookings || bookings.length === 0) {
-    clearState(phoneNumber)
+    await clearState(phoneNumber)
     return await getMessage(MSG.PAYMENT_NO_PENDING, { type: "booking" }, language)
   }
 
@@ -211,7 +211,7 @@ async function handleBookingPending(
       unit_id: profile.unit_id || undefined,
     }
     userState.step = "payment_receipt_upload"
-    setState(phoneNumber, userState)
+    await setState(phoneNumber, userState)
 
     return await showPaymentMethods(b.booking_charges, description, language)
   }
@@ -233,7 +233,7 @@ async function handleBookingPending(
   }
   userState.step = "payment_selection"
   userState.statusItems = bookings
-  setState(phoneNumber, userState)
+  await setState(phoneNumber, userState)
 
   return await getMessage(MSG.PAYMENT_SELECT, { list }, language)
 }
@@ -297,7 +297,7 @@ async function handlePaymentSelection(
     .limit(1)
 
   if (existing && existing.length > 0) {
-    clearState(phoneNumber)
+    await clearState(phoneNumber)
     return await getMessage(MSG.PAYMENT_ALREADY_SUBMITTED, undefined, language)
   }
 
@@ -311,7 +311,7 @@ async function handlePaymentSelection(
   userState.step = "payment_receipt_upload"
   // Clear the items list — no longer needed
   userState.statusItems = undefined
-  setState(phoneNumber, userState)
+  await setState(phoneNumber, userState)
 
   return await showPaymentMethods(amount, description, language)
 }
@@ -372,7 +372,7 @@ async function handleReceiptUpload(
 
   const payment = userState.payment
   if (!payment?.selected_payment_id || !payment.amount) {
-    clearState(phoneNumber)
+    await clearState(phoneNumber)
     return await getMessage(MSG.ERROR_GENERIC, undefined, language)
   }
 
@@ -390,7 +390,7 @@ async function handleReceiptUpload(
       .limit(1)
 
     if (existing && existing.length > 0) {
-      clearState(phoneNumber)
+      await clearState(phoneNumber)
       return await getMessage(MSG.PAYMENT_ALREADY_SUBMITTED, undefined, language)
     }
 
@@ -460,7 +460,7 @@ async function handleReceiptUpload(
       return await getMessage(MSG.PAYMENT_UPLOAD_ERROR, undefined, language)
     }
 
-    clearState(phoneNumber)
+    await clearState(phoneNumber)
 
     // Notify admins asynchronously (don't block response)
     notifyAdminsOfReceipt(profile, payment.description || "", payment.amount).catch(

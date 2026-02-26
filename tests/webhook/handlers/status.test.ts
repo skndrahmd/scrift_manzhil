@@ -3,7 +3,7 @@
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { supabase } from '@/lib/supabase'
-import { clearAllStates, getState, setState } from '@/lib/webhook/state'
+import { clearState, getState, setState } from '@/lib/webhook/state'
 import {
   initializeStatusFlow,
   handleStatusFlow,
@@ -65,8 +65,8 @@ const mockComplaints = [
 ]
 
 describe('Status Flow Handler', () => {
-  beforeEach(() => {
-    clearAllStates()
+  beforeEach(async () => {
+    await clearState()
     vi.clearAllMocks()
     ;(supabase as any).__reset()
   })
@@ -79,7 +79,7 @@ describe('Status Flow Handler', () => {
       const result = await initializeStatusFlow(mockProfile, PHONE)
 
       expect(result).toBeTruthy()
-      const state = getState(PHONE)
+      const state = await getState(PHONE)
       expect(state.step).toBe('status_select')
       expect(state.type).toBe('status')
       expect(state.statusItems).toHaveLength(2)
@@ -93,50 +93,50 @@ describe('Status Flow Handler', () => {
 
       expect(result).toBeTruthy()
       // State should not be set (no flow started)
-      const state = getState(PHONE)
+      const state = await getState(PHONE)
       expect(state.step).toBe('initial')
     })
   })
 
   describe('handleStatusFlow', () => {
     it('returns complaint detail on valid selection', async () => {
-      setState(PHONE, {
+      await setState(PHONE, {
         step: 'status_select',
         type: 'status',
         statusItems: mockComplaints,
       })
 
-      const result = await handleStatusFlow('1', mockProfile, PHONE, getState(PHONE))
+      const result = await handleStatusFlow('1', mockProfile, PHONE, await getState(PHONE))
 
       expect(result).toBeTruthy()
       // State should be cleared after viewing detail
-      const state = getState(PHONE)
+      const state = await getState(PHONE)
       expect(state.step).toBe('initial')
     })
 
     it('returns error on invalid selection number', async () => {
-      setState(PHONE, {
+      await setState(PHONE, {
         step: 'status_select',
         type: 'status',
         statusItems: mockComplaints,
       })
 
-      const result = await handleStatusFlow('5', mockProfile, PHONE, getState(PHONE))
+      const result = await handleStatusFlow('5', mockProfile, PHONE, await getState(PHONE))
 
       expect(result).toBeTruthy()
       // State should remain (still selecting)
-      const state = getState(PHONE)
+      const state = await getState(PHONE)
       expect(state.step).toBe('status_select')
     })
 
     it('returns error on non-numeric selection', async () => {
-      setState(PHONE, {
+      await setState(PHONE, {
         step: 'status_select',
         type: 'status',
         statusItems: mockComplaints,
       })
 
-      const result = await handleStatusFlow('abc', mockProfile, PHONE, getState(PHONE))
+      const result = await handleStatusFlow('abc', mockProfile, PHONE, await getState(PHONE))
 
       expect(result).toBeTruthy()
     })
@@ -152,8 +152,8 @@ describe('Status Flow Handler', () => {
 })
 
 describe('Cancel Complaint Flow Handler', () => {
-  beforeEach(() => {
-    clearAllStates()
+  beforeEach(async () => {
+    await clearState()
     vi.clearAllMocks()
     ;(supabase as any).__reset()
   })
@@ -170,7 +170,7 @@ describe('Cancel Complaint Flow Handler', () => {
       const result = await initializeCancelFlow(mockProfile, PHONE)
 
       expect(result).toBeTruthy()
-      const state = getState(PHONE)
+      const state = await getState(PHONE)
       expect(state.step).toBe('cancel_select')
       expect(state.type).toBe('cancel')
       expect(state.cancelItems).toHaveLength(1)
@@ -185,7 +185,7 @@ describe('Cancel Complaint Flow Handler', () => {
       const result = await initializeCancelFlow(mockProfile, PHONE)
 
       expect(result).toBeTruthy()
-      const state = getState(PHONE)
+      const state = await getState(PHONE)
       expect(state.step).toBe('initial')
     })
 
@@ -203,27 +203,27 @@ describe('Cancel Complaint Flow Handler', () => {
 
   describe('handleCancelFlow — select complaint', () => {
     it('moves to confirm step on valid selection', async () => {
-      setState(PHONE, {
+      await setState(PHONE, {
         step: 'cancel_select',
         type: 'cancel',
         cancelItems: [mockComplaints[0]],
       })
 
-      const result = await handleCancelFlow('1', mockProfile, PHONE, getState(PHONE))
+      const result = await handleCancelFlow('1', mockProfile, PHONE, await getState(PHONE))
 
       expect(result).toBeTruthy()
-      const state = getState(PHONE)
+      const state = await getState(PHONE)
       expect(state.step).toBe('cancel_confirm')
     })
 
     it('returns error on invalid selection', async () => {
-      setState(PHONE, {
+      await setState(PHONE, {
         step: 'cancel_select',
         type: 'cancel',
         cancelItems: [mockComplaints[0]],
       })
 
-      const result = await handleCancelFlow('5', mockProfile, PHONE, getState(PHONE))
+      const result = await handleCancelFlow('5', mockProfile, PHONE, await getState(PHONE))
 
       expect(result).toBeTruthy()
     })
@@ -238,44 +238,44 @@ describe('Cancel Complaint Flow Handler', () => {
     })
 
     it('cancels complaint on "1" (yes)', async () => {
-      setState(PHONE, confirmState())
+      await setState(PHONE, confirmState())
 
       ;(supabase as any).__setResult('complaints', { data: null, error: null })
 
-      const result = await handleCancelFlow('1', mockProfile, PHONE, getState(PHONE))
+      const result = await handleCancelFlow('1', mockProfile, PHONE, await getState(PHONE))
 
       expect(result).toBeTruthy()
-      const state = getState(PHONE)
+      const state = await getState(PHONE)
       expect(state.step).toBe('initial')
     })
 
     it('aborts on "2" (no)', async () => {
-      setState(PHONE, confirmState())
+      await setState(PHONE, confirmState())
 
-      const result = await handleCancelFlow('2', mockProfile, PHONE, getState(PHONE))
+      const result = await handleCancelFlow('2', mockProfile, PHONE, await getState(PHONE))
 
       expect(result).toBeTruthy()
-      const state = getState(PHONE)
+      const state = await getState(PHONE)
       expect(state.step).toBe('initial')
     })
 
     it('returns error on invalid response', async () => {
-      setState(PHONE, confirmState())
+      await setState(PHONE, confirmState())
 
-      const result = await handleCancelFlow('maybe', mockProfile, PHONE, getState(PHONE))
+      const result = await handleCancelFlow('maybe', mockProfile, PHONE, await getState(PHONE))
 
       expect(result).toBeTruthy()
     })
 
     it('returns error on DB failure during cancellation', async () => {
-      setState(PHONE, confirmState())
+      await setState(PHONE, confirmState())
 
       ;(supabase as any).__setResult('complaints', {
         data: null,
         error: { message: 'Update failed' },
       })
 
-      const result = await handleCancelFlow('1', mockProfile, PHONE, getState(PHONE))
+      const result = await handleCancelFlow('1', mockProfile, PHONE, await getState(PHONE))
 
       expect(result).toBeTruthy()
     })

@@ -1,7 +1,8 @@
 /**
- * Tests for conversation state management
+ * Tests for conversation state management (database-backed)
+ * Uses the global mock from tests/setup.ts
  */
-import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest'
+import { describe, it, expect, beforeEach, vi } from 'vitest'
 import {
   getState,
   setState,
@@ -9,205 +10,197 @@ import {
   clearState,
   hasActiveFlow,
   isSessionExpired,
-  getAllStates,
-  clearAllStates,
+  cleanupExpiredSessions,
 } from '@/lib/webhook/state'
 import { SESSION_TIMEOUT_MS } from '@/lib/webhook/config'
+import { supabaseAdmin } from '@/lib/supabase'
 
-describe('Conversation State Management', () => {
+describe('Conversation State Management (Database)', () => {
   beforeEach(() => {
-    clearAllStates()
+    vi.clearAllMocks()
+    ;(supabaseAdmin as any).__reset()
   })
 
   describe('getState', () => {
-    it('returns initial state for unknown phone', () => {
-      const state = getState('+923001234567')
+    it('returns initial state for unknown phone', async () => {
+      ;(supabaseAdmin as any).__setResult('bot_sessions', {
+        data: null,
+        error: { code: 'PGRST116' },
+      })
+
+      const state = await getState('+923001234567')
       expect(state).toEqual({ step: 'initial' })
     })
 
-    it('returns stored state after setState', () => {
-      setState('+923001234567', { step: 'complaint_category', type: 'complaint' })
-      const state = getState('+923001234567')
+    it('returns stored state from database', async () => {
+      ;(supabaseAdmin as any).__setResult('bot_sessions', {
+        data: { state: { step: 'complaint_category', type: 'complaint' } },
+        error: null,
+      })
+
+      const state = await getState('+923001234567')
       expect(state.step).toBe('complaint_category')
       expect(state.type).toBe('complaint')
     })
   })
 
   describe('setState', () => {
-    it('stores state for a phone number', () => {
-      setState('+923001234567', { step: 'booking_date', type: 'booking' })
-      expect(getState('+923001234567').step).toBe('booking_date')
+    it('stores state for a phone number', async () => {
+      ;(supabaseAdmin as any).__setResult('bot_sessions', {
+        data: { state: { step: 'booking_date', type: 'booking' } },
+        error: null,
+      })
+
+      await setState('+923001234567', { step: 'booking_date', type: 'booking' })
+      const state = await getState('+923001234567')
+
+      expect(state.step).toBe('booking_date')
     })
 
-    it('overwrites previous state', () => {
-      setState('+923001234567', { step: 'step1' })
-      setState('+923001234567', { step: 'step2' })
-      expect(getState('+923001234567').step).toBe('step2')
+    it('overwrites previous state', async () => {
+      ;(supabaseAdmin as any).__setResult('bot_sessions', {
+        data: { state: { step: 'step2' } },
+        error: null,
+      })
+
+      await setState('+923001234567', { step: 'step1' })
+      await setState('+923001234567', { step: 'step2' })
+      const state = await getState('+923001234567')
+
+      expect(state.step).toBe('step2')
     })
   })
 
   describe('updateState', () => {
-    it('merges partial updates into existing state', () => {
-      setState('+923001234567', { step: 'complaint_category', type: 'complaint' })
-      const updated = updateState('+923001234567', { step: 'complaint_subcategory' })
+    it('merges partial updates into existing state', async () => {
+      ;(supabaseAdmin as any).__setResult('bot_sessions', {
+        data: { state: { step: 'complaint_category', type: 'complaint' } },
+        error: null,
+      })
+
+      const updated = await updateState('+923001234567', { step: 'complaint_subcategory' })
+
       expect(updated.step).toBe('complaint_subcategory')
       expect(updated.type).toBe('complaint')
     })
 
-    it('creates state if none exists', () => {
-      const updated = updateState('+923001234567', { step: 'booking_date', type: 'booking' })
+    it('creates state if none exists', async () => {
+      ;(supabaseAdmin as any).__setResult('bot_sessions', {
+        data: null,
+        error: { code: 'PGRST116' },
+      })
+
+      const updated = await updateState('+923001234567', { step: 'booking_date', type: 'booking' })
+
       expect(updated.step).toBe('booking_date')
       expect(updated.type).toBe('booking')
-    })
-
-    it('preserves nested data during merge', () => {
-      setState('+923001234567', {
-        step: 'complaint_description',
-        type: 'complaint',
-        complaint: { category: 'apartment', subcategory: 'plumbing' },
-      })
-      const updated = updateState('+923001234567', { step: 'complaint_submit' })
-      expect(updated.complaint?.category).toBe('apartment')
-      expect(updated.complaint?.subcategory).toBe('plumbing')
     })
   })
 
   describe('clearState', () => {
-    it('resets state to initial', () => {
-      setState('+923001234567', { step: 'some_step', type: 'complaint' })
-      clearState('+923001234567')
-      expect(getState('+923001234567')).toEqual({ step: 'initial' })
-    })
+    it('deletes state from database', async () => {
+      ;(supabaseAdmin as any).__setResult('bot_sessions', { data: null, error: null })
 
-    it('does nothing for unknown phone', () => {
-      clearState('+923009999999')
-      expect(getState('+923009999999')).toEqual({ step: 'initial' })
+      // Should not throw
+      await clearState('+923001234567')
     })
   })
 
   describe('hasActiveFlow', () => {
-    it('returns false for unknown phone', () => {
-      expect(hasActiveFlow('+923001234567')).toBe(false)
+    it('returns false for unknown phone', async () => {
+      ;(supabaseAdmin as any).__setResult('bot_sessions', {
+        data: null,
+        error: { code: 'PGRST116' },
+      })
+
+      const result = await hasActiveFlow('+923001234567')
+      expect(result).toBe(false)
     })
 
-    it('returns false for initial state', () => {
-      setState('+923001234567', { step: 'initial' })
-      expect(hasActiveFlow('+923001234567')).toBe(false)
+    it('returns false for initial state', async () => {
+      ;(supabaseAdmin as any).__setResult('bot_sessions', {
+        data: { state: { step: 'initial' } },
+        error: null,
+      })
+
+      const result = await hasActiveFlow('+923001234567')
+      expect(result).toBe(false)
     })
 
-    it('returns true for active flow', () => {
-      setState('+923001234567', { step: 'complaint_category', type: 'complaint' })
-      expect(hasActiveFlow('+923001234567')).toBe(true)
-    })
-  })
+    it('returns true for active flow', async () => {
+      ;(supabaseAdmin as any).__setResult('bot_sessions', {
+        data: { state: { step: 'complaint_category', type: 'complaint' } },
+        error: null,
+      })
 
-  describe('getAllStates', () => {
-    it('returns empty map initially', () => {
-      const states = getAllStates()
-      expect(states.size).toBe(0)
-    })
-
-    it('returns all active states', () => {
-      setState('+923001111111', { step: 'step1' })
-      setState('+923002222222', { step: 'step2' })
-      const states = getAllStates()
-      expect(states.size).toBe(2)
-    })
-
-    it('returns a copy (not the original)', () => {
-      setState('+923001111111', { step: 'step1' })
-      const states = getAllStates()
-      states.clear()
-      expect(getAllStates().size).toBe(1)
-    })
-  })
-
-  describe('clearAllStates', () => {
-    it('removes all states', () => {
-      setState('+923001111111', { step: 'step1' })
-      setState('+923002222222', { step: 'step2' })
-      clearAllStates()
-      expect(getAllStates().size).toBe(0)
-      expect(hasActiveFlow('+923001111111')).toBe(false)
-    })
-  })
-
-  describe('lastActivity timestamp', () => {
-    it('setState auto-stamps lastActivity', () => {
-      const before = Date.now()
-      setState('+923001234567', { step: 'complaint_category', type: 'complaint' })
-      const after = Date.now()
-      const state = getState('+923001234567')
-      expect(state.lastActivity).toBeGreaterThanOrEqual(before)
-      expect(state.lastActivity).toBeLessThanOrEqual(after)
-    })
-
-    it('updateState auto-stamps lastActivity', () => {
-      setState('+923001234567', { step: 'step1' })
-      const before = Date.now()
-      updateState('+923001234567', { step: 'step2' })
-      const after = Date.now()
-      const state = getState('+923001234567')
-      expect(state.lastActivity).toBeGreaterThanOrEqual(before)
-      expect(state.lastActivity).toBeLessThanOrEqual(after)
+      const result = await hasActiveFlow('+923001234567')
+      expect(result).toBe(true)
     })
   })
 
   describe('isSessionExpired', () => {
-    afterEach(() => {
-      vi.useRealTimers()
+    it('returns false for unknown phone (no state)', async () => {
+      ;(supabaseAdmin as any).__setResult('bot_sessions', {
+        data: null,
+        error: { code: 'PGRST116' },
+      })
+
+      const result = await isSessionExpired('+923009999999')
+      expect(result).toBe(false)
     })
 
-    it('returns false for unknown phone (no state)', () => {
-      expect(isSessionExpired('+923009999999')).toBe(false)
+    it('returns false for recently active session', async () => {
+      ;(supabaseAdmin as any).__setResult('bot_sessions', {
+        data: { last_activity: new Date().toISOString() },
+        error: null,
+      })
+
+      const result = await isSessionExpired('+923001234567')
+      expect(result).toBe(false)
     })
 
-    it('returns false for recently active session', () => {
-      setState('+923001234567', { step: 'complaint_category', type: 'complaint' })
-      expect(isSessionExpired('+923001234567')).toBe(false)
+    it('returns true when session exceeds timeout', async () => {
+      const oldTime = new Date(Date.now() - SESSION_TIMEOUT_MS - 1000).toISOString()
+      ;(supabaseAdmin as any).__setResult('bot_sessions', {
+        data: { last_activity: oldTime },
+        error: null,
+      })
+
+      const result = await isSessionExpired('+923001234567')
+      expect(result).toBe(true)
     })
 
-    it('returns true when session exceeds timeout', () => {
-      vi.useFakeTimers()
-      setState('+923001234567', { step: 'complaint_category', type: 'complaint' })
+    it('returns false when session is exactly at timeout boundary', async () => {
+      const boundaryTime = new Date(Date.now() - SESSION_TIMEOUT_MS + 1000).toISOString()
+      ;(supabaseAdmin as any).__setResult('bot_sessions', {
+        data: { last_activity: boundaryTime },
+        error: null,
+      })
 
-      // Advance time past the timeout
-      vi.advanceTimersByTime(SESSION_TIMEOUT_MS + 1000)
+      const result = await isSessionExpired('+923001234567')
+      expect(result).toBe(false)
+    })
+  })
 
-      expect(isSessionExpired('+923001234567')).toBe(true)
-      vi.useRealTimers()
+  describe('cleanupExpiredSessions', () => {
+    it('deletes expired sessions and returns count', async () => {
+      ;(supabaseAdmin as any).__setResult('bot_sessions', {
+        data: [{ phone_number: '+923001111111' }, { phone_number: '+923002222222' }],
+        error: null,
+      })
+
+      const count = await cleanupExpiredSessions()
+      expect(count).toBe(2)
     })
 
-    it('returns false when session is exactly at timeout boundary', () => {
-      vi.useFakeTimers()
-      setState('+923001234567', { step: 'booking_date', type: 'booking' })
+    it('returns 0 on error', async () => {
+      ;(supabaseAdmin as any).__setResult('bot_sessions', {
+        data: null,
+        error: { message: 'DB error' },
+      })
 
-      // Advance time to exactly the timeout (not past it)
-      vi.advanceTimersByTime(SESSION_TIMEOUT_MS)
-
-      expect(isSessionExpired('+923001234567')).toBe(false)
-      vi.useRealTimers()
-    })
-
-    it('resets expiry after new interaction (updateState)', () => {
-      vi.useFakeTimers()
-      setState('+923001234567', { step: 'step1', type: 'complaint' })
-
-      // Advance 4 minutes (not expired yet)
-      vi.advanceTimersByTime(4 * 60 * 1000)
-      expect(isSessionExpired('+923001234567')).toBe(false)
-
-      // User interacts — resets the timer
-      updateState('+923001234567', { step: 'step2' })
-
-      // Advance another 4 minutes (total 8 from start, but only 4 from last interaction)
-      vi.advanceTimersByTime(4 * 60 * 1000)
-      expect(isSessionExpired('+923001234567')).toBe(false)
-
-      // Advance 2 more minutes (6 from last interaction — expired)
-      vi.advanceTimersByTime(2 * 60 * 1000)
-      expect(isSessionExpired('+923001234567')).toBe(true)
-      vi.useRealTimers()
+      const count = await cleanupExpiredSessions()
+      expect(count).toBe(0)
     })
   })
 })

@@ -16,7 +16,7 @@ import { MSG } from "../message-keys"
  * Initialize booking flow
  */
 export async function initializeBookingFlow(phoneNumber: string, language?: string): Promise<string> {
-  setState(phoneNumber, {
+  await setState(phoneNumber, {
     step: "booking_date",
     type: "booking",
     language,
@@ -97,10 +97,10 @@ async function handleDateInput(
     }
 
     // Date is available, show policies
-    const userState = getState(phoneNumber)
+    const userState = await getState(phoneNumber)
     userState.step = "booking_policies"
     userState.date = parsedDate
-    setState(phoneNumber, userState)
+    await setState(phoneNumber, userState)
 
     const bookingCharges = settings?.booking_charges || 500
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || ""
@@ -144,7 +144,7 @@ async function handlePoliciesAcceptance(
         .limit(1)
 
       if (checkAgain && checkAgain.length > 0) {
-        clearState(phoneNumber)
+        await clearState(phoneNumber)
         return await getMessage(MSG.BOOKING_DATE_NO_LONGER_AVAILABLE, undefined, language)
       }
 
@@ -172,7 +172,7 @@ async function handlePoliciesAcceptance(
         return await getMessage(MSG.BOOKING_FAILED, undefined, language)
       }
 
-      clearState(phoneNumber)
+      await clearState(phoneNumber)
 
       const baseUrl = process.env.NEXT_PUBLIC_APP_URL || ""
       const invoiceUrl = `${baseUrl}/booking-invoice/${booking.id}?payment=pending&booking=confirmed`
@@ -186,7 +186,7 @@ async function handlePoliciesAcceptance(
 
     if (choice === "2") {
       // User declined terms
-      clearState(phoneNumber)
+      await clearState(phoneNumber)
       return await getMessage(MSG.BOOKING_DECLINED, undefined, language)
     }
 

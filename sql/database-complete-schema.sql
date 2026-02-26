@@ -999,6 +999,27 @@ CREATE POLICY "Service role full access on bot_message_translations"
 CREATE INDEX idx_translations_language ON bot_message_translations(language_code);
 CREATE INDEX idx_translations_key ON bot_message_translations(message_key);
 
+-- --------------------------------------------
+-- 2.23 BOT SESSIONS TABLE
+-- Persistent session state for WhatsApp bot flows.
+-- Stores conversation state across serverless invocations.
+-- --------------------------------------------
+CREATE TABLE bot_sessions (
+  phone_number TEXT PRIMARY KEY,
+  state JSONB NOT NULL DEFAULT '{}',
+  last_activity TIMESTAMPTZ DEFAULT NOW(),
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE bot_sessions ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Service role full access on bot_sessions"
+  ON bot_sessions FOR ALL
+  USING (auth.role() = 'service_role');
+
+CREATE INDEX idx_bot_sessions_last_activity ON bot_sessions(last_activity);
+
 
 -- ============================================
 -- PART 8: TRIGGERS

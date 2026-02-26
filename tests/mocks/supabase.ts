@@ -15,6 +15,7 @@ export interface MockQueryBuilder {
   in: ReturnType<typeof vi.fn>
   gte: ReturnType<typeof vi.fn>
   lte: ReturnType<typeof vi.fn>
+  lt: ReturnType<typeof vi.fn>
   like: ReturnType<typeof vi.fn>
   order: ReturnType<typeof vi.fn>
   limit: ReturnType<typeof vi.fn>
@@ -27,17 +28,26 @@ export interface MockQueryBuilder {
 /**
  * Create a mock query builder that supports chaining
  */
-export function createMockQueryBuilder(result?: { data: any; error: any }): MockQueryBuilder {
-  const defaultResult = result || { data: null, error: null }
+export function createMockQueryBuilder(): MockQueryBuilder {
+  // Use an object holder so we can mutate the result without breaking closures
+  const resultHolder = { data: null as any, error: null as any }
 
   const builder: any = {
-    _result: defaultResult,
+    get _result() { return resultHolder },
+    set _result(value) { 
+      resultHolder.data = value.data
+      resultHolder.error = value.error
+    },
+    _setResult: (result: { data: any; error: any }) => {
+      resultHolder.data = result.data
+      resultHolder.error = result.error
+    },
   }
 
   // All chainable methods return the builder itself
   const chainMethods = [
     'select', 'insert', 'update', 'delete', 'upsert',
-    'eq', 'neq', 'in', 'gte', 'lte', 'like',
+    'eq', 'neq', 'in', 'gte', 'lte', 'lt', 'like',
     'order', 'limit',
   ]
 
@@ -45,12 +55,12 @@ export function createMockQueryBuilder(result?: { data: any; error: any }): Mock
     builder[method] = vi.fn().mockReturnValue(builder)
   }
 
-  // Terminal methods return the result
-  builder.single = vi.fn().mockResolvedValue(defaultResult)
-  builder.maybeSingle = vi.fn().mockResolvedValue(defaultResult)
+  // Terminal methods - return the holder object directly (mutated in place)
+  builder.single = vi.fn().mockImplementation(() => Promise.resolve(resultHolder))
+  builder.maybeSingle = vi.fn().mockImplementation(() => Promise.resolve(resultHolder))
 
   // Make the builder itself thenable (for `await supabase.from(...).select(...)`)
-  builder.then = (resolve: any) => resolve(defaultResult)
+  builder.then = (resolve: any) => resolve(resultHolder)
 
   return builder as MockQueryBuilder
 }
@@ -59,7 +69,7 @@ export function createMockQueryBuilder(result?: { data: any; error: any }): Mock
  * Create a mock Supabase client
  */
 export function createMockSupabaseClient() {
-  const queryBuilders = new Map<string, MockQueryBuilder>()
+  const queryBuilders = new Map<string, any>()
 
   const client = {
     from: vi.fn((table: string) => {
@@ -74,7 +84,12 @@ export function createMockSupabaseClient() {
     },
     // Helper: set return value for a specific table
     __setResult(table: string, result: { data: any; error: any }) {
-      queryBuilders.set(table, createMockQueryBuilder(result))
+      let builder = queryBuilders.get(table)
+      if (!builder) {
+        builder = createMockQueryBuilder()
+        queryBuilders.set(table, builder)
+      }
+      builder._setResult(result)
     },
     // Helper: get the query builder for a table
     __getBuilder(table: string) {

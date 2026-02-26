@@ -1,35 +1,56 @@
 /**
  * @module lib/webhook/state
- * In-memory conversation state management for WhatsApp webhook flows.
+ * Database-backed conversation state management for WhatsApp webhook flows.
  * Tracks each user's current step and collected data by phone number.
+ * Persists across serverless function invocations via Supabase.
  */
 
 import type { UserState } from "./types"
 import { SESSION_TIMEOUT_MS } from "./config"
+import { supabaseAdmin } from "@/lib/supabase"
 
 /**
- * In-memory state storage for user conversations
- * Key: phone number, Value: conversation state
- */
-const userStates = new Map<string, UserState>()
-
-/**
- * Gets the current conversation state for a user.
+ * Gets the current conversation state for a user from the database.
  * @param phoneNumber - User's phone number key
  * @returns Current UserState, or a fresh "initial" state if none exists
  */
-export function getState(phoneNumber: string): UserState {
-  return userStates.get(phoneNumber) || { step: "initial" }
+export async function getState(phoneNumber: string): Promise<UserState> {
+  const { data, error } = await supabaseAdmin
+    .from("bot_sessions")
+    .select("state")
+    .eq("phone_number", phoneNumber)
+    .single()
+
+  if (error || !data) {
+    return { step: "initial" }
+  }
+
+  return data.state as UserState
 }
 
 /**
- * Replaces the conversation state for a user.
+ * Replaces the conversation state for a user in the database.
  * Automatically stamps `lastActivity` with the current time.
  * @param phoneNumber - User's phone number key
  * @param state - New state to store
  */
-export function setState(phoneNumber: string, state: UserState): void {
-  userStates.set(phoneNumber, { ...state, lastActivity: Date.now() })
+export async function setState(phoneNumber: string, state: UserState): Promise<void> {
+  const stateWithTimestamp = {
+    ...state,
+    lastActivity: Date.now(),
+  }
+
+  await supabaseAdmin
+    .from("bot_sessions")
+    .upsert(
+      {
+        phone_number: phoneNumber,
+        state: stateWithTimestamp,
+        last_activity: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "phone_number" }
+    )
 }
 
 /**
@@ -39,10 +60,25 @@ export function setState(phoneNumber: string, state: UserState): void {
  * @param updates - Partial state fields to merge
  * @returns The merged UserState after update
  */
-export function updateState(phoneNumber: string, updates: Partial<UserState>): UserState {
-  const current = getState(phoneNumber)
+export async function updateState(
+  phoneNumber: string,
+  updates: Partial<UserState>
+): Promise<UserState> {
+  const current = await getState(phoneNumber)
   const newState = { ...current, ...updates, lastActivity: Date.now() }
-  userStates.set(phoneNumber, newState)
+
+  await supabaseAdmin
+    .from("bot_sessions")
+    .upsert(
+      {
+        phone_number: phoneNumber,
+        state: newState,
+        last_activity: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "phone_number" }
+    )
+
   return newState
 }
 
@@ -50,8 +86,11 @@ export function updateState(phoneNumber: string, updates: Partial<UserState>): U
  * Clears the conversation state for a user, resetting them to initial.
  * @param phoneNumber - User's phone number key
  */
-export function clearState(phoneNumber: string): void {
-  userStates.delete(phoneNumber)
+export async function clearState(phoneNumber: string): Promise<void> {
+  await supabaseAdmin
+    .from("bot_sessions")
+    .delete()
+    .eq("phone_number", phoneNumber)
 }
 
 /**
@@ -59,9 +98,9 @@ export function clearState(phoneNumber: string): void {
  * @param phoneNumber - User's phone number key
  * @returns True if the user is mid-flow
  */
-export function hasActiveFlow(phoneNumber: string): boolean {
-  const state = userStates.get(phoneNumber)
-  return state !== undefined && state.step !== "initial"
+export async function hasActiveFlow(phoneNumber: string): Promise<boolean> {
+  const state = await getState(phoneNumber)
+  return state.step !== "initial"
 }
 
 /**
@@ -71,23 +110,37 @@ export function hasActiveFlow(phoneNumber: string): boolean {
  * @param phoneNumber - User's phone number key
  * @returns True if the session has expired
  */
-export function isSessionExpired(phoneNumber: string): boolean {
-  const state = userStates.get(phoneNumber)
-  if (!state?.lastActivity) return false
-  return Date.now() - state.lastActivity > SESSION_TIMEOUT_MS
+export async function isSessionExpired(phoneNumber: string): Promise<boolean> {
+  const { data, error } = await supabaseAdmin
+    .from("bot_sessions")
+    .select("last_activity")
+    .eq("phone_number", phoneNumber)
+    .single()
+
+  if (error || !data?.last_activity) return false
+
+  const lastActivity = new Date(data.last_activity).getTime()
+  return Date.now() - lastActivity > SESSION_TIMEOUT_MS
 }
 
 /**
- * Returns a snapshot of all active conversation states (for debugging).
- * @returns Cloned Map of phone numbers to UserState
+ * Cleans up expired sessions (older than SESSION_TIMEOUT_MS).
+ * Can be called periodically via cron job.
+ * @returns Number of sessions cleaned up
  */
-export function getAllStates(): Map<string, UserState> {
-  return new Map(userStates)
-}
+export async function cleanupExpiredSessions(): Promise<number> {
+  const cutoff = new Date(Date.now() - SESSION_TIMEOUT_MS).toISOString()
 
-/**
- * Clears all conversation states across all users (for testing only).
- */
-export function clearAllStates(): void {
-  userStates.clear()
+  const { data, error } = await supabaseAdmin
+    .from("bot_sessions")
+    .delete()
+    .lt("last_activity", cutoff)
+    .select("phone_number")
+
+  if (error) {
+    console.error("[BotSessions] Cleanup error:", error)
+    return 0
+  }
+
+  return data?.length || 0
 }

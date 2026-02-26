@@ -3,7 +3,7 @@
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { supabase } from '@/lib/supabase'
-import { clearAllStates, getState, setState } from '@/lib/webhook/state'
+import { clearState, getState, setState } from '@/lib/webhook/state'
 import { initializeHallFlow, handleHallFlow } from '@/lib/webhook/handlers/hall'
 import type { Profile, UserState } from '@/lib/webhook/types'
 
@@ -73,8 +73,8 @@ const mockBookings = [
 ]
 
 describe('Hall Flow Handler', () => {
-  beforeEach(() => {
-    clearAllStates()
+  beforeEach(async () => {
+    await clearState()
     vi.clearAllMocks()
     ;(supabase as any).__reset()
   })
@@ -84,7 +84,7 @@ describe('Hall Flow Handler', () => {
       const result = await initializeHallFlow(PHONE)
 
       expect(result).toBeTruthy()
-      const state = getState(PHONE)
+      const state = await getState(PHONE)
       expect(state.step).toBe('hall_menu')
       expect(state.type).toBe('hall')
     })
@@ -94,87 +94,87 @@ describe('Hall Flow Handler', () => {
     const menuState = (): UserState => ({ step: 'hall_menu', type: 'hall' })
 
     it('"1" starts new booking flow', async () => {
-      setState(PHONE, menuState())
+      await setState(PHONE, menuState())
 
-      const result = await handleHallFlow('1', mockProfile, PHONE, getState(PHONE))
+      const result = await handleHallFlow('1', mockProfile, PHONE, await getState(PHONE))
 
       expect(result).toBeTruthy()
-      const state = getState(PHONE)
+      const state = await getState(PHONE)
       expect(state.step).toBe('hall_new_booking_date')
     })
 
     it('"2" starts cancel flow with bookings', async () => {
-      setState(PHONE, menuState())
+      await setState(PHONE, menuState())
       const { getUserBookings } = await import('@/lib/webhook/profile')
       ;(getUserBookings as any).mockResolvedValueOnce(mockBookings)
 
-      const result = await handleHallFlow('2', mockProfile, PHONE, getState(PHONE))
+      const result = await handleHallFlow('2', mockProfile, PHONE, await getState(PHONE))
 
       expect(result).toBeTruthy()
-      const state = getState(PHONE)
+      const state = await getState(PHONE)
       expect(state.step).toBe('hall_cancel_select')
       expect(state.bookingList).toHaveLength(2)
     })
 
     it('"2" returns no-bookings message when empty', async () => {
-      setState(PHONE, menuState())
+      await setState(PHONE, menuState())
       const { getUserBookings } = await import('@/lib/webhook/profile')
       ;(getUserBookings as any).mockResolvedValueOnce([])
 
-      const result = await handleHallFlow('2', mockProfile, PHONE, getState(PHONE))
+      const result = await handleHallFlow('2', mockProfile, PHONE, await getState(PHONE))
 
       expect(result).toBeTruthy()
     })
 
     it('"3" starts edit flow with bookings', async () => {
-      setState(PHONE, menuState())
+      await setState(PHONE, menuState())
       const { getUserBookings } = await import('@/lib/webhook/profile')
       ;(getUserBookings as any).mockResolvedValueOnce(mockBookings)
 
-      const result = await handleHallFlow('3', mockProfile, PHONE, getState(PHONE))
+      const result = await handleHallFlow('3', mockProfile, PHONE, await getState(PHONE))
 
       expect(result).toBeTruthy()
-      const state = getState(PHONE)
+      const state = await getState(PHONE)
       expect(state.step).toBe('hall_edit_select')
     })
 
     it('"3" returns no-bookings message when empty', async () => {
-      setState(PHONE, menuState())
+      await setState(PHONE, menuState())
       const { getUserBookings } = await import('@/lib/webhook/profile')
       ;(getUserBookings as any).mockResolvedValueOnce([])
 
-      const result = await handleHallFlow('3', mockProfile, PHONE, getState(PHONE))
+      const result = await handleHallFlow('3', mockProfile, PHONE, await getState(PHONE))
 
       expect(result).toBeTruthy()
     })
 
     it('"4" shows booking list', async () => {
-      setState(PHONE, menuState())
+      await setState(PHONE, menuState())
       const { getUserBookings } = await import('@/lib/webhook/profile')
       ;(getUserBookings as any).mockResolvedValueOnce(mockBookings)
 
-      const result = await handleHallFlow('4', mockProfile, PHONE, getState(PHONE))
+      const result = await handleHallFlow('4', mockProfile, PHONE, await getState(PHONE))
 
       expect(result).toBeTruthy()
       // State should be cleared after view
-      const state = getState(PHONE)
+      const state = await getState(PHONE)
       expect(state.step).toBe('initial')
     })
 
     it('"4" returns no-bookings when empty', async () => {
-      setState(PHONE, menuState())
+      await setState(PHONE, menuState())
       const { getUserBookings } = await import('@/lib/webhook/profile')
       ;(getUserBookings as any).mockResolvedValueOnce([])
 
-      const result = await handleHallFlow('4', mockProfile, PHONE, getState(PHONE))
+      const result = await handleHallFlow('4', mockProfile, PHONE, await getState(PHONE))
 
       expect(result).toBeTruthy()
     })
 
     it('returns error for invalid menu option', async () => {
-      setState(PHONE, menuState())
+      await setState(PHONE, menuState())
 
-      const result = await handleHallFlow('9', mockProfile, PHONE, getState(PHONE))
+      const result = await handleHallFlow('9', mockProfile, PHONE, await getState(PHONE))
 
       expect(result).toBeTruthy()
     })
@@ -182,30 +182,30 @@ describe('Hall Flow Handler', () => {
 
   describe('handleHallFlow — new booking date', () => {
     it('shows policies for valid available date', async () => {
-      setState(PHONE, { step: 'hall_new_booking_date', type: 'hall' })
+      await setState(PHONE, { step: 'hall_new_booking_date', type: 'hall' })
 
       ;(supabase as any).__setResult('bookings', { data: [], error: null })
 
-      const result = await handleHallFlow('20/06/2024', mockProfile, PHONE, getState(PHONE))
+      const result = await handleHallFlow('20/06/2024', mockProfile, PHONE, await getState(PHONE))
 
       expect(result).toBeTruthy()
-      const state = getState(PHONE)
+      const state = await getState(PHONE)
       expect(state.step).toBe('hall_new_booking_policies')
       expect(state.date).toBe('2024-06-20')
     })
 
     it('returns error for invalid date format', async () => {
-      setState(PHONE, { step: 'hall_new_booking_date', type: 'hall' })
+      await setState(PHONE, { step: 'hall_new_booking_date', type: 'hall' })
 
-      const result = await handleHallFlow('not-a-date', mockProfile, PHONE, getState(PHONE))
+      const result = await handleHallFlow('not-a-date', mockProfile, PHONE, await getState(PHONE))
 
       expect(result).toBeTruthy()
     })
 
     it('returns error for date in the past', async () => {
-      setState(PHONE, { step: 'hall_new_booking_date', type: 'hall' })
+      await setState(PHONE, { step: 'hall_new_booking_date', type: 'hall' })
 
-      const result = await handleHallFlow('10/06/2024', mockProfile, PHONE, getState(PHONE))
+      const result = await handleHallFlow('10/06/2024', mockProfile, PHONE, await getState(PHONE))
 
       expect(result).toBeTruthy()
     })
@@ -219,47 +219,47 @@ describe('Hall Flow Handler', () => {
     })
 
     it('creates booking on acceptance ("1")', async () => {
-      setState(PHONE, policiesState())
+      await setState(PHONE, policiesState())
 
       ;(supabase as any).__setResult('bookings', {
         data: { id: 'booking-new', booking_date: '2024-06-20' },
         error: null,
       })
 
-      const result = await handleHallFlow('1', mockProfile, PHONE, getState(PHONE))
+      const result = await handleHallFlow('1', mockProfile, PHONE, await getState(PHONE))
 
       expect(result).toBeTruthy()
-      const state = getState(PHONE)
+      const state = await getState(PHONE)
       expect(state.step).toBe('initial')
     })
 
     it('declines on "2"', async () => {
-      setState(PHONE, policiesState())
+      await setState(PHONE, policiesState())
 
-      const result = await handleHallFlow('2', mockProfile, PHONE, getState(PHONE))
+      const result = await handleHallFlow('2', mockProfile, PHONE, await getState(PHONE))
 
       expect(result).toBeTruthy()
-      const state = getState(PHONE)
+      const state = await getState(PHONE)
       expect(state.step).toBe('initial')
     })
 
     it('returns error for invalid response', async () => {
-      setState(PHONE, policiesState())
+      await setState(PHONE, policiesState())
 
-      const result = await handleHallFlow('5', mockProfile, PHONE, getState(PHONE))
+      const result = await handleHallFlow('5', mockProfile, PHONE, await getState(PHONE))
 
       expect(result).toBeTruthy()
     })
 
     it('handles duplicate booking error (23505)', async () => {
-      setState(PHONE, policiesState())
+      await setState(PHONE, policiesState())
 
       ;(supabase as any).__setResult('bookings', {
         data: null,
         error: { message: 'Duplicate', code: '23505' },
       })
 
-      const result = await handleHallFlow('1', mockProfile, PHONE, getState(PHONE))
+      const result = await handleHallFlow('1', mockProfile, PHONE, await getState(PHONE))
 
       expect(result).toBeTruthy()
     })
@@ -267,33 +267,33 @@ describe('Hall Flow Handler', () => {
 
   describe('handleHallFlow — cancel booking', () => {
     it('moves to confirm step on valid selection', async () => {
-      setState(PHONE, {
+      await setState(PHONE, {
         step: 'hall_cancel_select',
         type: 'hall',
         bookingList: mockBookings,
       })
 
-      const result = await handleHallFlow('1', mockProfile, PHONE, getState(PHONE))
+      const result = await handleHallFlow('1', mockProfile, PHONE, await getState(PHONE))
 
       expect(result).toBeTruthy()
-      const state = getState(PHONE)
+      const state = await getState(PHONE)
       expect(state.step).toBe('hall_cancel_confirm')
     })
 
     it('returns error on invalid selection', async () => {
-      setState(PHONE, {
+      await setState(PHONE, {
         step: 'hall_cancel_select',
         type: 'hall',
         bookingList: mockBookings,
       })
 
-      const result = await handleHallFlow('9', mockProfile, PHONE, getState(PHONE))
+      const result = await handleHallFlow('9', mockProfile, PHONE, await getState(PHONE))
 
       expect(result).toBeTruthy()
     })
 
     it('cancels booking on yes ("1")', async () => {
-      setState(PHONE, {
+      await setState(PHONE, {
         step: 'hall_cancel_confirm',
         type: 'hall',
         bookingList: mockBookings,
@@ -302,46 +302,46 @@ describe('Hall Flow Handler', () => {
 
       ;(supabase as any).__setResult('bookings', { data: null, error: null })
 
-      const result = await handleHallFlow('1', mockProfile, PHONE, getState(PHONE))
+      const result = await handleHallFlow('1', mockProfile, PHONE, await getState(PHONE))
 
       expect(result).toBeTruthy()
-      const state = getState(PHONE)
+      const state = await getState(PHONE)
       expect(state.step).toBe('initial')
     })
 
     it('aborts on no ("2")', async () => {
-      setState(PHONE, {
+      await setState(PHONE, {
         step: 'hall_cancel_confirm',
         type: 'hall',
         bookingList: mockBookings,
         selectedBooking: mockBookings[0],
       } as any)
 
-      const result = await handleHallFlow('2', mockProfile, PHONE, getState(PHONE))
+      const result = await handleHallFlow('2', mockProfile, PHONE, await getState(PHONE))
 
       expect(result).toBeTruthy()
-      const state = getState(PHONE)
+      const state = await getState(PHONE)
       expect(state.step).toBe('initial')
     })
   })
 
   describe('handleHallFlow — edit booking', () => {
     it('selects booking and moves to date step', async () => {
-      setState(PHONE, {
+      await setState(PHONE, {
         step: 'hall_edit_select',
         type: 'hall',
         bookingList: mockBookings,
       })
 
-      const result = await handleHallFlow('1', mockProfile, PHONE, getState(PHONE))
+      const result = await handleHallFlow('1', mockProfile, PHONE, await getState(PHONE))
 
       expect(result).toBeTruthy()
-      const state = getState(PHONE)
+      const state = await getState(PHONE)
       expect(state.step).toBe('hall_edit_date')
     })
 
     it('updates booking date on valid new date', async () => {
-      setState(PHONE, {
+      await setState(PHONE, {
         step: 'hall_edit_date',
         type: 'hall',
         bookingList: mockBookings,
@@ -350,35 +350,35 @@ describe('Hall Flow Handler', () => {
 
       ;(supabase as any).__setResult('bookings', { data: null, error: null })
 
-      const result = await handleHallFlow('22/06/2024', mockProfile, PHONE, getState(PHONE))
+      const result = await handleHallFlow('22/06/2024', mockProfile, PHONE, await getState(PHONE))
 
       expect(result).toBeTruthy()
-      const state = getState(PHONE)
+      const state = await getState(PHONE)
       expect(state.step).toBe('initial')
     })
 
     it('returns error for past date in edit', async () => {
-      setState(PHONE, {
+      await setState(PHONE, {
         step: 'hall_edit_date',
         type: 'hall',
         bookingList: mockBookings,
         selectedBooking: mockBookings[0],
       } as any)
 
-      const result = await handleHallFlow('10/06/2024', mockProfile, PHONE, getState(PHONE))
+      const result = await handleHallFlow('10/06/2024', mockProfile, PHONE, await getState(PHONE))
 
       expect(result).toBeTruthy()
     })
 
     it('returns error for invalid date format in edit', async () => {
-      setState(PHONE, {
+      await setState(PHONE, {
         step: 'hall_edit_date',
         type: 'hall',
         bookingList: mockBookings,
         selectedBooking: mockBookings[0],
       } as any)
 
-      const result = await handleHallFlow('not-a-date', mockProfile, PHONE, getState(PHONE))
+      const result = await handleHallFlow('not-a-date', mockProfile, PHONE, await getState(PHONE))
 
       expect(result).toBeTruthy()
     })

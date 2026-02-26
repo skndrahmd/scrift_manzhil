@@ -17,7 +17,7 @@ import { getComplaintCategoryMenu, getApartmentSubcategoryMenu, getBuildingSubca
  * Initialize complaint flow
  */
 export async function initializeComplaintFlow(phoneNumber: string, language?: string): Promise<string> {
-  setState(phoneNumber, {
+  await setState(phoneNumber, {
     step: "complaint_category",
     type: "complaint",
     complaint: {},
@@ -67,7 +67,7 @@ async function handleCategorySelection(
   if (choice === "1") {
     userState.complaint!.category = "apartment"
     userState.step = "complaint_subcategory"
-    setState(phoneNumber, userState)
+    await setState(phoneNumber, userState)
 
     return await getApartmentSubcategoryMenu(language)
   }
@@ -75,7 +75,7 @@ async function handleCategorySelection(
   if (choice === "2") {
     userState.complaint!.category = "building"
     userState.step = "complaint_subcategory"
-    setState(phoneNumber, userState)
+    await setState(phoneNumber, userState)
 
     return await getBuildingSubcategoryMenu(language)
   }
@@ -125,7 +125,7 @@ async function handleSubcategorySelection(
 
     if (needsDescription) {
       userState.step = "complaint_description"
-      setState(phoneNumber, userState)
+      await setState(phoneNumber, userState)
       return await getMessage(MSG.COMPLAINT_DESCRIPTION_PROMPT, undefined, language)
     }
 
@@ -182,7 +182,7 @@ async function createComplaint(
     }
 
     // Clear state
-    clearState(phoneNumber)
+    await clearState(phoneNumber)
 
     const categoryText = complaint.category === "apartment" ? "Apartment" : "Building"
     const subcategoryText = formatSubcategory(complaint.subcategory!)

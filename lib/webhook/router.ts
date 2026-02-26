@@ -72,13 +72,13 @@ export async function processMessage(
 ): Promise<string> {
   try {
     const trimmedMessage = message.trim()
-    const userState = getState(phoneNumber)
+    const userState = await getState(phoneNumber)
 
     console.log("[Webhook] Processing:", { message: trimmedMessage, step: userState.step, type: userState.type, hasMedia: !!mediaInfo })
 
     // Handle main menu command - Universal "0" (checked first so it always works)
     if (isMainMenuCommand(trimmedMessage)) {
-      clearState(phoneNumber)
+      await clearState(phoneNumber)
 
       // Check if any languages are enabled
       const enabledLanguages = await getEnabledLanguages()
@@ -93,7 +93,7 @@ export async function processMessage(
           ),
         ].join("\n")
 
-        setState(phoneNumber, { step: "language_selection" })
+        await setState(phoneNumber, { step: "language_selection" })
 
         return `🌐 *Select your language:*\n\n${options}\n\nReply 1-${enabledLanguages.length + 1}`
       }
@@ -106,10 +106,10 @@ export async function processMessage(
       userState.step !== "initial" &&
       userState.step !== "main_menu" &&
       userState.step !== "language_selection" &&
-      isSessionExpired(phoneNumber)
+      await isSessionExpired(phoneNumber)
     ) {
       const language = userState.language
-      clearState(phoneNumber)
+      await clearState(phoneNumber)
       return await getMessage(MSG.SESSION_EXPIRED, undefined, language)
     }
 
@@ -125,14 +125,14 @@ export async function processMessage(
 
       if (choice === 1) {
         // English selected — no language in state
-        clearState(phoneNumber)
+        await clearState(phoneNumber)
         return await getMainMenu(profile.name)
       }
 
       const langIndex = choice - 2
       if (langIndex >= 0 && langIndex < enabledLanguages.length) {
         const selectedLang = enabledLanguages[langIndex]
-        setState(phoneNumber, {
+        await setState(phoneNumber, {
           step: "initial",
           language: selectedLang.language_code,
         })
@@ -173,7 +173,7 @@ export async function processMessage(
     }
   } catch (error) {
     console.error("[Webhook] Process message error:", error)
-    const userState = getState(phoneNumber)
+    const userState = await getState(phoneNumber)
     return await getMessage(MSG.ERROR_GENERIC, undefined, userState?.language)
   }
 }
@@ -312,7 +312,7 @@ async function handleBackCommand(
 
   if (nav) {
     userState.step = nav.step
-    setState(phoneNumber, userState)
+    await setState(phoneNumber, userState)
 
     // For complaint category, use the full menu function with variables
     if (nav.messageKey === MSG.COMPLAINT_CATEGORY_MENU) {
@@ -329,6 +329,6 @@ async function handleBackCommand(
   }
 
   // Default: return to main menu
-  clearState(phoneNumber)
+  await clearState(phoneNumber)
   return await getMainMenu(profile.name, language)
 }

@@ -15,7 +15,7 @@ import { MSG } from "../message-keys"
  * Initialize visitor registration flow
  */
 export async function initializeVisitorFlow(phoneNumber: string, language?: string): Promise<string> {
-    setState(phoneNumber, {
+    await setState(phoneNumber, {
         step: "visitor_name",
         type: "visitor",
         visitor: {},
@@ -68,7 +68,7 @@ async function handleNameInput(
         return await getMessage(MSG.VISITOR_NAME_TOO_SHORT, undefined, language)
     }
 
-    setState(phoneNumber, {
+    await setState(phoneNumber, {
         step: "visitor_car_number",
         type: "visitor",
         visitor: { ...visitor, visitor_name: name },
@@ -98,7 +98,7 @@ async function handleCarNumberInput(
         car_number: input,
     }
 
-    setState(phoneNumber, {
+    await setState(phoneNumber, {
         step: "visitor_date",
         type: "visitor",
         visitor: updatedVisitor,
@@ -166,7 +166,7 @@ async function handleDateInputAndSave(
             return await getMessage(MSG.VISITOR_CREATION_ERROR, undefined, language)
         }
 
-        clearState(phoneNumber)
+        await clearState(phoneNumber)
         const formattedDate = formatDate(parsedDateStr)
         const carLine = visitor.car_number ? `\n🚗 Car: ${visitor.car_number}` : ""
         const passId = data.id.substring(0, 5)
@@ -179,7 +179,7 @@ async function handleDateInputAndSave(
         }, language)
     } catch (error) {
         console.error("[Visitor] Error:", error)
-        clearState(phoneNumber)
+        await clearState(phoneNumber)
         return await getMessage(MSG.VISITOR_UNEXPECTED_ERROR, undefined, language)
     }
 }

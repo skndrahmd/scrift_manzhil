@@ -20,7 +20,7 @@ import {
  * Initialize staff management flow
  */
 export async function initializeStaffFlow(phoneNumber: string, language?: string): Promise<string> {
-  setState(phoneNumber, {
+  await setState(phoneNumber, {
     step: "staff_menu",
     type: "staff",
     staff: {},
@@ -49,7 +49,7 @@ export async function handleStaffFlow(
 
   // Guard: profile must be linked to a unit
   if (!profile.unit_id) {
-    clearState(phoneNumber)
+    await clearState(phoneNumber)
     return await getMessage(MSG.STAFF_NO_UNIT, undefined, language)
   }
 
@@ -95,7 +95,7 @@ async function handleStaffMenuSelection(
     case "1": // Add new staff
       userState.step = "staff_add_name"
       userState.staff = {}
-      setState(phoneNumber, userState)
+      await setState(phoneNumber, userState)
       return await getMessage(MSG.STAFF_ADD_NAME, undefined, language)
 
     case "2": // View staff
@@ -132,7 +132,7 @@ async function handleAddStaffFlow(
 
     userState.staff!.name = message.trim()
     userState.step = "staff_add_phone"
-    setState(phoneNumber, userState)
+    await setState(phoneNumber, userState)
     return await getMessage(MSG.STAFF_ADD_PHONE, undefined, language)
   }
 
@@ -156,7 +156,7 @@ async function handleAddStaffFlow(
 
     userState.staff!.phone = phoneValidation.normalized!
     userState.step = "staff_add_cnic"
-    setState(phoneNumber, userState)
+    await setState(phoneNumber, userState)
     return await getMessage(MSG.STAFF_ADD_CNIC, undefined, language)
   }
 
@@ -168,7 +168,7 @@ async function handleAddStaffFlow(
 
     userState.staff!.cnic = cnicValidation.normalized!
     userState.step = "staff_add_role_select"
-    setState(phoneNumber, userState)
+    await setState(phoneNumber, userState)
 
     return await getStaffRoleMenu(language)
   }
@@ -183,7 +183,7 @@ async function handleAddStaffFlow(
 
     if (choice === "8") {
       userState.step = "staff_add_role_custom"
-      setState(phoneNumber, userState)
+      await setState(phoneNumber, userState)
       return await getMessage(MSG.STAFF_ADD_ROLE_CUSTOM, undefined, language)
     }
 
@@ -231,7 +231,7 @@ async function createStaffMember(
       return await getMessage(MSG.STAFF_ADD_ERROR, undefined, language)
     }
 
-    clearState(phoneNumber)
+    await clearState(phoneNumber)
     return await getMessage(MSG.STAFF_ADDED, {
       name: staff.name || "",
       cnic: staff.cnic || "",
@@ -272,7 +272,7 @@ async function viewStaffList(profile: Profile, phoneNumber: string, language?: s
       )
       .join("\n\n")
 
-    clearState(phoneNumber)
+    await clearState(phoneNumber)
     return await getMessage(MSG.STAFF_VIEW_LIST, { list: listText }, language)
   } catch (error) {
     console.error("[Staff] View error:", error)
@@ -295,10 +295,10 @@ async function initializeDeleteStaff(profile: Profile, phoneNumber: string, lang
       return await getMessage(MSG.STAFF_DELETE_EMPTY, undefined, language)
     }
 
-    const userState = getState(phoneNumber)
+    const userState = await getState(phoneNumber)
     userState.step = "staff_delete_list"
     userState.staffList = staffList
-    setState(phoneNumber, userState)
+    await setState(phoneNumber, userState)
 
     const listText = staffList.map((s, i) => `${i + 1}. ${s.name} (${s.role})`).join("\n")
 
@@ -332,7 +332,7 @@ async function handleDeleteStaffFlow(
     const selectedStaff = userState.staffList![staffIndex - 1]
       ; (userState as any).selectedStaff = selectedStaff
     userState.step = "staff_delete_confirm"
-    setState(phoneNumber, userState)
+    await setState(phoneNumber, userState)
 
     return await getMessage(MSG.STAFF_DELETE_CONFIRM, {
       name: selectedStaff.name,
@@ -351,12 +351,12 @@ async function handleDeleteStaffFlow(
         return await getMessage(MSG.STAFF_DELETE_FAILED, undefined, language)
       }
 
-      clearState(phoneNumber)
+      await clearState(phoneNumber)
       return await getMessage(MSG.STAFF_DELETED, { name: selectedStaff.name }, language)
     }
 
     if (isNoResponse(message)) {
-      clearState(phoneNumber)
+      await clearState(phoneNumber)
       return await getMessage(MSG.STAFF_DELETE_CANCELLED, undefined, language)
     }
 
@@ -381,10 +381,10 @@ async function initializeEditStaff(profile: Profile, phoneNumber: string, langua
       return await getMessage(MSG.STAFF_EDIT_EMPTY, undefined, language)
     }
 
-    const userState = getState(phoneNumber)
+    const userState = await getState(phoneNumber)
     userState.step = "staff_edit_list"
     userState.staffList = staffList
-    setState(phoneNumber, userState)
+    await setState(phoneNumber, userState)
 
     const listText = staffList.map((s, i) => `${i + 1}. ${s.name} (${s.role})`).join("\n")
 
@@ -418,7 +418,7 @@ async function handleEditStaffFlow(
     const selectedStaff = userState.staffList![staffIndex - 1]
       ; (userState as any).selectedStaff = selectedStaff
     userState.step = "staff_edit_field"
-    setState(phoneNumber, userState)
+    await setState(phoneNumber, userState)
 
     return await getMessage(MSG.STAFF_EDIT_FIELD_SELECT, { name: selectedStaff.name }, language)
   }
@@ -429,7 +429,7 @@ async function handleEditStaffFlow(
     if (fields[choice]) {
       ; (userState as any).editField = fields[choice]
       userState.step = "staff_edit_value"
-      setState(phoneNumber, userState)
+      await setState(phoneNumber, userState)
 
       const selectedStaff = (userState as any).selectedStaff
       if (choice === "1") {
@@ -479,7 +479,7 @@ async function handleEditStaffFlow(
       phone_number: "Phone",
     }
 
-    clearState(phoneNumber)
+    await clearState(phoneNumber)
     return await getMessage(MSG.STAFF_EDIT_SUCCESS, {
       field_name: fieldNames[editField],
       new_value: newValue,

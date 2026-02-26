@@ -29,8 +29,7 @@ export {
   clearState,
   hasActiveFlow,
   isSessionExpired,
-  getAllStates,
-  clearAllStates,
+  cleanupExpiredSessions,
 } from "./state"
 
 // Menu functions

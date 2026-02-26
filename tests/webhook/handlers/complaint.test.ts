@@ -3,7 +3,7 @@
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { supabase } from '@/lib/supabase'
-import { clearAllStates, getState, setState } from '@/lib/webhook/state'
+import { getState, setState, clearState } from '@/lib/webhook/state'
 import { initializeComplaintFlow, handleComplaintFlow } from '@/lib/webhook/handlers/complaint'
 import type { Profile, UserState } from '@/lib/webhook/types'
 
@@ -55,8 +55,8 @@ const mockProfile: Profile = {
 }
 
 describe('Complaint Flow Handler', () => {
-  beforeEach(() => {
-    clearAllStates()
+  beforeEach(async () => {
+    await clearState()
     vi.clearAllMocks()
     ;(supabase as any).__reset()
   })
@@ -66,7 +66,7 @@ describe('Complaint Flow Handler', () => {
       const result = await initializeComplaintFlow(PHONE)
 
       expect(result).toContain('category')
-      const state = getState(PHONE)
+      const state = await getState(PHONE)
       expect(state.step).toBe('complaint_category')
       expect(state.type).toBe('complaint')
       expect(state.complaint).toEqual({})
@@ -74,57 +74,57 @@ describe('Complaint Flow Handler', () => {
 
     it('passes language to state', async () => {
       await initializeComplaintFlow(PHONE, 'ur')
-      const state = getState(PHONE)
+      const state = await getState(PHONE)
       expect(state.language).toBe('ur')
     })
   })
 
   describe('handleComplaintFlow — category selection', () => {
     it('selects apartment category on "1"', async () => {
-      setState(PHONE, { step: 'complaint_category', type: 'complaint', complaint: {} })
-      const userState = getState(PHONE)
+      await setState(PHONE, { step: 'complaint_category', type: 'complaint', complaint: {} })
+      const userState = await getState(PHONE)
 
       const result = await handleComplaintFlow('1', mockProfile, PHONE, userState)
 
       expect(result).toContain('subcategory')
-      const state = getState(PHONE)
+      const state = await getState(PHONE)
       expect(state.step).toBe('complaint_subcategory')
       expect(state.complaint?.category).toBe('apartment')
     })
 
     it('selects building category on "2"', async () => {
-      setState(PHONE, { step: 'complaint_category', type: 'complaint', complaint: {} })
-      const userState = getState(PHONE)
+      await setState(PHONE, { step: 'complaint_category', type: 'complaint', complaint: {} })
+      const userState = await getState(PHONE)
 
       const result = await handleComplaintFlow('2', mockProfile, PHONE, userState)
 
       expect(result).toBeTruthy()
-      const state = getState(PHONE)
+      const state = await getState(PHONE)
       expect(state.step).toBe('complaint_subcategory')
       expect(state.complaint?.category).toBe('building')
     })
 
     it('returns error on invalid category', async () => {
-      setState(PHONE, { step: 'complaint_category', type: 'complaint', complaint: {} })
-      const userState = getState(PHONE)
+      await setState(PHONE, { step: 'complaint_category', type: 'complaint', complaint: {} })
+      const userState = await getState(PHONE)
 
       const result = await handleComplaintFlow('5', mockProfile, PHONE, userState)
 
       expect(result).toBeTruthy()
       // State should remain on category step
-      const state = getState(PHONE)
+      const state = await getState(PHONE)
       expect(state.step).toBe('complaint_category')
     })
   })
 
   describe('handleComplaintFlow — apartment subcategory selection', () => {
     it('creates complaint directly for plumbing (option 1, no description needed)', async () => {
-      setState(PHONE, {
+      await setState(PHONE, {
         step: 'complaint_subcategory',
         type: 'complaint',
         complaint: { category: 'apartment' },
       })
-      const userState = getState(PHONE)
+      const userState = await getState(PHONE)
 
       // Mock complaint insert success
       ;(supabase as any).__setResult('complaints', {
@@ -141,100 +141,100 @@ describe('Complaint Flow Handler', () => {
 
       expect(result).toBeTruthy()
       // State should be cleared after creation
-      const state = getState(PHONE)
+      const state = await getState(PHONE)
       expect(state.step).toBe('initial')
     })
 
     it('moves to description step for "other" (option 5)', async () => {
-      setState(PHONE, {
+      await setState(PHONE, {
         step: 'complaint_subcategory',
         type: 'complaint',
         complaint: { category: 'apartment' },
       })
-      const userState = getState(PHONE)
+      const userState = await getState(PHONE)
 
       const result = await handleComplaintFlow('5', mockProfile, PHONE, userState)
 
       expect(result).toBeTruthy()
-      const state = getState(PHONE)
+      const state = await getState(PHONE)
       expect(state.step).toBe('complaint_description')
       expect(state.complaint?.subcategory).toBe('other')
     })
 
     it('moves to description step for "my_parking" (option 4)', async () => {
-      setState(PHONE, {
+      await setState(PHONE, {
         step: 'complaint_subcategory',
         type: 'complaint',
         complaint: { category: 'apartment' },
       })
-      const userState = getState(PHONE)
+      const userState = await getState(PHONE)
 
       const result = await handleComplaintFlow('4', mockProfile, PHONE, userState)
 
       expect(result).toBeTruthy()
-      const state = getState(PHONE)
+      const state = await getState(PHONE)
       expect(state.step).toBe('complaint_description')
       expect(state.complaint?.subcategory).toBe('my_parking')
     })
 
     it('returns error for invalid subcategory', async () => {
-      setState(PHONE, {
+      await setState(PHONE, {
         step: 'complaint_subcategory',
         type: 'complaint',
         complaint: { category: 'apartment' },
       })
-      const userState = getState(PHONE)
+      const userState = await getState(PHONE)
 
       const result = await handleComplaintFlow('9', mockProfile, PHONE, userState)
 
       expect(result).toBeTruthy()
       // Should still be on subcategory step
-      const state = getState(PHONE)
+      const state = await getState(PHONE)
       expect(state.step).toBe('complaint_subcategory')
     })
   })
 
   describe('handleComplaintFlow — building subcategory selection', () => {
     it('moves to description step for any building subcategory', async () => {
-      setState(PHONE, {
+      await setState(PHONE, {
         step: 'complaint_subcategory',
         type: 'complaint',
         complaint: { category: 'building' },
       })
-      const userState = getState(PHONE)
+      const userState = await getState(PHONE)
 
       const result = await handleComplaintFlow('1', mockProfile, PHONE, userState)
 
       expect(result).toBeTruthy()
-      const state = getState(PHONE)
+      const state = await getState(PHONE)
       expect(state.step).toBe('complaint_description')
       expect(state.complaint?.subcategory).toBe('lift_elevator')
     })
 
     it('returns error for out-of-range building subcategory', async () => {
-      setState(PHONE, {
+      await setState(PHONE, {
         step: 'complaint_subcategory',
         type: 'complaint',
         complaint: { category: 'building' },
       })
-      const userState = getState(PHONE)
+      const userState = await getState(PHONE)
 
       const result = await handleComplaintFlow('15', mockProfile, PHONE, userState)
 
       expect(result).toBeTruthy()
-      const state = getState(PHONE)
+      const state = await getState(PHONE)
       expect(state.step).toBe('complaint_subcategory')
     })
   })
 
   describe('handleComplaintFlow — description step', () => {
     it('creates complaint with description', async () => {
-      setState(PHONE, {
+      await setState(PHONE, {
         step: 'complaint_description',
         type: 'complaint',
         complaint: { category: 'building', subcategory: 'lift_elevator' },
       })
-      const userState = getState(PHONE)
+      const userState = await getState(PHONE)
 
       ;(supabase as any).__setResult('complaints', {
         data: {
@@ -250,17 +250,17 @@ describe('Complaint Flow Handler', () => {
       const result = await handleComplaintFlow('Lift not working on 3rd floor', mockProfile, PHONE, userState)
 
       expect(result).toBeTruthy()
-      const state = getState(PHONE)
+      const state = await getState(PHONE)
       expect(state.step).toBe('initial')
     })
 
     it('returns error on DB failure during creation', async () => {
-      setState(PHONE, {
+      await setState(PHONE, {
         step: 'complaint_description',
         type: 'complaint',
         complaint: { category: 'apartment', subcategory: 'other' },
       })
-      const userState = getState(PHONE)
+      const userState = await getState(PHONE)
 
       ;(supabase as any).__setResult('complaints', {
         data: null,

@@ -3,7 +3,7 @@
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { supabase } from '@/lib/supabase'
-import { clearAllStates, getState } from '@/lib/webhook/state'
+import { clearState, getState } from '@/lib/webhook/state'
 import { initializeFeedbackFlow, handleFeedbackFlow } from '@/lib/webhook/handlers/feedback'
 import type { Profile, UserState } from '@/lib/webhook/types'
 
@@ -25,8 +25,8 @@ const mockProfile: Profile = {
 }
 
 describe('Feedback Flow Handler', () => {
-  beforeEach(() => {
-    clearAllStates()
+  beforeEach(async () => {
+    await clearState()
     vi.clearAllMocks()
     ;(supabase as any).__reset()
   })
@@ -38,7 +38,7 @@ describe('Feedback Flow Handler', () => {
       expect(result).toBeTruthy()
       expect(typeof result).toBe('string')
 
-      const state = getState(PHONE)
+      const state = await getState(PHONE)
       expect(state.step).toBe('feedback_input')
       expect(state.type).toBe('feedback')
     })
@@ -46,7 +46,7 @@ describe('Feedback Flow Handler', () => {
     it('passes language to state', async () => {
       await initializeFeedbackFlow(PHONE, 'ur')
 
-      const state = getState(PHONE)
+      const state = await getState(PHONE)
       expect(state.language).toBe('ur')
     })
   })
@@ -60,7 +60,7 @@ describe('Feedback Flow Handler', () => {
 
       expect(result).toBeTruthy()
       // State should be cleared after success
-      const state = getState(PHONE)
+      const state = await getState(PHONE)
       expect(state.step).toBe('initial')
 
       // Verify insert was called

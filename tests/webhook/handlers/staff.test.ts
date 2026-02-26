@@ -3,7 +3,7 @@
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { supabase } from '@/lib/supabase'
-import { clearAllStates, getState, setState } from '@/lib/webhook/state'
+import { clearState, getState, setState } from '@/lib/webhook/state'
 import { initializeStaffFlow, handleStaffFlow } from '@/lib/webhook/handlers/staff'
 import type { Profile, UserState } from '@/lib/webhook/types'
 
@@ -55,8 +55,8 @@ const mockStaffList = [
 ]
 
 describe('Staff Flow Handler', () => {
-  beforeEach(() => {
-    clearAllStates()
+  beforeEach(async () => {
+    await clearState()
     vi.clearAllMocks()
     ;(supabase as any).__reset()
   })
@@ -66,7 +66,7 @@ describe('Staff Flow Handler', () => {
       const result = await initializeStaffFlow(PHONE)
 
       expect(result).toBeTruthy()
-      const state = getState(PHONE)
+      const state = await getState(PHONE)
       expect(state.step).toBe('staff_menu')
       expect(state.type).toBe('staff')
       expect(state.staff).toEqual({})
@@ -75,12 +75,12 @@ describe('Staff Flow Handler', () => {
 
   describe('handleStaffFlow — no unit guard', () => {
     it('returns error and clears state if profile has no unit_id', async () => {
-      setState(PHONE, { step: 'staff_menu', type: 'staff', staff: {}, staffList: [] })
+      await setState(PHONE, { step: 'staff_menu', type: 'staff', staff: {}, staffList: [] })
 
-      const result = await handleStaffFlow('1', profileNoUnit, PHONE, getState(PHONE))
+      const result = await handleStaffFlow('1', profileNoUnit, PHONE, await getState(PHONE))
 
       expect(result).toBeTruthy()
-      const state = getState(PHONE)
+      const state = await getState(PHONE)
       expect(state.step).toBe('initial')
     })
   })
@@ -89,59 +89,59 @@ describe('Staff Flow Handler', () => {
     const menuState = (): UserState => ({ step: 'staff_menu', type: 'staff', staff: {}, staffList: [] })
 
     it('"1" starts add staff flow', async () => {
-      setState(PHONE, menuState())
+      await setState(PHONE, menuState())
 
-      const result = await handleStaffFlow('1', mockProfile, PHONE, getState(PHONE))
+      const result = await handleStaffFlow('1', mockProfile, PHONE, await getState(PHONE))
 
       expect(result).toBeTruthy()
-      const state = getState(PHONE)
+      const state = await getState(PHONE)
       expect(state.step).toBe('staff_add_name')
     })
 
     it('"2" shows staff list', async () => {
-      setState(PHONE, menuState())
+      await setState(PHONE, menuState())
       ;(supabase as any).__setResult('staff', { data: mockStaffList, error: null })
 
-      const result = await handleStaffFlow('2', mockProfile, PHONE, getState(PHONE))
+      const result = await handleStaffFlow('2', mockProfile, PHONE, await getState(PHONE))
 
       expect(result).toBeTruthy()
     })
 
     it('"2" shows empty message when no staff', async () => {
-      setState(PHONE, menuState())
+      await setState(PHONE, menuState())
       ;(supabase as any).__setResult('staff', { data: [], error: null })
 
-      const result = await handleStaffFlow('2', mockProfile, PHONE, getState(PHONE))
+      const result = await handleStaffFlow('2', mockProfile, PHONE, await getState(PHONE))
 
       expect(result).toBeTruthy()
     })
 
     it('"3" starts edit flow with staff list', async () => {
-      setState(PHONE, menuState())
+      await setState(PHONE, menuState())
       ;(supabase as any).__setResult('staff', { data: mockStaffList, error: null })
 
-      const result = await handleStaffFlow('3', mockProfile, PHONE, getState(PHONE))
+      const result = await handleStaffFlow('3', mockProfile, PHONE, await getState(PHONE))
 
       expect(result).toBeTruthy()
-      const state = getState(PHONE)
+      const state = await getState(PHONE)
       expect(state.step).toBe('staff_edit_list')
     })
 
     it('"4" starts delete flow with staff list', async () => {
-      setState(PHONE, menuState())
+      await setState(PHONE, menuState())
       ;(supabase as any).__setResult('staff', { data: mockStaffList, error: null })
 
-      const result = await handleStaffFlow('4', mockProfile, PHONE, getState(PHONE))
+      const result = await handleStaffFlow('4', mockProfile, PHONE, await getState(PHONE))
 
       expect(result).toBeTruthy()
-      const state = getState(PHONE)
+      const state = await getState(PHONE)
       expect(state.step).toBe('staff_delete_list')
     })
 
     it('returns error for invalid menu option', async () => {
-      setState(PHONE, menuState())
+      await setState(PHONE, menuState())
 
-      const result = await handleStaffFlow('9', mockProfile, PHONE, getState(PHONE))
+      const result = await handleStaffFlow('9', mockProfile, PHONE, await getState(PHONE))
 
       expect(result).toBeTruthy()
     })
@@ -149,51 +149,51 @@ describe('Staff Flow Handler', () => {
 
   describe('handleStaffFlow — add staff flow', () => {
     it('accepts valid name and moves to phone step', async () => {
-      setState(PHONE, { step: 'staff_add_name', type: 'staff', staff: {}, staffList: [] })
+      await setState(PHONE, { step: 'staff_add_name', type: 'staff', staff: {}, staffList: [] })
 
-      const result = await handleStaffFlow('Ali Khan', mockProfile, PHONE, getState(PHONE))
+      const result = await handleStaffFlow('Ali Khan', mockProfile, PHONE, await getState(PHONE))
 
       expect(result).toBeTruthy()
-      const state = getState(PHONE)
+      const state = await getState(PHONE)
       expect(state.step).toBe('staff_add_phone')
       expect(state.staff?.name).toBe('Ali Khan')
     })
 
     it('accepts valid phone and moves to CNIC step', async () => {
-      setState(PHONE, { step: 'staff_add_phone', type: 'staff', staff: { name: 'Ali Khan' }, staffList: [] })
+      await setState(PHONE, { step: 'staff_add_phone', type: 'staff', staff: { name: 'Ali Khan' }, staffList: [] })
 
       // No duplicate found
       ;(supabase as any).__setResult('staff', { data: null, error: { code: 'PGRST116', message: 'not found' } })
 
-      const result = await handleStaffFlow('03001234567', mockProfile, PHONE, getState(PHONE))
+      const result = await handleStaffFlow('03001234567', mockProfile, PHONE, await getState(PHONE))
 
       expect(result).toBeTruthy()
-      const state = getState(PHONE)
+      const state = await getState(PHONE)
       expect(state.step).toBe('staff_add_cnic')
     })
 
     it('rejects duplicate phone number', async () => {
-      setState(PHONE, { step: 'staff_add_phone', type: 'staff', staff: { name: 'Ali Khan' }, staffList: [] })
+      await setState(PHONE, { step: 'staff_add_phone', type: 'staff', staff: { name: 'Ali Khan' }, staffList: [] })
 
       ;(supabase as any).__setResult('staff', { data: { id: 's1' }, error: null })
 
-      const result = await handleStaffFlow('03001234567', mockProfile, PHONE, getState(PHONE))
+      const result = await handleStaffFlow('03001234567', mockProfile, PHONE, await getState(PHONE))
 
       expect(result).toBeTruthy()
     })
 
     it('accepts valid CNIC and moves to role selection', async () => {
-      setState(PHONE, { step: 'staff_add_cnic', type: 'staff', staff: { name: 'Ali', phone: '03001234567' }, staffList: [] })
+      await setState(PHONE, { step: 'staff_add_cnic', type: 'staff', staff: { name: 'Ali', phone: '03001234567' }, staffList: [] })
 
-      const result = await handleStaffFlow('3520112345671', mockProfile, PHONE, getState(PHONE))
+      const result = await handleStaffFlow('3520112345671', mockProfile, PHONE, await getState(PHONE))
 
       expect(result).toBeTruthy()
-      const state = getState(PHONE)
+      const state = await getState(PHONE)
       expect(state.step).toBe('staff_add_role_select')
     })
 
     it('creates staff on role selection (option "1")', async () => {
-      setState(PHONE, {
+      await setState(PHONE, {
         step: 'staff_add_role_select',
         type: 'staff',
         staff: { name: 'Ali', phone: '03001234567', cnic: '3520112345671' },
@@ -202,30 +202,30 @@ describe('Staff Flow Handler', () => {
 
       ;(supabase as any).__setResult('staff', { data: null, error: null })
 
-      const result = await handleStaffFlow('1', mockProfile, PHONE, getState(PHONE))
+      const result = await handleStaffFlow('1', mockProfile, PHONE, await getState(PHONE))
 
       expect(result).toBeTruthy()
-      const state = getState(PHONE)
+      const state = await getState(PHONE)
       expect(state.step).toBe('initial')
     })
 
     it('moves to custom role input on "8"', async () => {
-      setState(PHONE, {
+      await setState(PHONE, {
         step: 'staff_add_role_select',
         type: 'staff',
         staff: { name: 'Ali', phone: '03001234567', cnic: '3520112345671' },
         staffList: [],
       })
 
-      const result = await handleStaffFlow('8', mockProfile, PHONE, getState(PHONE))
+      const result = await handleStaffFlow('8', mockProfile, PHONE, await getState(PHONE))
 
       expect(result).toBeTruthy()
-      const state = getState(PHONE)
+      const state = await getState(PHONE)
       expect(state.step).toBe('staff_add_role_custom')
     })
 
     it('creates staff with custom role', async () => {
-      setState(PHONE, {
+      await setState(PHONE, {
         step: 'staff_add_role_custom',
         type: 'staff',
         staff: { name: 'Ali', phone: '03001234567', cnic: '3520112345671' },
@@ -234,22 +234,22 @@ describe('Staff Flow Handler', () => {
 
       ;(supabase as any).__setResult('staff', { data: null, error: null })
 
-      const result = await handleStaffFlow('Gardener', mockProfile, PHONE, getState(PHONE))
+      const result = await handleStaffFlow('Gardener', mockProfile, PHONE, await getState(PHONE))
 
       expect(result).toBeTruthy()
-      const state = getState(PHONE)
+      const state = await getState(PHONE)
       expect(state.step).toBe('initial')
     })
 
     it('rejects too-short custom role', async () => {
-      setState(PHONE, {
+      await setState(PHONE, {
         step: 'staff_add_role_custom',
         type: 'staff',
         staff: { name: 'Ali', phone: '03001234567', cnic: '3520112345671' },
         staffList: [],
       })
 
-      const result = await handleStaffFlow('AB', mockProfile, PHONE, getState(PHONE))
+      const result = await handleStaffFlow('AB', mockProfile, PHONE, await getState(PHONE))
 
       expect(result).toBeTruthy()
     })
@@ -257,35 +257,35 @@ describe('Staff Flow Handler', () => {
 
   describe('handleStaffFlow — delete staff flow', () => {
     it('selects staff and moves to confirm', async () => {
-      setState(PHONE, {
+      await setState(PHONE, {
         step: 'staff_delete_list',
         type: 'staff',
         staff: {},
         staffList: mockStaffList,
       })
 
-      const result = await handleStaffFlow('1', mockProfile, PHONE, getState(PHONE))
+      const result = await handleStaffFlow('1', mockProfile, PHONE, await getState(PHONE))
 
       expect(result).toBeTruthy()
-      const state = getState(PHONE)
+      const state = await getState(PHONE)
       expect(state.step).toBe('staff_delete_confirm')
     })
 
     it('returns error on invalid selection', async () => {
-      setState(PHONE, {
+      await setState(PHONE, {
         step: 'staff_delete_list',
         type: 'staff',
         staff: {},
         staffList: mockStaffList,
       })
 
-      const result = await handleStaffFlow('9', mockProfile, PHONE, getState(PHONE))
+      const result = await handleStaffFlow('9', mockProfile, PHONE, await getState(PHONE))
 
       expect(result).toBeTruthy()
     })
 
     it('deletes staff on yes ("1")', async () => {
-      setState(PHONE, {
+      await setState(PHONE, {
         step: 'staff_delete_confirm',
         type: 'staff',
         staff: {},
@@ -295,15 +295,15 @@ describe('Staff Flow Handler', () => {
 
       ;(supabase as any).__setResult('staff', { data: null, error: null })
 
-      const result = await handleStaffFlow('1', mockProfile, PHONE, getState(PHONE))
+      const result = await handleStaffFlow('1', mockProfile, PHONE, await getState(PHONE))
 
       expect(result).toBeTruthy()
-      const state = getState(PHONE)
+      const state = await getState(PHONE)
       expect(state.step).toBe('initial')
     })
 
     it('cancels on no ("2")', async () => {
-      setState(PHONE, {
+      await setState(PHONE, {
         step: 'staff_delete_confirm',
         type: 'staff',
         staff: {},
@@ -311,32 +311,32 @@ describe('Staff Flow Handler', () => {
         selectedStaff: mockStaffList[0],
       } as any)
 
-      const result = await handleStaffFlow('2', mockProfile, PHONE, getState(PHONE))
+      const result = await handleStaffFlow('2', mockProfile, PHONE, await getState(PHONE))
 
       expect(result).toBeTruthy()
-      const state = getState(PHONE)
+      const state = await getState(PHONE)
       expect(state.step).toBe('initial')
     })
   })
 
   describe('handleStaffFlow — edit staff flow', () => {
     it('selects staff and moves to field selection', async () => {
-      setState(PHONE, {
+      await setState(PHONE, {
         step: 'staff_edit_list',
         type: 'staff',
         staff: {},
         staffList: mockStaffList,
       })
 
-      const result = await handleStaffFlow('1', mockProfile, PHONE, getState(PHONE))
+      const result = await handleStaffFlow('1', mockProfile, PHONE, await getState(PHONE))
 
       expect(result).toBeTruthy()
-      const state = getState(PHONE)
+      const state = await getState(PHONE)
       expect(state.step).toBe('staff_edit_field')
     })
 
     it('selects name field ("1") and moves to value input', async () => {
-      setState(PHONE, {
+      await setState(PHONE, {
         step: 'staff_edit_field',
         type: 'staff',
         staff: {},
@@ -344,15 +344,15 @@ describe('Staff Flow Handler', () => {
         selectedStaff: mockStaffList[0],
       } as any)
 
-      const result = await handleStaffFlow('1', mockProfile, PHONE, getState(PHONE))
+      const result = await handleStaffFlow('1', mockProfile, PHONE, await getState(PHONE))
 
       expect(result).toBeTruthy()
-      const state = getState(PHONE)
+      const state = await getState(PHONE)
       expect(state.step).toBe('staff_edit_value')
     })
 
     it('selects CNIC field ("2")', async () => {
-      setState(PHONE, {
+      await setState(PHONE, {
         step: 'staff_edit_field',
         type: 'staff',
         staff: {},
@@ -360,15 +360,15 @@ describe('Staff Flow Handler', () => {
         selectedStaff: mockStaffList[0],
       } as any)
 
-      const result = await handleStaffFlow('2', mockProfile, PHONE, getState(PHONE))
+      const result = await handleStaffFlow('2', mockProfile, PHONE, await getState(PHONE))
 
       expect(result).toBeTruthy()
-      const state = getState(PHONE)
+      const state = await getState(PHONE)
       expect(state.step).toBe('staff_edit_value')
     })
 
     it('selects phone field ("3")', async () => {
-      setState(PHONE, {
+      await setState(PHONE, {
         step: 'staff_edit_field',
         type: 'staff',
         staff: {},
@@ -376,15 +376,15 @@ describe('Staff Flow Handler', () => {
         selectedStaff: mockStaffList[0],
       } as any)
 
-      const result = await handleStaffFlow('3', mockProfile, PHONE, getState(PHONE))
+      const result = await handleStaffFlow('3', mockProfile, PHONE, await getState(PHONE))
 
       expect(result).toBeTruthy()
-      const state = getState(PHONE)
+      const state = await getState(PHONE)
       expect(state.step).toBe('staff_edit_value')
     })
 
     it('updates name value in DB', async () => {
-      setState(PHONE, {
+      await setState(PHONE, {
         step: 'staff_edit_value',
         type: 'staff',
         staff: {},
@@ -395,15 +395,15 @@ describe('Staff Flow Handler', () => {
 
       ;(supabase as any).__setResult('staff', { data: null, error: null })
 
-      const result = await handleStaffFlow('Ali Updated', mockProfile, PHONE, getState(PHONE))
+      const result = await handleStaffFlow('Ali Updated', mockProfile, PHONE, await getState(PHONE))
 
       expect(result).toBeTruthy()
-      const state = getState(PHONE)
+      const state = await getState(PHONE)
       expect(state.step).toBe('initial')
     })
 
     it('validates CNIC format on edit', async () => {
-      setState(PHONE, {
+      await setState(PHONE, {
         step: 'staff_edit_value',
         type: 'staff',
         staff: {},
@@ -412,16 +412,16 @@ describe('Staff Flow Handler', () => {
         editField: 'cnic',
       } as any)
 
-      const result = await handleStaffFlow('invalid-cnic', mockProfile, PHONE, getState(PHONE))
+      const result = await handleStaffFlow('invalid-cnic', mockProfile, PHONE, await getState(PHONE))
 
       expect(result).toBeTruthy()
       // Should still be on edit_value step
-      const state = getState(PHONE)
+      const state = await getState(PHONE)
       expect(state.step).toBe('staff_edit_value')
     })
 
     it('validates phone format on edit', async () => {
-      setState(PHONE, {
+      await setState(PHONE, {
         step: 'staff_edit_value',
         type: 'staff',
         staff: {},
@@ -430,15 +430,15 @@ describe('Staff Flow Handler', () => {
         editField: 'phone_number',
       } as any)
 
-      const result = await handleStaffFlow('invalid-phone', mockProfile, PHONE, getState(PHONE))
+      const result = await handleStaffFlow('invalid-phone', mockProfile, PHONE, await getState(PHONE))
 
       expect(result).toBeTruthy()
-      const state = getState(PHONE)
+      const state = await getState(PHONE)
       expect(state.step).toBe('staff_edit_value')
     })
 
     it('accepts valid CNIC on edit', async () => {
-      setState(PHONE, {
+      await setState(PHONE, {
         step: 'staff_edit_value',
         type: 'staff',
         staff: {},
@@ -449,15 +449,15 @@ describe('Staff Flow Handler', () => {
 
       ;(supabase as any).__setResult('staff', { data: null, error: null })
 
-      const result = await handleStaffFlow('3520112345679', mockProfile, PHONE, getState(PHONE))
+      const result = await handleStaffFlow('3520112345679', mockProfile, PHONE, await getState(PHONE))
 
       expect(result).toBeTruthy()
-      const state = getState(PHONE)
+      const state = await getState(PHONE)
       expect(state.step).toBe('initial')
     })
 
     it('accepts valid phone on edit', async () => {
-      setState(PHONE, {
+      await setState(PHONE, {
         step: 'staff_edit_value',
         type: 'staff',
         staff: {},
@@ -468,10 +468,10 @@ describe('Staff Flow Handler', () => {
 
       ;(supabase as any).__setResult('staff', { data: null, error: null })
 
-      const result = await handleStaffFlow('03009876543', mockProfile, PHONE, getState(PHONE))
+      const result = await handleStaffFlow('03009876543', mockProfile, PHONE, await getState(PHONE))
 
       expect(result).toBeTruthy()
-      const state = getState(PHONE)
+      const state = await getState(PHONE)
       expect(state.step).toBe('initial')
     })
   })

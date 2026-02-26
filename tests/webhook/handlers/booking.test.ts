@@ -3,7 +3,7 @@
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { supabase } from '@/lib/supabase'
-import { clearAllStates, getState, setState } from '@/lib/webhook/state'
+import { clearState, getState, setState } from '@/lib/webhook/state'
 import { initializeBookingFlow, handleBookingFlow } from '@/lib/webhook/handlers/booking'
 import type { Profile, UserState } from '@/lib/webhook/types'
 
@@ -56,8 +56,8 @@ const mockProfile: Profile = {
 }
 
 describe('Booking Flow Handler', () => {
-  beforeEach(() => {
-    clearAllStates()
+  beforeEach(async () => {
+    await clearState()
     vi.clearAllMocks()
     ;(supabase as any).__reset()
   })
@@ -67,7 +67,7 @@ describe('Booking Flow Handler', () => {
       const result = await initializeBookingFlow(PHONE)
 
       expect(result).toBeTruthy()
-      const state = getState(PHONE)
+      const state = await getState(PHONE)
       expect(state.step).toBe('booking_date')
       expect(state.type).toBe('booking')
     })
@@ -75,60 +75,60 @@ describe('Booking Flow Handler', () => {
 
   describe('handleBookingFlow — date input', () => {
     it('shows policies for valid available date', async () => {
-      setState(PHONE, { step: 'booking_date', type: 'booking' })
+      await setState(PHONE, { step: 'booking_date', type: 'booking' })
 
       // No existing bookings
       ;(supabase as any).__setResult('bookings', { data: [], error: null })
 
-      const result = await handleBookingFlow('20/06/2024', mockProfile, PHONE, getState(PHONE))
+      const result = await handleBookingFlow('20/06/2024', mockProfile, PHONE, await getState(PHONE))
 
       expect(result).toBeTruthy()
-      const state = getState(PHONE)
+      const state = await getState(PHONE)
       expect(state.step).toBe('booking_policies')
       expect(state.date).toBe('2024-06-20')
     })
 
     it('returns error for date in the past', async () => {
-      setState(PHONE, { step: 'booking_date', type: 'booking' })
+      await setState(PHONE, { step: 'booking_date', type: 'booking' })
 
-      const result = await handleBookingFlow('10/06/2024', mockProfile, PHONE, getState(PHONE))
+      const result = await handleBookingFlow('10/06/2024', mockProfile, PHONE, await getState(PHONE))
 
       expect(result).toBeTruthy()
       // State should remain on booking_date
-      const state = getState(PHONE)
+      const state = await getState(PHONE)
       expect(state.step).toBe('booking_date')
     })
 
     it('returns error for non-working day', async () => {
-      setState(PHONE, { step: 'booking_date', type: 'booking' })
+      await setState(PHONE, { step: 'booking_date', type: 'booking' })
 
       const { isWorkingDay } = await import('@/lib/date')
       ;(isWorkingDay as any).mockReturnValueOnce(false)
 
       ;(supabase as any).__setResult('bookings', { data: [], error: null })
 
-      const result = await handleBookingFlow('20/06/2024', mockProfile, PHONE, getState(PHONE))
+      const result = await handleBookingFlow('20/06/2024', mockProfile, PHONE, await getState(PHONE))
 
       expect(result).toBeTruthy()
     })
 
     it('returns error for already-booked date', async () => {
-      setState(PHONE, { step: 'booking_date', type: 'booking' })
+      await setState(PHONE, { step: 'booking_date', type: 'booking' })
 
       ;(supabase as any).__setResult('bookings', {
         data: [{ id: 'booking-1' }],
         error: null,
       })
 
-      const result = await handleBookingFlow('20/06/2024', mockProfile, PHONE, getState(PHONE))
+      const result = await handleBookingFlow('20/06/2024', mockProfile, PHONE, await getState(PHONE))
 
       expect(result).toBeTruthy()
     })
 
     it('returns error for invalid date format', async () => {
-      setState(PHONE, { step: 'booking_date', type: 'booking' })
+      await setState(PHONE, { step: 'booking_date', type: 'booking' })
 
-      const result = await handleBookingFlow('not-a-date', mockProfile, PHONE, getState(PHONE))
+      const result = await handleBookingFlow('not-a-date', mockProfile, PHONE, await getState(PHONE))
 
       expect(result).toBeTruthy()
     })
@@ -142,7 +142,7 @@ describe('Booking Flow Handler', () => {
     })
 
     it('creates booking on acceptance ("1")', async () => {
-      setState(PHONE, policiesState())
+      await setState(PHONE, policiesState())
 
       // Double-check: no existing bookings
       ;(supabase as any).__setResult('bookings', {
@@ -150,33 +150,33 @@ describe('Booking Flow Handler', () => {
         error: null,
       })
 
-      const result = await handleBookingFlow('1', mockProfile, PHONE, getState(PHONE))
+      const result = await handleBookingFlow('1', mockProfile, PHONE, await getState(PHONE))
 
       expect(result).toBeTruthy()
-      const state = getState(PHONE)
+      const state = await getState(PHONE)
       expect(state.step).toBe('initial')
     })
 
     it('declines booking on "2"', async () => {
-      setState(PHONE, policiesState())
+      await setState(PHONE, policiesState())
 
-      const result = await handleBookingFlow('2', mockProfile, PHONE, getState(PHONE))
+      const result = await handleBookingFlow('2', mockProfile, PHONE, await getState(PHONE))
 
       expect(result).toBeTruthy()
-      const state = getState(PHONE)
+      const state = await getState(PHONE)
       expect(state.step).toBe('initial')
     })
 
     it('returns error for invalid response', async () => {
-      setState(PHONE, policiesState())
+      await setState(PHONE, policiesState())
 
-      const result = await handleBookingFlow('5', mockProfile, PHONE, getState(PHONE))
+      const result = await handleBookingFlow('5', mockProfile, PHONE, await getState(PHONE))
 
       expect(result).toBeTruthy()
     })
 
     it('handles duplicate booking error (code 23505)', async () => {
-      setState(PHONE, policiesState())
+      await setState(PHONE, policiesState())
 
       // First query (double-check) returns empty
       const mockBuilder = (supabase as any).__getBuilder('bookings') || (() => {
@@ -192,7 +192,7 @@ describe('Booking Flow Handler', () => {
         error: { message: 'Duplicate', code: '23505' },
       })
 
-      const result = await handleBookingFlow('1', mockProfile, PHONE, getState(PHONE))
+      const result = await handleBookingFlow('1', mockProfile, PHONE, await getState(PHONE))
 
       expect(result).toBeTruthy()
     })

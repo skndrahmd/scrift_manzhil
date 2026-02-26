@@ -3,7 +3,7 @@
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { supabaseAdmin } from '@/lib/supabase'
-import { clearAllStates, getState, setState } from '@/lib/webhook/state'
+import { clearState, getState, setState } from '@/lib/webhook/state'
 import { initializePaymentFlow, handlePaymentFlow } from '@/lib/webhook/handlers/payment'
 import type { Profile, UserState } from '@/lib/webhook/types'
 
@@ -43,8 +43,8 @@ const mockBookingPayments = [
 ]
 
 describe('Payment Flow Handler', () => {
-  beforeEach(() => {
-    clearAllStates()
+  beforeEach(async () => {
+    await clearState()
     vi.clearAllMocks()
     ;(supabaseAdmin as any).__reset()
   })
@@ -59,7 +59,7 @@ describe('Payment Flow Handler', () => {
       const result = await initializePaymentFlow(mockProfile, PHONE)
 
       expect(result).toBeTruthy()
-      const state = getState(PHONE)
+      const state = await getState(PHONE)
       expect(state.step).toBe('initial')
     })
 
@@ -72,7 +72,7 @@ describe('Payment Flow Handler', () => {
       const result = await initializePaymentFlow(mockProfile, PHONE)
 
       expect(result).toBeTruthy()
-      const state = getState(PHONE)
+      const state = await getState(PHONE)
       expect(state.step).toBe('payment_type_selection')
       expect(state.type).toBe('payment')
     })
@@ -80,7 +80,7 @@ describe('Payment Flow Handler', () => {
 
   describe('handlePaymentFlow — type selection', () => {
     it('"1" selects maintenance and loads pending payments', async () => {
-      setState(PHONE, {
+      await setState(PHONE, {
         step: 'payment_type_selection',
         type: 'payment',
         payment: {},
@@ -91,16 +91,16 @@ describe('Payment Flow Handler', () => {
         error: null,
       })
 
-      const result = await handlePaymentFlow('1', mockProfile, PHONE, getState(PHONE))
+      const result = await handlePaymentFlow('1', mockProfile, PHONE, await getState(PHONE))
 
       expect(result).toBeTruthy()
-      const state = getState(PHONE)
+      const state = await getState(PHONE)
       expect(state.step).toBe('payment_selection')
       expect(state.payment?.payment_type).toBe('maintenance')
     })
 
     it('"2" selects booking and loads pending bookings', async () => {
-      setState(PHONE, {
+      await setState(PHONE, {
         step: 'payment_type_selection',
         type: 'payment',
         payment: {},
@@ -111,29 +111,29 @@ describe('Payment Flow Handler', () => {
         error: null,
       })
 
-      const result = await handlePaymentFlow('2', mockProfile, PHONE, getState(PHONE))
+      const result = await handlePaymentFlow('2', mockProfile, PHONE, await getState(PHONE))
 
       expect(result).toBeTruthy()
-      const state = getState(PHONE)
+      const state = await getState(PHONE)
       // Single booking auto-selects to receipt upload
       expect(state.step).toBe('payment_receipt_upload')
       expect(state.payment?.payment_type).toBe('booking')
     })
 
     it('re-shows menu on invalid selection', async () => {
-      setState(PHONE, {
+      await setState(PHONE, {
         step: 'payment_type_selection',
         type: 'payment',
         payment: {},
       })
 
-      const result = await handlePaymentFlow('5', mockProfile, PHONE, getState(PHONE))
+      const result = await handlePaymentFlow('5', mockProfile, PHONE, await getState(PHONE))
 
       expect(result).toBeTruthy()
     })
 
     it('returns no-pending message when maintenance has no unpaid', async () => {
-      setState(PHONE, {
+      await setState(PHONE, {
         step: 'payment_type_selection',
         type: 'payment',
         payment: {},
@@ -144,15 +144,15 @@ describe('Payment Flow Handler', () => {
         error: null,
       })
 
-      const result = await handlePaymentFlow('1', mockProfile, PHONE, getState(PHONE))
+      const result = await handlePaymentFlow('1', mockProfile, PHONE, await getState(PHONE))
 
       expect(result).toBeTruthy()
-      const state = getState(PHONE)
+      const state = await getState(PHONE)
       expect(state.step).toBe('initial')
     })
 
     it('auto-selects single pending maintenance payment', async () => {
-      setState(PHONE, {
+      await setState(PHONE, {
         step: 'payment_type_selection',
         type: 'payment',
         payment: {},
@@ -168,10 +168,10 @@ describe('Payment Flow Handler', () => {
         error: null,
       })
 
-      const result = await handlePaymentFlow('1', mockProfile, PHONE, getState(PHONE))
+      const result = await handlePaymentFlow('1', mockProfile, PHONE, await getState(PHONE))
 
       expect(result).toBeTruthy()
-      const state = getState(PHONE)
+      const state = await getState(PHONE)
       expect(state.step).toBe('payment_receipt_upload')
       expect(state.payment?.selected_payment_id).toBe('mp1')
     })
@@ -179,7 +179,7 @@ describe('Payment Flow Handler', () => {
 
   describe('handlePaymentFlow — payment selection', () => {
     it('selects payment from list and shows methods', async () => {
-      setState(PHONE, {
+      await setState(PHONE, {
         step: 'payment_selection',
         type: 'payment',
         payment: { payment_type: 'maintenance', unit_id: 'unit-1' },
@@ -196,22 +196,22 @@ describe('Payment Flow Handler', () => {
         error: null,
       })
 
-      const result = await handlePaymentFlow('1', mockProfile, PHONE, getState(PHONE))
+      const result = await handlePaymentFlow('1', mockProfile, PHONE, await getState(PHONE))
 
       expect(result).toBeTruthy()
-      const state = getState(PHONE)
+      const state = await getState(PHONE)
       expect(state.step).toBe('payment_receipt_upload')
     })
 
     it('re-shows list on invalid selection', async () => {
-      setState(PHONE, {
+      await setState(PHONE, {
         step: 'payment_selection',
         type: 'payment',
         payment: { payment_type: 'maintenance', unit_id: 'unit-1' },
         statusItems: mockMaintenancePayments,
       })
 
-      const result = await handlePaymentFlow('9', mockProfile, PHONE, getState(PHONE))
+      const result = await handlePaymentFlow('9', mockProfile, PHONE, await getState(PHONE))
 
       expect(result).toBeTruthy()
     })
@@ -231,24 +231,24 @@ describe('Payment Flow Handler', () => {
     })
 
     it('asks for image when no media provided', async () => {
-      setState(PHONE, uploadState())
+      await setState(PHONE, uploadState())
 
-      const result = await handlePaymentFlow('hello', mockProfile, PHONE, getState(PHONE), undefined)
+      const result = await handlePaymentFlow('hello', mockProfile, PHONE, await getState(PHONE), undefined)
 
       expect(result).toBeTruthy()
       // Should still be on upload step
-      const state = getState(PHONE)
+      const state = await getState(PHONE)
       expect(state.step).toBe('payment_receipt_upload')
     })
 
     it('returns error for unknown step', async () => {
-      setState(PHONE, {
+      await setState(PHONE, {
         step: 'unknown_payment_step',
         type: 'payment',
         payment: {},
       })
 
-      const result = await handlePaymentFlow('1', mockProfile, PHONE, getState(PHONE))
+      const result = await handlePaymentFlow('1', mockProfile, PHONE, await getState(PHONE))
 
       expect(result).toBeTruthy()
     })

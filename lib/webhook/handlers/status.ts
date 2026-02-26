@@ -26,7 +26,7 @@ export async function initializeStatusFlow(
     return await getMessage(MSG.STATUS_NO_COMPLAINTS, undefined, language)
   }
 
-  setState(phoneNumber, {
+  await setState(phoneNumber, {
     step: "status_select",
     type: "status",
     statusItems: complaints,
@@ -70,7 +70,7 @@ export async function handleStatusFlow(
     }
 
     const complaint = userState.statusItems![complaintIndex - 1]
-    clearState(phoneNumber)
+    await clearState(phoneNumber)
 
     const statusText =
       complaint.status === "pending"
@@ -133,7 +133,7 @@ export async function initializeCancelFlow(
     return await getMessage(MSG.CANCEL_NO_COMPLAINTS, undefined, language)
   }
 
-  setState(phoneNumber, {
+  await setState(phoneNumber, {
     step: "cancel_select",
     type: "cancel",
     cancelItems: complaints,
@@ -178,7 +178,7 @@ export async function handleCancelFlow(
     const selectedComplaint = userState.cancelItems![complaintIndex - 1]
       ; (userState as any).selectedComplaint = selectedComplaint
     userState.step = "cancel_confirm"
-    setState(phoneNumber, userState)
+    await setState(phoneNumber, userState)
 
     return await getMessage(MSG.CANCEL_CONFIRM, {
       complaint_id: selectedComplaint.complaint_id,
@@ -204,14 +204,14 @@ export async function handleCancelFlow(
         return await getMessage(MSG.CANCEL_FAILED, undefined, language)
       }
 
-      clearState(phoneNumber)
+      await clearState(phoneNumber)
       return await getMessage(MSG.CANCEL_SUCCESS, {
         complaint_id: selectedComplaint.complaint_id,
       }, language)
     }
 
     if (isNoResponse(message)) {
-      clearState(phoneNumber)
+      await clearState(phoneNumber)
       return await getMessage(MSG.CANCEL_ABORTED, undefined, language)
     }
 

@@ -14,7 +14,7 @@ import { MSG } from "../message-keys"
  * Initialize feedback flow
  */
 export async function initializeFeedbackFlow(phoneNumber: string, language?: string): Promise<string> {
-  setState(phoneNumber, {
+  await setState(phoneNumber, {
     step: "feedback_input",
     type: "feedback",
     language,
@@ -53,7 +53,7 @@ export async function handleFeedbackFlow(
       }
 
       // Clear state
-      clearState(phoneNumber)
+      await clearState(phoneNumber)
 
       return await getMessage(MSG.FEEDBACK_RECEIVED, undefined, language)
     }

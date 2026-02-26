@@ -3,7 +3,7 @@
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { supabaseAdmin } from '@/lib/supabase'
-import { clearAllStates, getState, setState } from '@/lib/webhook/state'
+import { clearState, getState, setState } from '@/lib/webhook/state'
 import { initializeVisitorFlow, handleVisitorFlow } from '@/lib/webhook/handlers/visitor'
 import type { Profile, UserState } from '@/lib/webhook/types'
 
@@ -42,8 +42,8 @@ const mockProfile: Profile = {
 }
 
 describe('Visitor Flow Handler', () => {
-  beforeEach(() => {
-    clearAllStates()
+  beforeEach(async () => {
+    await clearState()
     vi.clearAllMocks()
     ;(supabaseAdmin as any).__reset()
   })
@@ -53,7 +53,7 @@ describe('Visitor Flow Handler', () => {
       const result = await initializeVisitorFlow(PHONE)
 
       expect(result).toBeTruthy()
-      const state = getState(PHONE)
+      const state = await getState(PHONE)
       expect(state.step).toBe('visitor_name')
       expect(state.type).toBe('visitor')
       expect(state.visitor).toEqual({})
@@ -61,7 +61,7 @@ describe('Visitor Flow Handler', () => {
 
     it('passes language to state', async () => {
       await initializeVisitorFlow(PHONE, 'ur')
-      expect(getState(PHONE).language).toBe('ur')
+      expect((await getState(PHONE)).language).toBe('ur')
     })
   })
 
@@ -73,21 +73,21 @@ describe('Visitor Flow Handler', () => {
     })
 
     it('accepts valid name and moves to car number step', async () => {
-      setState(PHONE, nameState())
-      const result = await handleVisitorFlow('Ahmed Khan', mockProfile, PHONE, getState(PHONE))
+      await setState(PHONE, nameState())
+      const result = await handleVisitorFlow('Ahmed Khan', mockProfile, PHONE, await getState(PHONE))
 
       expect(result).toBeTruthy()
-      const state = getState(PHONE)
+      const state = await getState(PHONE)
       expect(state.step).toBe('visitor_car_number')
       expect(state.visitor?.visitor_name).toBe('Ahmed Khan')
     })
 
     it('rejects name shorter than 2 characters', async () => {
-      setState(PHONE, nameState())
-      const result = await handleVisitorFlow('A', mockProfile, PHONE, getState(PHONE))
+      await setState(PHONE, nameState())
+      const result = await handleVisitorFlow('A', mockProfile, PHONE, await getState(PHONE))
 
       expect(result).toBeTruthy()
-      const state = getState(PHONE)
+      const state = await getState(PHONE)
       expect(state.step).toBe('visitor_name')
     })
   })
@@ -100,21 +100,21 @@ describe('Visitor Flow Handler', () => {
     })
 
     it('accepts valid car number and moves to date step', async () => {
-      setState(PHONE, carState())
-      const result = await handleVisitorFlow('ABC-123', mockProfile, PHONE, getState(PHONE))
+      await setState(PHONE, carState())
+      const result = await handleVisitorFlow('ABC-123', mockProfile, PHONE, await getState(PHONE))
 
       expect(result).toBeTruthy()
-      const state = getState(PHONE)
+      const state = await getState(PHONE)
       expect(state.step).toBe('visitor_date')
       expect(state.visitor?.car_number).toBe('ABC-123')
     })
 
     it('rejects car number shorter than 2 characters', async () => {
-      setState(PHONE, carState())
-      const result = await handleVisitorFlow('A', mockProfile, PHONE, getState(PHONE))
+      await setState(PHONE, carState())
+      const result = await handleVisitorFlow('A', mockProfile, PHONE, await getState(PHONE))
 
       expect(result).toBeTruthy()
-      const state = getState(PHONE)
+      const state = await getState(PHONE)
       expect(state.step).toBe('visitor_car_number')
     })
   })
@@ -127,58 +127,58 @@ describe('Visitor Flow Handler', () => {
     })
 
     it('saves visitor pass on valid future date', async () => {
-      setState(PHONE, dateState())
+      await setState(PHONE, dateState())
 
       ;(supabaseAdmin as any).__setResult('visitor_passes', {
         data: { id: 'pass-12345-abcdef', visitor_name: 'Ahmed Khan' },
         error: null,
       })
 
-      const result = await handleVisitorFlow('20/06/2024', mockProfile, PHONE, getState(PHONE))
+      const result = await handleVisitorFlow('20/06/2024', mockProfile, PHONE, await getState(PHONE))
 
       expect(result).toBeTruthy()
-      const state = getState(PHONE)
+      const state = await getState(PHONE)
       expect(state.step).toBe('initial')
     })
 
     it('rejects invalid date format', async () => {
-      setState(PHONE, dateState())
-      const result = await handleVisitorFlow('not-a-date', mockProfile, PHONE, getState(PHONE))
+      await setState(PHONE, dateState())
+      const result = await handleVisitorFlow('not-a-date', mockProfile, PHONE, await getState(PHONE))
 
       expect(result).toBeTruthy()
-      const state = getState(PHONE)
+      const state = await getState(PHONE)
       expect(state.step).toBe('visitor_date')
     })
 
     it('rejects date in the past', async () => {
-      setState(PHONE, dateState())
+      await setState(PHONE, dateState())
       // getPakistanTime returns June 15, 2024 — use a date before that
-      const result = await handleVisitorFlow('10/06/2024', mockProfile, PHONE, getState(PHONE))
+      const result = await handleVisitorFlow('10/06/2024', mockProfile, PHONE, await getState(PHONE))
 
       expect(result).toBeTruthy()
-      const state = getState(PHONE)
+      const state = await getState(PHONE)
       expect(state.step).toBe('visitor_date')
     })
 
     it('rejects date too far in the future (>30 days)', async () => {
-      setState(PHONE, dateState())
+      await setState(PHONE, dateState())
       // getPakistanTime returns June 15, 2024 — >30 days is after July 15
-      const result = await handleVisitorFlow('20/07/2024', mockProfile, PHONE, getState(PHONE))
+      const result = await handleVisitorFlow('20/07/2024', mockProfile, PHONE, await getState(PHONE))
 
       expect(result).toBeTruthy()
-      const state = getState(PHONE)
+      const state = await getState(PHONE)
       expect(state.step).toBe('visitor_date')
     })
 
     it('returns error on DB save failure', async () => {
-      setState(PHONE, dateState())
+      await setState(PHONE, dateState())
 
       ;(supabaseAdmin as any).__setResult('visitor_passes', {
         data: null,
         error: { message: 'Insert failed', code: '42000' },
       })
 
-      const result = await handleVisitorFlow('20/06/2024', mockProfile, PHONE, getState(PHONE))
+      const result = await handleVisitorFlow('20/06/2024', mockProfile, PHONE, await getState(PHONE))
 
       expect(result).toBeTruthy()
     })
@@ -186,12 +186,12 @@ describe('Visitor Flow Handler', () => {
 
   describe('handleVisitorFlow — default step', () => {
     it('re-initializes flow on unknown step', async () => {
-      setState(PHONE, { step: 'unknown_step', type: 'visitor', visitor: {} })
-      const result = await handleVisitorFlow('Hello', mockProfile, PHONE, getState(PHONE))
+      await setState(PHONE, { step: 'unknown_step', type: 'visitor', visitor: {} })
+      const result = await handleVisitorFlow('Hello', mockProfile, PHONE, await getState(PHONE))
 
       expect(result).toBeTruthy()
       // Should re-initialize to visitor_name
-      const state = getState(PHONE)
+      const state = await getState(PHONE)
       expect(state.step).toBe('visitor_name')
     })
   })

@@ -6,6 +6,35 @@ import '@testing-library/jest-dom'
 import { vi } from 'vitest'
 import { createMockSupabaseClient } from './mocks/supabase'
 
+// In-memory state store for tests
+const stateStore = new Map<string, any>()
+
+// Mock webhook state module (database-backed in production, in-memory for tests)
+vi.mock('@/lib/webhook/state', () => ({
+  getState: vi.fn(async (phoneNumber: string) => stateStore.get(phoneNumber) || { step: 'initial' }),
+  setState: vi.fn(async (phoneNumber: string, state: any) => { stateStore.set(phoneNumber, { ...state, lastActivity: Date.now() }) }),
+  updateState: vi.fn(async (phoneNumber: string, updates: any) => {
+    const current = stateStore.get(phoneNumber) || { step: 'initial' }
+    const newState = { ...current, ...updates, lastActivity: Date.now() }
+    stateStore.set(phoneNumber, newState)
+    return newState
+  }),
+  clearState: vi.fn(async (phoneNumber?: string) => {
+    if (phoneNumber) stateStore.delete(phoneNumber)
+    else stateStore.clear()
+  }),
+  hasActiveFlow: vi.fn(async (phoneNumber: string) => {
+    const state = stateStore.get(phoneNumber)
+    return state !== undefined && state.step !== 'initial'
+  }),
+  isSessionExpired: vi.fn(async (phoneNumber: string) => {
+    const state = stateStore.get(phoneNumber)
+    if (!state?.lastActivity) return false
+    return Date.now() - state.lastActivity > 5 * 60 * 1000
+  }),
+  cleanupExpiredSessions: vi.fn(async () => 0),
+}))
+
 // Mock Supabase clients
 vi.mock('@/lib/supabase', () => {
   const mockAdmin = createMockSupabaseClient()
@@ -74,4 +103,15 @@ vi.mock('@/lib/admin/notifications', () => ({
   getComplaintNotificationRecipients: vi.fn().mockResolvedValue([]),
   getReminderRecipients: vi.fn().mockResolvedValue([]),
   getAllNotificationRecipients: vi.fn().mockResolvedValue([]),
+}))
+
+// Mock bot messages module
+vi.mock('@/lib/webhook/messages', () => ({
+  getMessage: vi.fn(async (key: string, vars?: Record<string, string>, language?: string) => {
+    // Return a simple message based on the key
+    return `Mock message for ${key}${vars ? ` with vars ${JSON.stringify(vars)}` : ''}`
+  }),
+  getLabels: vi.fn(async (key: string, language?: string) => {
+    return ['Option 1', 'Option 2', 'Option 3']
+  }),
 }))
