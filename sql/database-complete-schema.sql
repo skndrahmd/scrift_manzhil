@@ -169,6 +169,7 @@ CREATE TABLE profiles (
   building_block TEXT,
   unit_id UUID REFERENCES units(id),
   is_primary_resident BOOLEAN DEFAULT false,
+  resident_type VARCHAR(20) DEFAULT 'tenant' CHECK (resident_type IN ('tenant', 'owner')),
   maintenance_charges NUMERIC DEFAULT 0,
   maintenance_paid BOOLEAN DEFAULT false,
   last_payment_date DATE,

@@ -10,6 +10,7 @@ interface ResidentToImport {
   cnic?: string
   building_block?: string
   maintenance_charges?: number
+  resident_type?: 'tenant' | 'owner'
 }
 
 interface ImportResult {
@@ -110,6 +111,7 @@ export async function POST(request: NextRequest) {
           unit_id: unitId,
           cnic: residentData.cnic || null,
           building_block: residentData.building_block || null,
+          resident_type: residentData.resident_type || 'tenant',
           is_active: true,
         })
         .select()

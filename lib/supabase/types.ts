@@ -28,6 +28,7 @@ export type Profile = {
   unit_id: string | null
   is_active: boolean
   is_primary_resident: boolean
+  resident_type?: 'tenant' | 'owner'
   maintenance_charges: number
   maintenance_paid: boolean
   last_payment_date: string | null

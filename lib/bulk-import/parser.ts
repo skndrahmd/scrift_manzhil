@@ -9,6 +9,7 @@ export interface ParsedResident {
   cnic?: string
   building_block?: string
   maintenance_charges?: number
+  resident_type?: 'tenant' | 'owner'
 }
 
 export interface ParseResult {
@@ -24,6 +25,7 @@ const COLUMN_MAPPINGS: Record<string, string[]> = {
   cnic: ['cnic', 'national_id', 'nic', 'id_number', 'national id', 'id number'],
   building_block: ['building_block', 'block', 'building', 'tower', 'wing', 'building block'],
   maintenance_charges: ['maintenance_charges', 'maintenance', 'charges', 'fee', 'monthly_charges', 'maintenance charges', 'monthly charges'],
+  resident_type: ['resident_type', 'type', 'resident type', 'owner_tenant', 'ownership', 'owner', 'tenant'],
 }
 
 // Normalize a header name by converting to lowercase and trimming
@@ -166,6 +168,18 @@ function transformData(
       }
     }
 
+    // Parse resident_type (normalize to 'tenant' or 'owner')
+    let residentType: 'tenant' | 'owner' | undefined
+    if (mappedRow.resident_type) {
+      const normalized = mappedRow.resident_type.toLowerCase().trim()
+      if (normalized === 'owner') {
+        residentType = 'owner'
+      } else if (normalized === 'tenant') {
+        residentType = 'tenant'
+      }
+      // Invalid values are ignored (will default to 'tenant' later)
+    }
+
     data.push({
       rowNumber,
       name: mappedRow.name || '',
@@ -174,6 +188,7 @@ function transformData(
       cnic: mappedRow.cnic || undefined,
       building_block: mappedRow.building_block || undefined,
       maintenance_charges: maintenanceCharges,
+      resident_type: residentType,
     })
   }
 
@@ -198,11 +213,11 @@ export async function parseFile(file: File): Promise<ParseResult> {
 
 // Generate a sample CSV template
 export function generateTemplate(): string {
-  const headers = ['name', 'phone_number', 'apartment_number', 'cnic', 'building_block', 'maintenance_charges']
+  const headers = ['name', 'phone_number', 'apartment_number', 'cnic', 'building_block', 'maintenance_charges', 'resident_type']
   const sampleRows = [
-    ['Ahmed Khan', '03001234567', 'A-101', '42101-1234567-1', 'Block A', '5000'],
-    ['Fatima Ali', '+923331234567', 'B-202', '', 'Block B', '7500'],
-    ['Muhammad Raza', '923451234567', 'C-303', '42201-7654321-3', '', '5000'],
+    ['Ahmed Khan', '03001234567', 'A-101', '42101-1234567-1', 'Block A', '5000', 'owner'],
+    ['Fatima Ali', '+923331234567', 'B-202', '', 'Block B', '7500', 'tenant'],
+    ['Muhammad Raza', '923451234567', 'C-303', '42201-7654321-3', '', '5000', 'tenant'],
   ]
 
   return [headers.join(','), ...sampleRows.map(row => row.join(','))].join('\n')

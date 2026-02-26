@@ -54,6 +54,7 @@ export function ResidentsTable() {
         phone_number: "",
         cnic: "",
         apartment_number: "",
+        resident_type: "tenant" as "tenant" | "owner",
     })
     const [isBulkImportOpen, setIsBulkImportOpen] = useState(false)
 
@@ -149,6 +150,7 @@ export function ResidentsTable() {
             cnic: newUser.cnic,
             apartment_number: newUser.apartment_number,
             unit_id: unit?.id || null,
+            resident_type: newUser.resident_type,
         }])
 
         if (error) {
@@ -183,6 +185,7 @@ export function ResidentsTable() {
                 phone_number: "",
                 cnic: "",
                 apartment_number: "",
+                resident_type: "tenant",
             })
             setIsAddUserOpen(false)
             fetchProfiles()
@@ -205,6 +208,7 @@ export function ResidentsTable() {
                 cnic: editingUser.cnic,
                 apartment_number: editingUser.apartment_number,
                 unit_id: unit?.id || editingUser.unit_id || null,
+                resident_type: editingUser.resident_type || "tenant",
                 updated_at: new Date().toISOString(),
             })
             .eq("id", editingUser.id)
@@ -290,12 +294,14 @@ export function ResidentsTable() {
                                         { header: "Name", dataKey: "name" },
                                         { header: "Phone", dataKey: "phone" },
                                         { header: "Apartment", dataKey: "apartment" },
+                                        { header: "Type", dataKey: "type" },
                                         { header: "Status", dataKey: "status" },
                                     ],
                                     rows: residentsDisplay.map((p) => ({
                                         name: p.name || "N/A",
                                         phone: p.phone_number || "N/A",
                                         apartment: p.apartment_number || "N/A",
+                                        type: p.resident_type === 'owner' ? 'Owner' : 'Tenant',
                                         status: getMaintenanceStatus(p) ? "Paid" : "Unpaid",
                                     })),
                                     fileName: `residents-${residentsPeriod}.pdf`,
@@ -371,6 +377,21 @@ export function ResidentsTable() {
                                             className="col-span-3"
                                         />
                                     </div>
+                                    <div className="grid sm:grid-cols-4 items-center gap-2 sm:gap-4">
+                                        <Label htmlFor="resident_type" className="sm:text-right">Type</Label>
+                                        <Select
+                                            value={newUser.resident_type}
+                                            onValueChange={(v) => setNewUser({ ...newUser, resident_type: v as "tenant" | "owner" })}
+                                        >
+                                            <SelectTrigger className="col-span-3">
+                                                <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="tenant">Tenant</SelectItem>
+                                                <SelectItem value="owner">Owner</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
                                 </div>
                                 <div className="flex justify-end gap-3">
                                     <Button variant="outline" onClick={() => setIsAddUserOpen(false)}>Cancel</Button>
@@ -391,6 +412,7 @@ export function ResidentsTable() {
                                 <TableHead>Name</TableHead>
                                 <TableHead>Phone</TableHead>
                                 <TableHead>Apartment</TableHead>
+                                <TableHead>Type</TableHead>
                                 <TableHead>Maintenance</TableHead>
                                 <TableHead>Status</TableHead>
                                 <TableHead className="text-right">Actions</TableHead>
@@ -399,7 +421,7 @@ export function ResidentsTable() {
                         <TableBody>
                             {paginatedResidents.length === 0 ? (
                                 <TableRow>
-                                    <TableCell colSpan={6} className="text-center py-12">
+                                    <TableCell colSpan={7} className="text-center py-12">
                                         <Users className="h-12 w-12 text-gray-300 mx-auto mb-4" />
                                         <p className="text-gray-500">No residents found</p>
                                     </TableCell>
@@ -423,6 +445,17 @@ export function ResidentsTable() {
                                         </TableCell>
                                         <TableCell className="text-gray-600">{profile.phone_number}</TableCell>
                                         <TableCell className="text-gray-600">{profile.apartment_number}</TableCell>
+                                        <TableCell>
+                                            <Badge
+                                                variant="outline"
+                                                className={profile.resident_type === 'owner'
+                                                    ? "bg-blue-50 text-blue-700 border-blue-200"
+                                                    : "bg-gray-50 text-gray-600 border-gray-200"
+                                                }
+                                            >
+                                                {profile.resident_type === 'owner' ? 'Owner' : 'Tenant'}
+                                            </Badge>
+                                        </TableCell>
                                         <TableCell className="text-gray-600">{(() => { const charges = getUnitCharges(profile); return charges != null ? `Rs. ${charges.toLocaleString()}` : '—' })()}</TableCell>
                                         <TableCell>
                                             {isPrimary(profile) ? (
@@ -508,6 +541,18 @@ export function ResidentsTable() {
                                         <div>
                                             <span className="text-gray-500 block">Phone</span>
                                             <span className="font-medium text-gray-700">{profile.phone_number}</span>
+                                        </div>
+                                        <div>
+                                            <span className="text-gray-500 block">Type</span>
+                                            <Badge
+                                                variant="outline"
+                                                className={profile.resident_type === 'owner'
+                                                    ? "bg-blue-50 text-blue-700 border-blue-200"
+                                                    : "bg-gray-50 text-gray-600 border-gray-200"
+                                                }
+                                            >
+                                                {profile.resident_type === 'owner' ? 'Owner' : 'Tenant'}
+                                            </Badge>
                                         </div>
                                         {(() => { const charges = getUnitCharges(profile); return charges != null ? (
                                             <div>
@@ -626,6 +671,21 @@ export function ResidentsTable() {
                                     onChange={(e) => setEditingUser({ ...editingUser, apartment_number: e.target.value })}
                                     className="col-span-3"
                                 />
+                            </div>
+                            <div className="grid sm:grid-cols-4 items-center gap-2 sm:gap-4">
+                                <Label className="sm:text-right">Type</Label>
+                                <Select
+                                    value={editingUser.resident_type || "tenant"}
+                                    onValueChange={(v) => setEditingUser({ ...editingUser, resident_type: v as "tenant" | "owner" })}
+                                >
+                                    <SelectTrigger className="col-span-3">
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="tenant">Tenant</SelectItem>
+                                        <SelectItem value="owner">Owner</SelectItem>
+                                    </SelectContent>
+                                </Select>
                             </div>
                         </div>
                     )}
