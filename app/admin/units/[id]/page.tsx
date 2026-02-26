@@ -12,6 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import Loader from "@/components/ui/loader"
 import { useToast } from "@/hooks/use-toast"
 import { formatDate as formatDateForDisplay } from "@/lib/date"
@@ -136,6 +137,7 @@ export default function UnitDetailPage({ params }: { params: { id: string } }) {
         name: "",
         phone_number: "",
         cnic: "",
+        resident_type: "tenant" as "tenant" | "owner",
     })
 
     // Edit resident dialog state
@@ -145,6 +147,7 @@ export default function UnitDetailPage({ params }: { params: { id: string } }) {
         name: "",
         phone_number: "",
         cnic: "",
+        resident_type: "tenant" as "tenant" | "owner",
     })
 
     // Edit maintenance charges dialog state
@@ -289,6 +292,7 @@ export default function UnitDetailPage({ params }: { params: { id: string } }) {
                 is_primary_resident: isPrimary,
                 is_active: true,
                 maintenance_paid: false,
+                resident_type: newResident.resident_type,
             })
 
             if (error) {
@@ -315,7 +319,7 @@ export default function UnitDetailPage({ params }: { params: { id: string } }) {
                 console.error("Welcome message error:", e)
             }
 
-            setNewResident({ name: "", phone_number: "", cnic: "" })
+            setNewResident({ name: "", phone_number: "", cnic: "", resident_type: "tenant" })
             setIsAddResidentOpen(false)
             await fetchProfiles()
             await fetchUnits()
@@ -336,6 +340,7 @@ export default function UnitDetailPage({ params }: { params: { id: string } }) {
                     name: editForm.name,
                     phone_number: editForm.phone_number,
                     cnic: editForm.cnic || null,
+                    resident_type: editForm.resident_type,
                 })
                 .eq("id", editingResident.id)
 
@@ -719,6 +724,21 @@ export default function UnitDetailPage({ params }: { params: { id: string } }) {
                                                 <Label>CNIC</Label>
                                                 <Input value={newResident.cnic} onChange={(e) => setNewResident({ ...newResident, cnic: e.target.value })} placeholder="Optional" />
                                             </div>
+                                            <div className="space-y-2">
+                                                <Label>Type</Label>
+                                                <Select
+                                                    value={newResident.resident_type}
+                                                    onValueChange={(v) => setNewResident({ ...newResident, resident_type: v as "tenant" | "owner" })}
+                                                >
+                                                    <SelectTrigger>
+                                                        <SelectValue />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        <SelectItem value="tenant">Tenant</SelectItem>
+                                                        <SelectItem value="owner">Owner</SelectItem>
+                                                    </SelectContent>
+                                                </Select>
+                                            </div>
                                             <Button className="w-full bg-manzhil-teal hover:bg-manzhil-dark" onClick={handleAddResident} disabled={addingResident}>
                                                 {addingResident ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Adding...</> : "Add Resident"}
                                             </Button>
@@ -735,6 +755,7 @@ export default function UnitDetailPage({ params }: { params: { id: string } }) {
                                         <TableRow className="bg-gradient-to-r from-manzhil-teal/5 to-transparent">
                                             <TableHead>Name</TableHead>
                                             <TableHead>Phone</TableHead>
+                                            <TableHead>Type</TableHead>
                                             <TableHead>Role</TableHead>
                                             <TableHead>Status</TableHead>
                                             <TableHead className="text-right">Actions</TableHead>
@@ -745,6 +766,17 @@ export default function UnitDetailPage({ params }: { params: { id: string } }) {
                                             <TableRow key={resident.id} className="hover:bg-manzhil-teal/5">
                                                 <TableCell className="font-medium text-gray-900">{resident.name}</TableCell>
                                                 <TableCell className="text-gray-600">{resident.phone_number}</TableCell>
+                                                <TableCell>
+                                                    <Badge
+                                                        variant="outline"
+                                                        className={resident.resident_type === 'owner'
+                                                            ? "bg-blue-50 text-blue-700 border-blue-200"
+                                                            : "bg-gray-50 text-gray-600 border-gray-200"
+                                                        }
+                                                    >
+                                                        {resident.resident_type === 'owner' ? 'Owner' : 'Tenant'}
+                                                    </Badge>
+                                                </TableCell>
                                                 <TableCell>
                                                     {isPrimary(resident) ? (
                                                         <Badge className="bg-amber-100 text-amber-800 border-amber-200">
@@ -786,6 +818,7 @@ export default function UnitDetailPage({ params }: { params: { id: string } }) {
                                                                     name: resident.name,
                                                                     phone_number: resident.phone_number,
                                                                     cnic: resident.cnic || "",
+                                                                    resident_type: resident.resident_type || "tenant",
                                                                 })
                                                                 setIsEditResidentOpen(true)
                                                             }}
@@ -809,7 +842,7 @@ export default function UnitDetailPage({ params }: { params: { id: string } }) {
                                         ))}
                                         {residents.length === 0 && (
                                             <TableRow>
-                                                <TableCell colSpan={5} className="text-center text-gray-500 py-8">
+                                                <TableCell colSpan={6} className="text-center text-gray-500 py-8">
                                                     No residents in this unit
                                                 </TableCell>
                                             </TableRow>
@@ -831,7 +864,16 @@ export default function UnitDetailPage({ params }: { params: { id: string } }) {
                                                         <h3 className="font-medium text-manzhil-dark">{resident.name}</h3>
                                                         <p className="text-xs text-gray-500">{resident.phone_number}</p>
                                                     </div>
-                                                    <div className="flex items-center gap-1">
+                                                    <div className="flex items-center gap-1 flex-wrap">
+                                                        <Badge
+                                                            variant="outline"
+                                                            className={resident.resident_type === 'owner'
+                                                                ? "bg-blue-50 text-blue-700 border-blue-200 text-xs"
+                                                                : "bg-gray-50 text-gray-600 border-gray-200 text-xs"
+                                                            }
+                                                        >
+                                                            {resident.resident_type === 'owner' ? 'Owner' : 'Tenant'}
+                                                        </Badge>
                                                         {isPrimary(resident) && (
                                                             <Badge className="bg-amber-100 text-amber-800 text-xs">
                                                                 <Star className="h-3 w-3 mr-1" /> Primary
@@ -849,7 +891,7 @@ export default function UnitDetailPage({ params }: { params: { id: string } }) {
                                                             Set Primary
                                                         </Button>
                                                     )}
-                                                    <Button variant="outline" size="sm" onClick={() => { setEditingResident(resident); setEditForm({ name: resident.name, phone_number: resident.phone_number, cnic: resident.cnic || "" }); setIsEditResidentOpen(true) }} className="flex-1 text-manzhil-teal text-xs">
+                                                    <Button variant="outline" size="sm" onClick={() => { setEditingResident(resident); setEditForm({ name: resident.name, phone_number: resident.phone_number, cnic: resident.cnic || "", resident_type: resident.resident_type || "tenant" }); setIsEditResidentOpen(true) }} className="flex-1 text-manzhil-teal text-xs">
                                                         <Edit className="h-3 w-3 mr-1" /> Edit
                                                     </Button>
                                                     {!isPrimary(resident) && resident.is_active && (
@@ -884,6 +926,21 @@ export default function UnitDetailPage({ params }: { params: { id: string } }) {
                                 <div className="space-y-2">
                                     <Label>CNIC</Label>
                                     <Input value={editForm.cnic} onChange={(e) => setEditForm({ ...editForm, cnic: e.target.value })} />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label>Type</Label>
+                                    <Select
+                                        value={editForm.resident_type}
+                                        onValueChange={(v) => setEditForm({ ...editForm, resident_type: v as "tenant" | "owner" })}
+                                    >
+                                        <SelectTrigger>
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="tenant">Tenant</SelectItem>
+                                            <SelectItem value="owner">Owner</SelectItem>
+                                        </SelectContent>
+                                    </Select>
                                 </div>
                                 <Button className="w-full bg-manzhil-teal hover:bg-manzhil-dark" onClick={handleEditResident}>
                                     Save Changes
