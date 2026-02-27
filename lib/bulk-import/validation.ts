@@ -30,7 +30,8 @@ export const validateCNIC = validateCNICFormat
 export function validateResident(
   resident: ParsedResident,
   existingPhones: Set<string>,
-  filePhones: Map<string, number> // Map of normalized phone -> first row number
+  filePhones: Map<string, number>, // Map of normalized phone -> first row number
+  validApartments: Set<string> // Set of valid apartment numbers from units table
 ): ValidationResult {
   const errors: string[] = []
   const warnings: string[] = []
@@ -66,6 +67,11 @@ export function validateResident(
   const apartmentResult = validateApartment(resident.apartment_number)
   if (!apartmentResult.isValid && apartmentResult.error) {
     errors.push(apartmentResult.error)
+  } else if (apartmentResult.normalized) {
+    // Check if the unit exists in the units table
+    if (!validApartments.has(apartmentResult.normalized)) {
+      errors.push(`Unit "${resident.apartment_number}" does not exist. Please add the unit first.`)
+    }
   }
 
   // Optional field: CNIC validation
@@ -97,7 +103,8 @@ export function validateResident(
 // Validate all residents and return results with summary
 export function validateResidents(
   residents: ParsedResident[],
-  existingPhones: Set<string>
+  existingPhones: Set<string>,
+  validApartments: Set<string> = new Set()
 ): { results: ValidationResult[]; summary: ValidationSummary } {
   // Build map of phone numbers within the file to detect duplicates
   const filePhones = new Map<string, number>()
@@ -114,7 +121,7 @@ export function validateResidents(
   const results: ValidationResult[] = []
 
   for (const resident of residents) {
-    const result = validateResident(resident, existingPhones, filePhones)
+    const result = validateResident(resident, existingPhones, filePhones, validApartments)
     results.push(result)
   }
 

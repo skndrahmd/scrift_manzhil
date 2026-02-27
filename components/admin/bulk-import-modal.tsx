@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/table"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { useToast } from "@/hooks/use-toast"
+import { useAdmin } from "@/app/admin/layout"
 import {
   parseFile,
   downloadTemplate,
@@ -70,6 +71,16 @@ export function BulkImportModal({
   onImportComplete,
 }: BulkImportModalProps) {
   const { toast } = useToast()
+  const { units } = useAdmin()
+
+  // Build set of valid apartment numbers from units
+  const validApartments = React.useMemo(() => {
+    return new Set(
+      units
+        .filter(u => u.is_active !== false)
+        .map(u => u.apartment_number.toUpperCase())
+    )
+  }, [units])
 
   // State
   const [step, setStep] = React.useState<Step>("upload")
@@ -175,11 +186,11 @@ export function BulkImportModal({
   // Validate data when moving to preview
   React.useEffect(() => {
     if (step === "preview" && parsedData.length > 0) {
-      const { results, summary } = validateResidents(parsedData, existingPhones)
+      const { results, summary } = validateResidents(parsedData, existingPhones, validApartments)
       setValidationResults(results)
       setValidationSummary(summary)
     }
-  }, [step, parsedData, existingPhones])
+  }, [step, parsedData, existingPhones, validApartments])
 
   // Handle file drop
   const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
@@ -208,7 +219,7 @@ export function BulkImportModal({
     setParsedData(newParsedData)
 
     // Re-validate
-    const { results, summary } = validateResidents(newParsedData, existingPhones)
+    const { results, summary } = validateResidents(newParsedData, existingPhones, validApartments)
     setValidationResults(results)
     setValidationSummary(summary)
   }

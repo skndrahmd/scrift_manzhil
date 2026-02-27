@@ -65,7 +65,7 @@ export async function POST(request: NextRequest) {
     for (const resident of residents) {
       const { rowNumber, ...residentData } = resident
 
-      // Find or create unit for this apartment_number
+      // Find unit for this apartment_number - unit MUST exist
       let unitId: string | null = null
       if (residentData.apartment_number) {
         const cachedUnitId = unitCache.get(residentData.apartment_number)
@@ -81,26 +81,27 @@ export async function POST(request: NextRequest) {
 
           if (existingUnit) {
             unitId = existingUnit.id
-          } else {
-            // Create the unit
-            const { data: newUnit } = await supabaseAdmin
-              .from('units')
-              .insert({
-                apartment_number: residentData.apartment_number,
-                maintenance_charges: residentData.maintenance_charges,
-                is_occupied: true,
-              })
-              .select('id')
-              .single()
-
-            if (newUnit) {
-              unitId = newUnit.id
-            }
-          }
-          if (unitId) {
             unitCache.set(residentData.apartment_number, unitId)
+          } else {
+            // Unit does not exist - reject this resident
+            result.failed++
+            result.errors.push({
+              row: rowNumber,
+              name: residentData.name,
+              error: `Unit "${residentData.apartment_number}" does not exist. Please add the unit first.`,
+            })
+            continue // Skip to next resident
           }
         }
+      } else {
+        // No apartment number provided
+        result.failed++
+        result.errors.push({
+          row: rowNumber,
+          name: residentData.name,
+          error: 'Apartment number is required',
+        })
+        continue
       }
 
       const { data, error } = await supabaseAdmin

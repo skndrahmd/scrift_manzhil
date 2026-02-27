@@ -39,6 +39,7 @@ import { exportToPdf, filterByPeriod, periodLabel, type Period } from "@/lib/pdf
 import { BulkImportModal } from "./bulk-import-modal"
 import { syncResidentTypeForUnit } from "@/lib/services/resident-type-sync"
 import { validateResident, normalizePhoneNumber, validateCNIC, checkPhoneExists } from "@/lib/validation/resident"
+import { Combobox, type ComboboxOption } from "@/components/ui/combobox"
 
 export function ResidentsTable() {
     const { profiles, units, fetchProfiles, fetchUnits } = useAdmin()
@@ -57,7 +58,7 @@ export function ResidentsTable() {
         name: "",
         phone_number: "",
         cnic: "",
-        apartment_number: "",
+        unit_id: "",
         resident_type: "tenant" as "tenant" | "owner",
     })
     const [isBulkImportOpen, setIsBulkImportOpen] = useState(false)
@@ -69,6 +70,17 @@ export function ResidentsTable() {
         const map = new Map<string, typeof units[0]>()
         units.forEach((u) => map.set(u.id, u))
         return map
+    }, [units])
+
+    // Build unit options for combobox
+    const unitOptions: ComboboxOption[] = useMemo(() => {
+        return units
+            .filter(u => u.is_active !== false)
+            .map(u => ({
+                value: u.id,
+                label: u.apartment_number,
+                description: u.unit_type ? `${u.unit_type}${u.maintenance_charges ? ` • Rs. ${u.maintenance_charges.toLocaleString()}` : ''}` : undefined,
+            }))
     }, [units])
 
     const isPrimary = (profile: Profile) => {
@@ -134,26 +146,50 @@ export function ResidentsTable() {
 
     // Actions
     const addNewUser = async () => {
-        // Validate all fields
-        const validation = validateResident({
-            name: newUser.name,
-            phone_number: newUser.phone_number,
-            apartment_number: newUser.apartment_number,
-            cnic: newUser.cnic,
-            resident_type: newUser.resident_type,
-        })
-
-        if (!validation.isValid) {
+        // Validate required fields
+        if (!newUser.name?.trim()) {
             toast({
                 title: "Validation Error",
-                description: validation.errors[0],
+                description: "Name is required.",
+                variant: "destructive",
+            })
+            return
+        }
+
+        if (!newUser.phone_number?.trim()) {
+            toast({
+                title: "Validation Error",
+                description: "Phone number is required.",
+                variant: "destructive",
+            })
+            return
+        }
+
+        if (!newUser.unit_id) {
+            toast({
+                title: "Validation Error",
+                description: "Please select a unit/apartment.",
+                variant: "destructive",
+            })
+            return
+        }
+
+        // Normalize phone number
+        const normalizedPhone = normalizePhoneNumber(newUser.phone_number)
+
+        // Validate CNIC if provided
+        const normalizedCNIC = newUser.cnic ? validateCNIC(newUser.cnic) : null
+        if (newUser.cnic && !normalizedCNIC) {
+            toast({
+                title: "Validation Error",
+                description: "CNIC must be 13 digits.",
                 variant: "destructive",
             })
             return
         }
 
         // Check for duplicate phone number
-        const phoneExists = await checkPhoneExists(newUser.phone_number)
+        const phoneExists = await checkPhoneExists(normalizedPhone)
         if (phoneExists) {
             toast({
                 title: "Duplicate Phone",
@@ -163,16 +199,29 @@ export function ResidentsTable() {
             return
         }
 
-        // Look up unit by apartment_number
-        const unit = units.find(u => u.apartment_number === validation.normalizedData.apartment_number)
+        // Get the selected unit
+        const unit = unitMap.get(newUser.unit_id)
+        if (!unit) {
+            toast({
+                title: "Error",
+                description: "Selected unit not found.",
+                variant: "destructive",
+            })
+            return
+        }
+
+        // Check if this is the first resident in the unit
+        const existingResidents = (unit.profiles || []).filter((r) => r.is_active)
+        const isPrimaryResident = existingResidents.length === 0
 
         const { error } = await supabase.from("profiles").insert([{
-            name: validation.normalizedData.name,
-            phone_number: validation.normalizedData.phone_number,
-            cnic: validation.normalizedData.cnic || null,
-            apartment_number: validation.normalizedData.apartment_number,
-            unit_id: unit?.id || null,
-            resident_type: validation.normalizedData.resident_type,
+            name: newUser.name.trim(),
+            phone_number: normalizedPhone,
+            cnic: normalizedCNIC || null,
+            apartment_number: unit.apartment_number,
+            unit_id: unit.id,
+            resident_type: newUser.resident_type,
+            is_primary_resident: isPrimaryResident,
         }])
 
         if (error) {
@@ -184,7 +233,9 @@ export function ResidentsTable() {
         } else {
             toast({
                 title: "Success",
-                description: "User added successfully",
+                description: isPrimaryResident 
+                    ? "User added successfully as primary resident." 
+                    : "User added successfully.",
             })
 
             // Send welcome message
@@ -194,9 +245,9 @@ export function ResidentsTable() {
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
                         body: JSON.stringify({
-                            name: validation.normalizedData.name,
-                            phone_number: validation.normalizedData.phone_number,
-                            apartment_number: validation.normalizedData.apartment_number,
+                            name: newUser.name.trim(),
+                            phone_number: normalizedPhone,
+                            apartment_number: unit.apartment_number,
                         }),
                     })
                 } catch (e) {
@@ -205,30 +256,29 @@ export function ResidentsTable() {
             }
 
             // Sync resident_type across all residents in the unit
-            if (unit?.id) {
-                syncResidentTypeForUnit(unit.id, validation.normalizedData.resident_type).catch(e =>
-                    console.error("Failed to sync resident_type:", e)
-                )
-            }
+            syncResidentTypeForUnit(unit.id, newUser.resident_type).catch(e =>
+                console.error("Failed to sync resident_type:", e)
+            )
 
             setNewUser({
                 name: "",
                 phone_number: "",
                 cnic: "",
-                apartment_number: "",
+                unit_id: "",
                 resident_type: "tenant",
             })
             setSendWelcomeMessage(true)
             setIsAddUserOpen(false)
             fetchProfiles()
+            fetchUnits()
         }
     }
 
     const editUser = async () => {
         if (!editingUser) return
 
-        // Look up unit by apartment_number
-        const unit = units.find(u => u.apartment_number === editingUser.apartment_number)
+        // Get the selected unit
+        const unit = editingUser.unit_id ? unitMap.get(editingUser.unit_id) : null
 
         const { error } = await supabase
             .from("profiles")
@@ -238,7 +288,7 @@ export function ResidentsTable() {
                     ? editingUser.phone_number
                     : `+${editingUser.phone_number}`,
                 cnic: editingUser.cnic,
-                apartment_number: editingUser.apartment_number,
+                apartment_number: unit?.apartment_number || editingUser.apartment_number,
                 unit_id: unit?.id || editingUser.unit_id || null,
                 resident_type: editingUser.resident_type || "tenant",
                 updated_at: new Date().toISOString(),
@@ -261,6 +311,7 @@ export function ResidentsTable() {
             setEditingUser(null)
             setIsEditUserOpen(false)
             fetchProfiles()
+            fetchUnits()
         }
     }
 
@@ -401,12 +452,13 @@ export function ResidentsTable() {
                                     </div>
                                     <div className="grid sm:grid-cols-4 items-center gap-2 sm:gap-4">
                                         <Label htmlFor="apartment" className="sm:text-right">Apartment *</Label>
-                                        <Input
-                                            id="apartment"
-                                            value={newUser.apartment_number}
-                                            onChange={(e) => setNewUser({ ...newUser, apartment_number: e.target.value })}
+                                        <Combobox
+                                            options={unitOptions}
+                                            value={newUser.unit_id}
+                                            onValueChange={(value) => setNewUser({ ...newUser, unit_id: value })}
+                                            placeholder="Select unit..."
+                                            emptyMessage="No units found."
                                             className="col-span-3"
-                                            placeholder="A-101"
                                         />
                                     </div>
                                     <div className="grid sm:grid-cols-4 items-center gap-2 sm:gap-4">
@@ -722,9 +774,19 @@ export function ResidentsTable() {
                             </div>
                             <div className="grid sm:grid-cols-4 items-center gap-2 sm:gap-4">
                                 <Label className="sm:text-right">Apartment</Label>
-                                <Input
-                                    value={editingUser.apartment_number}
-                                    onChange={(e) => setEditingUser({ ...editingUser, apartment_number: e.target.value })}
+                                <Combobox
+                                    options={unitOptions}
+                                    value={editingUser.unit_id || ""}
+                                    onValueChange={(value) => {
+                                        const selectedUnit = unitMap.get(value)
+                                        setEditingUser({ 
+                                            ...editingUser, 
+                                            unit_id: value,
+                                            apartment_number: selectedUnit?.apartment_number || ""
+                                        })
+                                    }}
+                                    placeholder="Select unit..."
+                                    emptyMessage="No units found."
                                     className="col-span-3"
                                 />
                             </div>
