@@ -1,5 +1,6 @@
 import Papa from 'papaparse'
 import * as XLSX from 'xlsx'
+import { validateName, validateApartment, validateCNIC } from '@/lib/validation/resident'
 
 export interface ParsedResident {
   rowNumber: number
@@ -180,13 +181,22 @@ function transformData(
       // Invalid values are ignored (will default to 'tenant' later)
     }
 
+    // Normalize name (trim and remove extra spaces)
+    const normalizedName = validateName(mappedRow.name || '').normalized
+
+    // Normalize apartment number (uppercase, trim)
+    const normalizedApartment = validateApartment(mappedRow.apartment_number || '').normalized
+
+    // Normalize CNIC (remove dashes/spaces)
+    const normalizedCnic = mappedRow.cnic ? validateCNIC(mappedRow.cnic).normalized : undefined
+
     data.push({
       rowNumber,
-      name: mappedRow.name || '',
+      name: normalizedName,
       phone_number: mappedRow.phone_number || '',
-      apartment_number: mappedRow.apartment_number || '',
-      cnic: mappedRow.cnic || undefined,
-      building_block: mappedRow.building_block || undefined,
+      apartment_number: normalizedApartment,
+      cnic: normalizedCnic,
+      building_block: mappedRow.building_block?.trim() || undefined,
       maintenance_charges: maintenanceCharges,
       resident_type: residentType,
     })

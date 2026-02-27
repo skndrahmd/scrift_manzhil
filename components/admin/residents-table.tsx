@@ -38,6 +38,7 @@ import {
 import { exportToPdf, filterByPeriod, periodLabel, type Period } from "@/lib/pdf"
 import { BulkImportModal } from "./bulk-import-modal"
 import { syncResidentTypeForUnit } from "@/lib/services/resident-type-sync"
+import { validateResident, normalizePhoneNumber, validateCNIC, checkPhoneExists } from "@/lib/validation/resident"
 
 export function ResidentsTable() {
     const { profiles, units, fetchProfiles, fetchUnits } = useAdmin()
@@ -133,27 +134,45 @@ export function ResidentsTable() {
 
     // Actions
     const addNewUser = async () => {
-        if (!newUser.name || !newUser.phone_number || !newUser.apartment_number) {
+        // Validate all fields
+        const validation = validateResident({
+            name: newUser.name,
+            phone_number: newUser.phone_number,
+            apartment_number: newUser.apartment_number,
+            cnic: newUser.cnic,
+            resident_type: newUser.resident_type,
+        })
+
+        if (!validation.isValid) {
             toast({
-                title: "Error",
-                description: "Please fill in all required fields",
+                title: "Validation Error",
+                description: validation.errors[0],
                 variant: "destructive",
             })
             return
         }
 
-        const formattedPhone = newUser.phone_number.startsWith("+") ? newUser.phone_number : `+${newUser.phone_number}`
+        // Check for duplicate phone number
+        const phoneExists = await checkPhoneExists(newUser.phone_number)
+        if (phoneExists) {
+            toast({
+                title: "Duplicate Phone",
+                description: "A resident with this phone number already exists.",
+                variant: "destructive",
+            })
+            return
+        }
 
         // Look up unit by apartment_number
-        const unit = units.find(u => u.apartment_number === newUser.apartment_number)
+        const unit = units.find(u => u.apartment_number === validation.normalizedData.apartment_number)
 
         const { error } = await supabase.from("profiles").insert([{
-            name: newUser.name,
-            phone_number: formattedPhone,
-            cnic: newUser.cnic,
-            apartment_number: newUser.apartment_number,
+            name: validation.normalizedData.name,
+            phone_number: validation.normalizedData.phone_number,
+            cnic: validation.normalizedData.cnic || null,
+            apartment_number: validation.normalizedData.apartment_number,
             unit_id: unit?.id || null,
-            resident_type: newUser.resident_type,
+            resident_type: validation.normalizedData.resident_type,
         }])
 
         if (error) {
@@ -175,9 +194,9 @@ export function ResidentsTable() {
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
                         body: JSON.stringify({
-                            name: newUser.name,
-                            phone_number: formattedPhone,
-                            apartment_number: newUser.apartment_number,
+                            name: validation.normalizedData.name,
+                            phone_number: validation.normalizedData.phone_number,
+                            apartment_number: validation.normalizedData.apartment_number,
                         }),
                     })
                 } catch (e) {
@@ -187,7 +206,7 @@ export function ResidentsTable() {
 
             // Sync resident_type across all residents in the unit
             if (unit?.id) {
-                syncResidentTypeForUnit(unit.id, newUser.resident_type).catch(e =>
+                syncResidentTypeForUnit(unit.id, validation.normalizedData.resident_type).catch(e =>
                     console.error("Failed to sync resident_type:", e)
                 )
             }

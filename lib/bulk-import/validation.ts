@@ -1,4 +1,5 @@
 import { ParsedResident } from './parser'
+import { normalizePhoneNumber as normalizePhone, validateCNIC as validateCNICFormat, validateName, validateApartment } from '@/lib/validation/resident'
 
 export type ValidationStatus = 'valid' | 'warning' | 'error'
 
@@ -19,61 +20,11 @@ export interface ValidationSummary {
   validResidents: ParsedResident[]
 }
 
-// Normalize Pakistani phone number to E.164 format (+923XXXXXXXXX)
-export function normalizePhoneNumber(phone: string): { normalized: string; isValid: boolean } {
-  if (!phone) {
-    return { normalized: '', isValid: false }
-  }
+// Re-export normalizePhoneNumber from shared module for backward compatibility
+export const normalizePhoneNumber = normalizePhone
 
-  // Remove all non-digit characters except leading +
-  let cleaned = phone.replace(/[^\d+]/g, '')
-
-  // Handle various Pakistan phone number formats
-  // 03001234567 -> +923001234567
-  // 923001234567 -> +923001234567
-  // +923001234567 -> +923001234567
-  // 003001234567 -> +923001234567
-
-  // Remove leading zeros that aren't part of the area code
-  if (cleaned.startsWith('00')) {
-    cleaned = cleaned.substring(2)
-  }
-
-  // If starts with 0 and followed by 3, it's a local mobile format
-  if (cleaned.startsWith('03')) {
-    cleaned = '92' + cleaned.substring(1)
-  }
-
-  // If doesn't start with + or 92, it might be missing country code
-  if (!cleaned.startsWith('+') && !cleaned.startsWith('92')) {
-    // If it's 10 digits starting with 3, assume Pakistan mobile
-    if (cleaned.length === 10 && cleaned.startsWith('3')) {
-      cleaned = '92' + cleaned
-    }
-  }
-
-  // Ensure it starts with +
-  if (!cleaned.startsWith('+')) {
-    cleaned = '+' + cleaned
-  }
-
-  // Validate: Pakistan mobile numbers should be +92 followed by 10 digits (3XX XXXXXXX)
-  const pakistanMobileRegex = /^\+92[3][0-9]{9}$/
-  const isValid = pakistanMobileRegex.test(cleaned)
-
-  return { normalized: cleaned, isValid }
-}
-
-// Validate CNIC format (13 digits with optional dashes: 42101-1234567-1)
-export function validateCNIC(cnic: string): boolean {
-  if (!cnic) return true // CNIC is optional
-
-  // Remove dashes and spaces
-  const cleaned = cnic.replace(/[-\s]/g, '')
-
-  // Must be exactly 13 digits
-  return /^\d{13}$/.test(cleaned)
-}
+// Re-export validateCNIC from shared module for backward compatibility
+export const validateCNIC = validateCNICFormat
 
 // Validate a single resident record
 export function validateResident(
@@ -84,19 +35,20 @@ export function validateResident(
   const errors: string[] = []
   const warnings: string[] = []
 
-  // Validate and normalize phone number
-  const { normalized: normalizedPhone, isValid: isPhoneValid } = normalizePhoneNumber(resident.phone_number)
-
-  // Required field: name
-  if (!resident.name || resident.name.trim() === '') {
-    errors.push('Name is required')
+  // Validate name
+  const nameResult = validateName(resident.name)
+  if (!nameResult.isValid && nameResult.error) {
+    errors.push(nameResult.error)
   }
 
-  // Required field: phone_number
+  // Validate and normalize phone number
+  const phoneResult = normalizePhoneNumber(resident.phone_number)
+  const normalizedPhone = phoneResult.normalized
+
   if (!resident.phone_number || resident.phone_number.trim() === '') {
     errors.push('Phone number is required')
-  } else if (!isPhoneValid) {
-    errors.push('Invalid phone number format (must be valid Pakistan mobile: 03XX-XXXXXXX)')
+  } else if (!phoneResult.isValid && phoneResult.error) {
+    errors.push(phoneResult.error)
   } else {
     // Check for duplicates in existing database
     if (existingPhones.has(normalizedPhone)) {
@@ -110,14 +62,18 @@ export function validateResident(
     }
   }
 
-  // Required field: apartment_number
-  if (!resident.apartment_number || resident.apartment_number.trim() === '') {
-    errors.push('Apartment number is required')
+  // Validate apartment number
+  const apartmentResult = validateApartment(resident.apartment_number)
+  if (!apartmentResult.isValid && apartmentResult.error) {
+    errors.push(apartmentResult.error)
   }
 
   // Optional field: CNIC validation
-  if (resident.cnic && !validateCNIC(resident.cnic)) {
-    errors.push('Invalid CNIC format (must be 13 digits)')
+  if (resident.cnic) {
+    const cnicResult = validateCNICFormat(resident.cnic)
+    if (!cnicResult.isValid && cnicResult.error) {
+      errors.push(cnicResult.error)
+    }
   }
 
   // Determine status

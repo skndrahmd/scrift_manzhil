@@ -41,6 +41,7 @@ import {
 } from "lucide-react"
 import { generateMaintenanceInvoicePdf, generateBookingInvoicePdf } from "@/lib/pdf/invoice"
 import { syncResidentTypeForUnit } from "@/lib/services/resident-type-sync"
+import { validateResident, checkPhoneExists } from "@/lib/validation/resident"
 
 function formatMonth(year: number, month: number) {
     const date = new Date(year, month - 1, 1)
@@ -277,8 +278,29 @@ export default function UnitDetailPage({ params }: { params: { id: string } }) {
 
     // Add new resident to unit
     async function handleAddResident() {
-        if (!newResident.name || !newResident.phone_number || !unit) {
-            toast({ title: "Error", description: "Name and phone number are required", variant: "destructive" })
+        if (!unit) {
+            toast({ title: "Error", description: "Unit not found", variant: "destructive" })
+            return
+        }
+
+        // Validate all fields
+        const validation = validateResident({
+            name: newResident.name,
+            phone_number: newResident.phone_number,
+            apartment_number: unit.apartment_number,
+            cnic: newResident.cnic,
+            resident_type: newResident.resident_type,
+        })
+
+        if (!validation.isValid) {
+            toast({ title: "Validation Error", description: validation.errors[0], variant: "destructive" })
+            return
+        }
+
+        // Check for duplicate phone number
+        const phoneExists = await checkPhoneExists(newResident.phone_number)
+        if (phoneExists) {
+            toast({ title: "Duplicate Phone", description: "A resident with this phone number already exists.", variant: "destructive" })
             return
         }
 
@@ -286,16 +308,16 @@ export default function UnitDetailPage({ params }: { params: { id: string } }) {
         try {
             const isPrimary = residents.filter(r => r.is_active).length === 0
             const { error } = await supabase.from("profiles").insert({
-                name: newResident.name,
-                phone_number: newResident.phone_number,
-                cnic: newResident.cnic || null,
-                apartment_number: unit.apartment_number,
+                name: validation.normalizedData.name,
+                phone_number: validation.normalizedData.phone_number,
+                cnic: validation.normalizedData.cnic || null,
+                apartment_number: validation.normalizedData.apartment_number,
                 unit_id: unit.id,
                 maintenance_charges: unit.maintenance_charges,
                 is_primary_resident: isPrimary,
                 is_active: true,
                 maintenance_paid: false,
-                resident_type: newResident.resident_type,
+                resident_type: validation.normalizedData.resident_type,
             })
 
             if (error) {
@@ -305,11 +327,11 @@ export default function UnitDetailPage({ params }: { params: { id: string } }) {
                 throw error
             }
 
-            toast({ title: "Added", description: `${newResident.name} has been added to Unit ${apartmentNumber}` })
+            toast({ title: "Added", description: `${validation.normalizedData.name} has been added to Unit ${apartmentNumber}` })
 
             // Sync resident_type across all residents in the unit
             if (unit.id) {
-                syncResidentTypeForUnit(unit.id, newResident.resident_type).catch(e => 
+                syncResidentTypeForUnit(unit.id, validation.normalizedData.resident_type).catch(e => 
                     console.error("Failed to sync resident_type:", e)
                 )
             }
@@ -321,9 +343,9 @@ export default function UnitDetailPage({ params }: { params: { id: string } }) {
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
                         body: JSON.stringify({
-                            name: newResident.name,
-                            phone_number: newResident.phone_number,
-                            apartment_number: unit.apartment_number,
+                            name: validation.normalizedData.name,
+                            phone_number: validation.normalizedData.phone_number,
+                            apartment_number: validation.normalizedData.apartment_number,
                         }),
                     })
                 } catch (e) {
