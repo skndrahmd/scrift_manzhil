@@ -457,9 +457,10 @@ export default function UnitsPage() {
                                 </SelectTrigger>
                                 <SelectContent>
                                     <SelectItem value="Studio">Studio</SelectItem>
-                                    <SelectItem value="1BHK">1BHK</SelectItem>
-                                    <SelectItem value="2BHK">2BHK</SelectItem>
-                                    <SelectItem value="3BHK">3BHK</SelectItem>
+                                    <SelectItem value="1BDD">1BDD</SelectItem>
+                                    <SelectItem value="2BDD">2BDD</SelectItem>
+                                    <SelectItem value="3BDD">3BDD</SelectItem>
+                                    <SelectItem value="4BDD">4BDD</SelectItem>
                                     <SelectItem value="Penthouse">Penthouse</SelectItem>
                                 </SelectContent>
                             </Select>
