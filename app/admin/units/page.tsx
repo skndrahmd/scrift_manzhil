@@ -216,7 +216,8 @@ export default function UnitsPage() {
 
     // Delete unit handler
     const handleDeleteUnit = async (unitId: string, apartmentNumber: string, e: React.MouseEvent) => {
-        e.stopPropagation() // Prevent navigation to unit detail page
+        e.preventDefault() // Prevent Link navigation
+        e.stopPropagation() // Prevent card click
 
         if (!confirm(`Are you sure you want to delete Unit ${apartmentNumber}? This action cannot be undone.`)) {
             return
