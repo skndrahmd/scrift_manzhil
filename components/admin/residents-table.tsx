@@ -36,6 +36,7 @@ import {
 } from "@/components/ui/pagination"
 import { exportToPdf, filterByPeriod, periodLabel, type Period } from "@/lib/pdf"
 import { BulkImportModal } from "./bulk-import-modal"
+import { syncResidentTypeForUnit } from "@/lib/services/resident-type-sync"
 
 export function ResidentsTable() {
     const { profiles, units, fetchProfiles, fetchUnits } = useAdmin()
@@ -180,6 +181,13 @@ export function ResidentsTable() {
                 console.error("Welcome message error:", e)
             }
 
+            // Sync resident_type across all residents in the unit
+            if (unit?.id) {
+                syncResidentTypeForUnit(unit.id, newUser.resident_type).catch(e =>
+                    console.error("Failed to sync resident_type:", e)
+                )
+            }
+
             setNewUser({
                 name: "",
                 phone_number: "",
@@ -217,6 +225,15 @@ export function ResidentsTable() {
             toast({ title: "Error", description: "Failed to update user", variant: "destructive" })
         } else {
             toast({ title: "Success", description: "User updated successfully" })
+
+            // Sync resident_type across all residents in the unit
+            const unitId = unit?.id || editingUser.unit_id
+            if (unitId) {
+                syncResidentTypeForUnit(unitId, editingUser.resident_type || "tenant").catch(e =>
+                    console.error("Failed to sync resident_type:", e)
+                )
+            }
+
             setEditingUser(null)
             setIsEditUserOpen(false)
             fetchProfiles()

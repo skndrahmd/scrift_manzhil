@@ -39,6 +39,7 @@ import {
     Download,
 } from "lucide-react"
 import { generateMaintenanceInvoicePdf, generateBookingInvoicePdf } from "@/lib/pdf/invoice"
+import { syncResidentTypeForUnit } from "@/lib/services/resident-type-sync"
 
 function formatMonth(year: number, month: number) {
     const date = new Date(year, month - 1, 1)
@@ -304,6 +305,13 @@ export default function UnitDetailPage({ params }: { params: { id: string } }) {
 
             toast({ title: "Added", description: `${newResident.name} has been added to Unit ${apartmentNumber}` })
 
+            // Sync resident_type across all residents in the unit
+            if (unit.id) {
+                syncResidentTypeForUnit(unit.id, newResident.resident_type).catch(e => 
+                    console.error("Failed to sync resident_type:", e)
+                )
+            }
+
             // Send welcome message (fire-and-forget, don't block on failure)
             try {
                 await fetch("/api/residents/welcome-message", {
@@ -346,6 +354,14 @@ export default function UnitDetailPage({ params }: { params: { id: string } }) {
 
             if (error) throw error
             toast({ title: "Updated", description: "Resident updated successfully" })
+
+            // Sync resident_type across all residents in the unit
+            if (editingResident.unit_id) {
+                syncResidentTypeForUnit(editingResident.unit_id, editForm.resident_type).catch(e =>
+                    console.error("Failed to sync resident_type:", e)
+                )
+            }
+
             setIsEditResidentOpen(false)
             setEditingResident(null)
             await fetchProfiles()

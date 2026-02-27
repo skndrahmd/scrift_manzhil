@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { sendWelcomeMessage } from '@/lib/twilio/notifications/account'
 import { verifyAdminAccess } from '@/lib/auth/api-auth'
+import { syncResidentTypeForUnit } from '@/lib/services/resident-type-sync'
 
 interface ResidentToImport {
   name: string
@@ -141,6 +142,13 @@ export async function POST(request: NextRequest) {
           phone_number: data.phone_number,
           apartment_number: data.apartment_number,
         })
+
+        // Sync resident_type across all residents in the unit
+        if (unitId) {
+          syncResidentTypeForUnit(unitId, residentData.resident_type || 'tenant').catch(e =>
+            console.error('Failed to sync resident_type:', e)
+          )
+        }
       }
     }
 
