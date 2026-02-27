@@ -108,3 +108,65 @@ export async function PATCH(request: NextRequest) {
         )
     }
 }
+
+export async function DELETE(request: NextRequest) {
+    const { authenticated, error: authError } = await verifyAdminAccess("units")
+    if (!authenticated) {
+        return NextResponse.json({ error: authError }, { status: 401 })
+    }
+
+    try {
+        const { searchParams } = new URL(request.url)
+        const unitId = searchParams.get("unitId")
+
+        if (!unitId) {
+            return new Response(
+                JSON.stringify({ error: "unitId is required" }),
+                { status: 400, headers: { "Content-Type": "application/json" } }
+            )
+        }
+
+        // Check for active residents
+        const { data: activeResidents, error: residentsError } = await supabaseAdmin
+            .from("profiles")
+            .select("id")
+            .eq("unit_id", unitId)
+            .eq("is_active", true)
+
+        if (residentsError) throw residentsError
+
+        if (activeResidents && activeResidents.length > 0) {
+            return new Response(
+                JSON.stringify({ error: "Cannot delete unit with active residents. Please deactivate or remove residents first." }),
+                { status: 400, headers: { "Content-Type": "application/json" } }
+            )
+        }
+
+        // Delete maintenance payments
+        const { error: paymentsError } = await supabaseAdmin
+            .from("maintenance_payments")
+            .delete()
+            .eq("unit_id", unitId)
+
+        if (paymentsError) throw paymentsError
+
+        // Delete the unit
+        const { error: deleteError } = await supabaseAdmin
+            .from("units")
+            .delete()
+            .eq("id", unitId)
+
+        if (deleteError) throw deleteError
+
+        return new Response(JSON.stringify({ success: true }), {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+        })
+    } catch (error) {
+        console.error("[UNITS DELETE] Error:", error)
+        return new Response(
+            JSON.stringify({ error: "Failed to delete unit" }),
+            { status: 500, headers: { "Content-Type": "application/json" } }
+        )
+    }
+}

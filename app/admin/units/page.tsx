@@ -26,6 +26,7 @@ import {
     Upload,
     Loader2,
     Bell,
+    Trash2,
 } from "lucide-react"
 import Link from "next/link"
 import { useMemo, useState } from "react"
@@ -54,6 +55,9 @@ export default function UnitsPage() {
 
     // Bulk reminder state
     const [sendingBulk, setSendingBulk] = useState(false)
+
+    // Delete state
+    const [deletingUnitId, setDeletingUnitId] = useState<string | null>(null)
 
     // Enrich units with computed data from pre-loaded profiles
     const enrichedUnits = useMemo(() => {
@@ -207,6 +211,42 @@ export default function UnitsPage() {
             toast({ title: "Error", description: error?.message || "Failed to send reminders", variant: "destructive" })
         } finally {
             setSendingBulk(false)
+        }
+    }
+
+    // Delete unit handler
+    const handleDeleteUnit = async (unitId: string, apartmentNumber: string, e: React.MouseEvent) => {
+        e.stopPropagation() // Prevent navigation to unit detail page
+
+        if (!confirm(`Are you sure you want to delete Unit ${apartmentNumber}? This action cannot be undone.`)) {
+            return
+        }
+
+        setDeletingUnitId(unitId)
+        try {
+            const response = await fetch(`/api/units?unitId=${unitId}`, {
+                method: "DELETE",
+            })
+
+            const result = await response.json()
+
+            if (!response.ok) {
+                throw new Error(result.error || "Failed to delete unit")
+            }
+
+            toast({
+                title: "Unit Deleted",
+                description: `Unit ${apartmentNumber} has been deleted successfully.`,
+            })
+            await fetchUnits()
+        } catch (error: any) {
+            toast({
+                title: "Error",
+                description: error?.message || "Failed to delete unit",
+                variant: "destructive",
+            })
+        } finally {
+            setDeletingUnitId(null)
         }
     }
 
@@ -379,7 +419,22 @@ export default function UnitsPage() {
                                                 </p>
                                             </div>
                                         </div>
-                                        <ChevronRight className="h-5 w-5 text-gray-400 group-hover:text-manzhil-teal transition-colors" />
+                                        <div className="flex items-center gap-2">
+                                            <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                className="h-8 w-8 text-gray-400 hover:text-red-600 hover:bg-red-50"
+                                                onClick={(e) => handleDeleteUnit(unit.id, unit.apartment_number, e)}
+                                                disabled={deletingUnitId === unit.id}
+                                            >
+                                                {deletingUnitId === unit.id ? (
+                                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                                ) : (
+                                                    <Trash2 className="h-4 w-4" />
+                                                )}
+                                            </Button>
+                                            <ChevronRight className="h-5 w-5 text-gray-400 group-hover:text-manzhil-teal transition-colors" />
+                                        </div>
                                     </div>
 
                                     {/* Primary Resident */}
