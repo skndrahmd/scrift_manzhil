@@ -24,6 +24,7 @@ import {
 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Checkbox } from "@/components/ui/checkbox"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import {
@@ -49,6 +50,7 @@ export function ResidentsTable() {
     const [currentPage, setCurrentPage] = useState(1)
     const [isAddUserOpen, setIsAddUserOpen] = useState(false)
     const [isEditUserOpen, setIsEditUserOpen] = useState(false)
+    const [sendWelcomeMessage, setSendWelcomeMessage] = useState(true)
     const [editingUser, setEditingUser] = useState<Profile | null>(null)
     const [newUser, setNewUser] = useState({
         name: "",
@@ -167,18 +169,20 @@ export function ResidentsTable() {
             })
 
             // Send welcome message
-            try {
-                await fetch("/api/residents/welcome-message", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                        name: newUser.name,
-                        phone_number: formattedPhone,
-                        apartment_number: newUser.apartment_number,
-                    }),
-                })
-            } catch (e) {
-                console.error("Welcome message error:", e)
+            if (sendWelcomeMessage) {
+                try {
+                    await fetch("/api/residents/welcome-message", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                            name: newUser.name,
+                            phone_number: formattedPhone,
+                            apartment_number: newUser.apartment_number,
+                        }),
+                    })
+                } catch (e) {
+                    console.error("Welcome message error:", e)
+                }
             }
 
             // Sync resident_type across all residents in the unit
@@ -195,6 +199,7 @@ export function ResidentsTable() {
                 apartment_number: "",
                 resident_type: "tenant",
             })
+            setSendWelcomeMessage(true)
             setIsAddUserOpen(false)
             fetchProfiles()
         }
@@ -408,6 +413,21 @@ export function ResidentsTable() {
                                                 <SelectItem value="owner">Owner</SelectItem>
                                             </SelectContent>
                                         </Select>
+                                    </div>
+                                    <div className="grid sm:grid-cols-4 items-center gap-2 sm:gap-4">
+                                        <div className="sm:col-start-2 sm:col-span-3 flex items-center space-x-2">
+                                            <Checkbox
+                                                id="sendWelcomeResident"
+                                                checked={sendWelcomeMessage}
+                                                onCheckedChange={(checked) => setSendWelcomeMessage(checked === true)}
+                                            />
+                                            <label
+                                                htmlFor="sendWelcomeResident"
+                                                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                                            >
+                                                Send welcome message
+                                            </label>
+                                        </div>
                                     </div>
                                 </div>
                                 <div className="flex justify-end gap-3">

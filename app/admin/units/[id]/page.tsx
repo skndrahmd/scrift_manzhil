@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Checkbox } from "@/components/ui/checkbox"
 import Loader from "@/components/ui/loader"
 import { useToast } from "@/hooks/use-toast"
 import { formatDate as formatDateForDisplay } from "@/lib/date"
@@ -134,6 +135,7 @@ export default function UnitDetailPage({ params }: { params: { id: string } }) {
     // Add resident dialog state
     const [isAddResidentOpen, setIsAddResidentOpen] = useState(false)
     const [addingResident, setAddingResident] = useState(false)
+    const [sendWelcomeMessage, setSendWelcomeMessage] = useState(true)
     const [newResident, setNewResident] = useState({
         name: "",
         phone_number: "",
@@ -313,21 +315,24 @@ export default function UnitDetailPage({ params }: { params: { id: string } }) {
             }
 
             // Send welcome message (fire-and-forget, don't block on failure)
-            try {
-                await fetch("/api/residents/welcome-message", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                        name: newResident.name,
-                        phone_number: newResident.phone_number,
-                        apartment_number: unit.apartment_number,
-                    }),
-                })
-            } catch (e) {
-                console.error("Welcome message error:", e)
+            if (sendWelcomeMessage) {
+                try {
+                    await fetch("/api/residents/welcome-message", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                            name: newResident.name,
+                            phone_number: newResident.phone_number,
+                            apartment_number: unit.apartment_number,
+                        }),
+                    })
+                } catch (e) {
+                    console.error("Welcome message error:", e)
+                }
             }
 
             setNewResident({ name: "", phone_number: "", cnic: "", resident_type: "tenant" })
+            setSendWelcomeMessage(true)
             setIsAddResidentOpen(false)
             await fetchProfiles()
             await fetchUnits()
@@ -754,6 +759,19 @@ export default function UnitDetailPage({ params }: { params: { id: string } }) {
                                                         <SelectItem value="owner">Owner</SelectItem>
                                                     </SelectContent>
                                                 </Select>
+                                            </div>
+                                            <div className="flex items-center space-x-2">
+                                                <Checkbox
+                                                    id="sendWelcome"
+                                                    checked={sendWelcomeMessage}
+                                                    onCheckedChange={(checked) => setSendWelcomeMessage(checked === true)}
+                                                />
+                                                <label
+                                                    htmlFor="sendWelcome"
+                                                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                                                >
+                                                    Send welcome message
+                                                </label>
                                             </div>
                                             <Button className="w-full bg-manzhil-teal hover:bg-manzhil-dark" onClick={handleAddResident} disabled={addingResident}>
                                                 {addingResident ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Adding...</> : "Add Resident"}
