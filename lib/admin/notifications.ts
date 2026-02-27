@@ -111,3 +111,38 @@ export async function getAllNotificationRecipients(): Promise<string[]> {
     return []
   }
 }
+
+/**
+ * Fetches phone numbers of active admins opted-in to complaint status update notifications.
+ * @returns Array of E.164 phone numbers, or empty array if none configured
+ */
+export async function getComplaintStatusUpdateRecipients(): Promise<string[]> {
+  try {
+    const { data, error } = await supabaseAdmin
+      .from("admin_users")
+      .select("phone_number")
+      .eq("receive_complaint_status_updates", true)
+      .eq("is_active", true)
+      .not("phone_number", "is", null)
+
+    if (error) {
+      console.error("[NOTIFICATIONS] Error fetching complaint status update recipients:", error)
+      return []
+    }
+
+    const recipients = data
+      ?.map(row => row.phone_number)
+      .filter((num): num is string => num !== null && num.length > 0)
+
+    if (!recipients || recipients.length === 0) {
+      console.log("[NOTIFICATIONS] No complaint status update recipients configured")
+      return []
+    }
+
+    console.log(`[NOTIFICATIONS] Found ${recipients.length} complaint status update recipients`)
+    return recipients
+  } catch (error) {
+    console.error("[NOTIFICATIONS] Exception fetching complaint status update recipients:", error)
+    return []
+  }
+}

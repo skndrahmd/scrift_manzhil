@@ -301,6 +301,7 @@ export type AdminUser = {
   receive_complaint_notifications: boolean
   receive_reminder_notifications: boolean
   receive_daily_reports: boolean
+  receive_complaint_status_updates: boolean
   created_at: string
   updated_at: string
 }

@@ -6,7 +6,7 @@
 import { sendWithFallback } from "../send"
 import { getTemplateSid } from "../templates"
 import { formatSubcategory } from "../formatters"
-import type { TwilioResult, ComplaintRegisteredParams, ComplaintStatusParams } from "../types"
+import type { TwilioResult, ComplaintRegisteredParams, ComplaintStatusParams, AdminComplaintStatusParams } from "../types"
 
 /**
  * Send complaint registered notification
@@ -156,4 +156,51 @@ Hi ${name || "Resident"}, your complaint is pending review. We'll address it sho
 — Manzhil`
 
   return sendWithFallback(phone, undefined, {}, fallbackMessage)
+}
+
+/**
+ * Send admin complaint status update notification
+ * Sent to admins when a complaint status changes
+ */
+export async function sendAdminComplaintStatusUpdate(
+  params: AdminComplaintStatusParams
+): Promise<TwilioResult> {
+  const { phone, name, complaintId, residentName, apartmentNumber, complaintType, oldStatus, newStatus, updateTime } = params
+  const complaintTypeDisplay = formatSubcategory(complaintType)
+
+  // Format status for display
+  const formatStatus = (status: string): string => {
+    const statusMap: Record<string, string> = {
+      "pending": "Pending",
+      "in-progress": "In Progress",
+      "completed": "Completed",
+      "cancelled": "Cancelled"
+    }
+    return statusMap[status] || status
+  }
+
+  const templateSid = await getTemplateSid("admin_complaint_status_update")
+  const templateVariables = {
+    "1": name || "Admin",
+    "2": complaintId,
+    "3": residentName || "Resident",
+    "4": apartmentNumber,
+    "5": complaintTypeDisplay,
+    "6": formatStatus(oldStatus),
+    "7": formatStatus(newStatus),
+    "8": updateTime,
+  }
+
+  const fallbackMessage = `📋 *Complaint Status Updated*
+
+Complaint ID: ${complaintId}
+Resident: ${residentName || "Resident"} (Apt ${apartmentNumber})
+Type: ${complaintTypeDisplay}
+
+Status: ${formatStatus(oldStatus)} → ${formatStatus(newStatus)}
+Updated: ${updateTime}
+
+— Manzhil`
+
+  return sendWithFallback(phone, templateSid, templateVariables, fallbackMessage)
 }

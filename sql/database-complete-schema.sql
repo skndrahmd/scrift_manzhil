@@ -642,6 +642,7 @@ CREATE TABLE admin_users (
   receive_complaint_notifications BOOLEAN DEFAULT false,
   receive_reminder_notifications BOOLEAN DEFAULT false,
   receive_daily_reports BOOLEAN DEFAULT false,
+  receive_complaint_status_updates BOOLEAN DEFAULT false,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -662,6 +663,8 @@ CREATE INDEX idx_admin_users_notifications ON admin_users(receive_complaint_noti
   WHERE receive_complaint_notifications = true;
 CREATE INDEX idx_admin_users_reminder_notifications ON admin_users(receive_reminder_notifications)
   WHERE receive_reminder_notifications = true;
+CREATE INDEX idx_admin_users_status_updates ON admin_users(receive_complaint_status_updates)
+  WHERE receive_complaint_status_updates = true;
 
 -- --------------------------------------------
 -- 5.2 ADMIN PERMISSIONS TABLE

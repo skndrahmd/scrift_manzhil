@@ -72,6 +72,7 @@ export function StaffManagement() {
         receive_complaint_notifications: false,
         receive_reminder_notifications: false,
         receive_daily_reports: false,
+        receive_complaint_status_updates: false,
         permissions: {} as Record<string, boolean>,
     })
 
@@ -130,6 +131,7 @@ export function StaffManagement() {
             receive_complaint_notifications: false,
             receive_reminder_notifications: false,
             receive_daily_reports: false,
+            receive_complaint_status_updates: false,
             permissions: {},
         })
         setEditingStaff(null)
@@ -149,6 +151,7 @@ export function StaffManagement() {
             receive_complaint_notifications: staffMember.receive_complaint_notifications,
             receive_reminder_notifications: staffMember.receive_reminder_notifications,
             receive_daily_reports: staffMember.receive_daily_reports,
+            receive_complaint_status_updates: staffMember.receive_complaint_status_updates,
             permissions: permObj,
         })
         setDialogOpen(true)
@@ -176,6 +179,7 @@ export function StaffManagement() {
                         receive_complaint_notifications: formData.receive_complaint_notifications,
                         receive_reminder_notifications: formData.receive_reminder_notifications,
                         receive_daily_reports: formData.receive_daily_reports,
+                        receive_complaint_status_updates: formData.receive_complaint_status_updates,
                         updated_at: new Date().toISOString(),
                     })
                     .eq("id", editingStaff.id)
@@ -223,6 +227,7 @@ export function StaffManagement() {
                         receive_complaint_notifications: formData.receive_complaint_notifications,
                         receive_reminder_notifications: formData.receive_reminder_notifications,
                         receive_daily_reports: formData.receive_daily_reports,
+                        receive_complaint_status_updates: formData.receive_complaint_status_updates,
                         permissions: formData.role === "staff" ? formData.permissions : {},
                     }),
                 })
@@ -474,6 +479,21 @@ export function StaffManagement() {
                                     </div>
                                     <div className="flex items-center justify-between">
                                         <div className="space-y-0.5">
+                                            <Label>Complaint Status Updates</Label>
+                                            <p className="text-xs text-muted-foreground">
+                                                Get notified when complaint status changes
+                                            </p>
+                                        </div>
+                                        <Switch
+                                            checked={formData.receive_complaint_status_updates}
+                                            onCheckedChange={(checked) =>
+                                                setFormData(f => ({ ...f, receive_complaint_status_updates: checked }))
+                                            }
+                                            disabled={!formData.phone_number}
+                                        />
+                                    </div>
+                                    <div className="flex items-center justify-between">
+                                        <div className="space-y-0.5">
                                             <Label>Daily Reports</Label>
                                             <p className="text-xs text-muted-foreground">
                                                 Receive daily summary reports
@@ -581,12 +601,17 @@ export function StaffManagement() {
                                                                 <Bell className="h-3 w-3 mr-1" /> Reminders
                                                             </Badge>
                                                         )}
+                                                        {member.receive_complaint_status_updates && (
+                                                            <Badge variant="outline" className="text-xs">
+                                                                <Bell className="h-3 w-3 mr-1" /> Status
+                                                            </Badge>
+                                                        )}
                                                         {member.receive_daily_reports && (
                                                             <Badge variant="outline" className="text-xs">
                                                                 <FileText className="h-3 w-3 mr-1" /> Reports
                                                             </Badge>
                                                         )}
-                                                        {!member.receive_complaint_notifications && !member.receive_reminder_notifications && !member.receive_daily_reports && (
+                                                        {!member.receive_complaint_notifications && !member.receive_reminder_notifications && !member.receive_complaint_status_updates && !member.receive_daily_reports && (
                                                             <span className="text-gray-400 text-sm">None</span>
                                                         )}
                                                     </div>
@@ -678,12 +703,17 @@ export function StaffManagement() {
                                                         <Bell className="h-3 w-3" /> Reminders
                                                     </Badge>
                                                 )}
+                                                {member.receive_complaint_status_updates && (
+                                                    <Badge variant="outline" className="text-xs gap-1">
+                                                        <Bell className="h-3 w-3" /> Status
+                                                    </Badge>
+                                                )}
                                                 {member.receive_daily_reports && (
                                                     <Badge variant="outline" className="text-xs gap-1">
                                                         <FileText className="h-3 w-3" /> Reports
                                                     </Badge>
                                                 )}
-                                                {!member.receive_complaint_notifications && !member.receive_reminder_notifications && !member.receive_daily_reports && (
+                                                {!member.receive_complaint_notifications && !member.receive_reminder_notifications && !member.receive_complaint_status_updates && !member.receive_daily_reports && (
                                                     <span className="text-xs text-gray-400">No notifications</span>
                                                 )}
                                             </div>

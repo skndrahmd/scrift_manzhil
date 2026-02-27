@@ -21,6 +21,7 @@ export type {
   BookingCancelledParams,
   ComplaintRegisteredParams,
   ComplaintStatusParams,
+  AdminComplaintStatusParams,
   WelcomeMessageParams,
   AccountBlockedParams,
   AccountReactivatedParams,
@@ -65,6 +66,7 @@ export {
   sendComplaintCompleted,
   sendComplaintRejected,
   sendComplaintPending,
+  sendAdminComplaintStatusUpdate,
   // Account
   sendWelcomeMessage,
   sendAccountBlocked,

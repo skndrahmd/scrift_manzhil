@@ -35,6 +35,7 @@ export type TemplateType =
   | "pending_complaint"
   | "payment_approved"
   | "payment_rejected"
+  | "admin_complaint_status_update"
 
 // Base notification params (common to all)
 export interface BaseNotificationParams {
@@ -162,4 +163,15 @@ export interface WhatsAppTemplate {
   created_at: string
   updated_at: string
   updated_by: string | null
+}
+
+// Admin complaint status update notification params
+export interface AdminComplaintStatusParams extends BaseNotificationParams {
+  complaintId: string
+  residentName: string
+  apartmentNumber: string
+  complaintType: string
+  oldStatus: string
+  newStatus: string
+  updateTime: string
 }

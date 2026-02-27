@@ -1,15 +1,17 @@
 /**
  * @module complaint
  * Service layer for complaint status management with optimistic locking
- * and WhatsApp notification dispatch to residents.
+ * and WhatsApp notification dispatch to residents and admins.
  */
 import { supabaseAdmin } from "@/lib/supabase"
 import { getPakistanISOString } from "@/lib/date"
+import { getComplaintStatusUpdateRecipients } from "@/lib/admin/notifications"
 import {
   sendComplaintInProgress,
   sendComplaintCompleted,
   sendComplaintRejected,
   sendComplaintPending,
+  sendAdminComplaintStatusUpdate,
   formatDateTime,
 } from "@/lib/twilio"
 
@@ -72,13 +74,16 @@ export async function updateComplaintStatus(complaintId: string, status: string)
   // Fetch profile separately (more reliable than join)
   const { data: profile, error: profileError } = await supabaseAdmin
     .from("profiles")
-    .select("name, phone_number")
+    .select("name, phone_number, apartment_number")
     .eq("id", complaint.profile_id)
     .single()
 
   if (profileError) {
     console.error("[COMPLAINT UPDATE] Profile fetch error:", profileError)
   }
+
+  // Store old status before update
+  const oldStatus = complaint.status
 
   // Optimistic locking: only update if record hasn't changed since we read it
   const { data: updateResult, error: updateError } = await supabaseAdmin
@@ -131,6 +136,41 @@ export async function updateComplaintStatus(complaintId: string, status: string)
     }
   } else {
     console.warn("[COMPLAINT UPDATE] No phone number found for profile, skipping notification")
+  }
+
+  // Notify admins who opted in for complaint status updates
+  try {
+    const adminRecipients = await getComplaintStatusUpdateRecipients()
+    if (adminRecipients.length > 0) {
+      const updateTime = formatDateTime(new Date())
+      const adminNotificationParams = {
+        complaintId: complaint.complaint_id,
+        residentName: profile?.name || "Resident",
+        apartmentNumber: profile?.apartment_number || "N/A",
+        complaintType: complaint.subcategory,
+        oldStatus,
+        newStatus: status,
+        updateTime,
+      }
+
+      // Send notifications to all opted-in admins
+      const notificationPromises = adminRecipients.map(async (phone) => {
+        try {
+          await sendAdminComplaintStatusUpdate({
+            phone,
+            name: "Admin",
+            ...adminNotificationParams,
+          })
+        } catch (err) {
+          console.error(`[COMPLAINT UPDATE] Failed to notify admin ${phone}:`, err)
+        }
+      })
+
+      await Promise.all(notificationPromises)
+      console.log(`[COMPLAINT UPDATE] Notified ${adminRecipients.length} admins about status change`)
+    }
+  } catch (adminNotifyError) {
+    console.error("[COMPLAINT UPDATE] Failed to send admin notifications:", adminNotifyError)
   }
 
   return { success: true }
