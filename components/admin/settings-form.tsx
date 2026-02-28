@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Settings, Save, Users, Calendar, MessageSquare, Send, Globe, CreditCard, Building2 } from "lucide-react"
+import { Settings, Save, Users, Calendar, MessageSquare, Send, Globe, CreditCard, Building2, ListOrdered } from "lucide-react"
 import Link from "next/link"
 import { useToast } from "@/hooks/use-toast"
 import { StaffManagement } from "./staff-management"
@@ -108,6 +108,10 @@ export function SettingsForm() {
                             <Building2 className="h-4 w-4 shrink-0" />
                             <span className="hidden sm:inline">Amenities</span>
                         </TabsTrigger>
+                        <TabsTrigger value="menu-options" className="flex items-center gap-2">
+                            <ListOrdered className="h-4 w-4 shrink-0" />
+                            <span className="hidden sm:inline">Menu Options</span>
+                        </TabsTrigger>
                     </TabsList>
 
                     <TabsContent value="booking" className="mt-6">
@@ -199,6 +203,25 @@ export function SettingsForm() {
                                     <Button className="bg-gradient-to-r from-manzhil-dark to-manzhil-teal hover:shadow-lg hover:shadow-manzhil-teal/30 transition-all">
                                         <Building2 className="h-4 w-4 mr-2" />
                                         Open Amenities Manager
+                                    </Button>
+                                </Link>
+                            </CardContent>
+                        </Card>
+                    </TabsContent>
+
+                    <TabsContent value="menu-options" className="mt-6">
+                        <Card className="border-0 shadow-lg shadow-manzhil-teal/5">
+                            <CardHeader>
+                                <CardTitle className="text-lg">WhatsApp Bot Menu Options</CardTitle>
+                            </CardHeader>
+                            <CardContent className="space-y-4">
+                                <p className="text-sm text-gray-500">
+                                    Configure the WhatsApp bot main menu — reorder options, enable or disable them, and edit labels and emojis. Changes take effect in real time for residents.
+                                </p>
+                                <Link href="/admin/settings/menu-options">
+                                    <Button className="bg-gradient-to-r from-manzhil-dark to-manzhil-teal hover:shadow-lg hover:shadow-manzhil-teal/30 transition-all">
+                                        <ListOrdered className="h-4 w-4 mr-2" />
+                                        Open Menu Options Manager
                                     </Button>
                                 </Link>
                             </CardContent>

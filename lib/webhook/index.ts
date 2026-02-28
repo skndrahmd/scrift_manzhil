@@ -87,6 +87,9 @@ export {
   STAFF_MENU_OPTIONS,
   EMERGENCY_CONTACTS,
   getComplaintRecipients,
+  getMenuOptions,
+  getAllMenuOptions,
+  getMenuActionMap,
 } from "./config"
 
 // Bot message system
@@ -108,6 +111,7 @@ export type {
   Profile,
   BookingSettings,
   ValidationResult,
+  MenuOption,
   HandlerResponse,
   FlowHandler,
 } from "./types"

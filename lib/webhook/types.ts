@@ -16,6 +16,7 @@ export type FlowType =
   | "hall"
   | "visitor"
   | "payment"
+  | "amenity"
 
 /**
  * Complaint data structure during conversation
@@ -144,6 +145,21 @@ export interface ValidationResult {
   valid: boolean
   normalized?: string
   error?: string
+}
+
+/**
+ * Menu option from the database (dynamic main menu configuration)
+ */
+export interface MenuOption {
+  id: string
+  action_key: string
+  label: string
+  emoji: string
+  is_enabled: boolean
+  sort_order: number
+  handler_type: string
+  created_at: string
+  updated_at: string
 }
 
 /**

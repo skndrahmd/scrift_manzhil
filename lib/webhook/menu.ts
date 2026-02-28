@@ -11,6 +11,7 @@ import {
   STAFF_MENU_OPTIONS,
   EMERGENCY_CONTACTS,
   COMPLAINT_CATEGORIES,
+  getMenuOptions,
 } from "./config"
 import { formatDate, formatCurrency } from "./utils"
 import { getMessage, getLabels } from "./messages"
@@ -35,19 +36,24 @@ function safeLabels(
 }
 
 /**
- * Get main menu display
+ * Get main menu display.
+ * Reads enabled menu options from the database (via getMenuOptions()) so that
+ * admin changes to order, labels, emojis, and enabled/disabled state are
+ * reflected in real time. Falls back to the static MAIN_MENU_OPTIONS array
+ * if the database is unavailable.
  */
 export async function getMainMenu(name: string, language?: string): Promise<string> {
-  const rawLabels = await getLabels(MSG.LABELS_MAIN_MENU_OPTIONS, language)
-  const labels = safeLabels(rawLabels, MAIN_MENU_OPTIONS, "MainMenu")
-  const options = MAIN_MENU_OPTIONS.map(
-    (opt, i) => `${opt.key}. ${opt.emoji} ${labels[i]}`
+  const dynamicOptions = await getMenuOptions()
+
+  // Build the menu string from dynamic options
+  const options = dynamicOptions.map(
+    (opt) => `${opt.key}. ${opt.emoji} ${opt.label}`
   ).join("\n")
 
   return await getMessage(MSG.MAIN_MENU, {
     name,
     options,
-    max_option: String(MAIN_MENU_OPTIONS.length),
+    max_option: String(dynamicOptions.length),
   }, language)
 }
 

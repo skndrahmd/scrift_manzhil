@@ -4,6 +4,8 @@
  */
 
 import { getComplaintNotificationRecipients } from "@/lib/admin/notifications"
+import { supabaseAdmin } from "@/lib/supabase"
+import type { MenuOption } from "./types"
 
 /**
  * Get dynamic complaint notification recipients from the admin panel
@@ -94,7 +96,8 @@ export const STAFF_ROLES = [
 ]
 
 /**
- * Main menu options
+ * Main menu options — static fallback used when the database is unavailable.
+ * The live menu is served from the `menu_options` table via getMenuOptions().
  */
 export const MAIN_MENU_OPTIONS = [
   { key: "1", label: "Register Complaint", emoji: "📝" },
@@ -110,6 +113,89 @@ export const MAIN_MENU_OPTIONS = [
   { key: "11", label: "Submit Payment", emoji: "💳" },
   { key: "12", label: "Amenities", emoji: "🏟️" },
 ]
+
+/**
+ * Static mapping from handler_type to the hardcoded MAIN_MENU_OPTIONS key.
+ * Used only as fallback when the DB is unavailable.
+ */
+const FALLBACK_HANDLER_MAP: Record<string, string> = {
+  complaint: "1",
+  status: "2",
+  cancel: "3",
+  staff: "4",
+  maintenance_status: "5",
+  hall: "6",
+  visitor: "7",
+  profile_info: "8",
+  feedback: "9",
+  emergency_contacts: "10",
+  payment: "11",
+  amenity: "12",
+}
+
+/**
+ * Fetches enabled menu options from the database, ordered by sort_order.
+ * Falls back to the static MAIN_MENU_OPTIONS if the DB query fails.
+ * Each returned item has a sequential `key` (1-based) for display numbering.
+ */
+export async function getMenuOptions(): Promise<{ key: string; label: string; emoji: string; handler_type: string }[]> {
+  try {
+    const { data, error } = await supabaseAdmin
+      .from("menu_options")
+      .select("label, emoji, handler_type, sort_order")
+      .eq("is_enabled", true)
+      .order("sort_order", { ascending: true })
+
+    if (error || !data || data.length === 0) {
+      console.warn("[getMenuOptions] DB query failed or empty, using fallback:", error?.message)
+      return MAIN_MENU_OPTIONS.map(opt => ({ ...opt, handler_type: FALLBACK_HANDLER_MAP[opt.key] || opt.key }))
+    }
+
+    // Assign sequential keys (1-based) based on sort order
+    return data.map((opt, index) => ({
+      key: String(index + 1),
+      label: opt.label,
+      emoji: opt.emoji,
+      handler_type: opt.handler_type,
+    }))
+  } catch (err) {
+    console.error("[getMenuOptions] Unexpected error:", err)
+    return MAIN_MENU_OPTIONS.map(opt => ({ ...opt, handler_type: FALLBACK_HANDLER_MAP[opt.key] || opt.key }))
+  }
+}
+
+/**
+ * Fetches ALL menu options (including disabled) for the admin UI.
+ * Returns full MenuOption objects ordered by sort_order.
+ */
+export async function getAllMenuOptions(): Promise<MenuOption[]> {
+  const { data, error } = await supabaseAdmin
+    .from("menu_options")
+    .select("*")
+    .order("sort_order", { ascending: true })
+
+  if (error) {
+    console.error("[getAllMenuOptions] DB error:", error.message)
+    return []
+  }
+
+  return (data || []) as MenuOption[]
+}
+
+/**
+ * Returns a map of menu position number → handler_type for the router.
+ * E.g., if "Register Complaint" is enabled and first in sort order,
+ * the map will have "1" → "complaint".
+ * Falls back to the static mapping if the DB is unavailable.
+ */
+export async function getMenuActionMap(): Promise<Map<string, string>> {
+  const options = await getMenuOptions()
+  const map = new Map<string, string>()
+  options.forEach(opt => {
+    map.set(opt.key, opt.handler_type)
+  })
+  return map
+}
 
 /**
  * Hall menu options

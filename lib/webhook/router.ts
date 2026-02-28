@@ -38,6 +38,7 @@ import {
 import { getMessage } from "./messages"
 import { MSG } from "./message-keys"
 import { supabaseAdmin } from "@/lib/supabase"
+import { getMenuActionMap, getMenuOptions } from "./config"
 
 /**
  * Get enabled languages. Returns empty array if none enabled.
@@ -183,7 +184,45 @@ export async function processMessage(
 }
 
 /**
- * Handle main menu selections
+ * Static map from handler_type → handler function.
+ * Each handler_type corresponds to a value in the `menu_options.handler_type` column.
+ * This map never changes at runtime; only the DB controls which options are
+ * enabled and in what order they appear.
+ */
+const ACTION_HANDLERS: Record<
+  string,
+  (profile: Profile, phoneNumber: string, language?: string) => Promise<string>
+> = {
+  complaint: async (_profile, phoneNumber, language) =>
+    initializeComplaintFlow(phoneNumber, language),
+  status: async (profile, phoneNumber, language) =>
+    initializeStatusFlow(profile, phoneNumber, language),
+  cancel: async (profile, phoneNumber, language) =>
+    initializeCancelFlow(profile, phoneNumber, language),
+  staff: async (_profile, phoneNumber, language) =>
+    initializeStaffFlow(phoneNumber, language),
+  maintenance_status: async (profile, _phoneNumber, language) =>
+    getMaintenanceStatus(profile, language),
+  hall: async (_profile, phoneNumber, language) =>
+    initializeHallFlow(phoneNumber, language),
+  visitor: async (_profile, phoneNumber, language) =>
+    initializeVisitorFlow(phoneNumber, language),
+  profile_info: async (profile, _phoneNumber, language) =>
+    getProfileInfo(profile, language),
+  feedback: async (_profile, phoneNumber, language) =>
+    initializeFeedbackFlow(phoneNumber, language),
+  emergency_contacts: async (_profile, _phoneNumber, language) =>
+    getEmergencyContacts(language),
+  payment: async (profile, phoneNumber, language) =>
+    initializePaymentFlow(profile, phoneNumber, language),
+  amenity: async (_profile, phoneNumber, language) =>
+    initializeAmenityFlow(phoneNumber, language),
+}
+
+/**
+ * Handle main menu selections.
+ * Uses the dynamic action map from the database to resolve the user's
+ * numeric choice to a handler_type, then dispatches to the appropriate handler.
  */
 async function handleMainMenu(
   message: string,
@@ -193,50 +232,26 @@ async function handleMainMenu(
 ): Promise<string> {
   const choice = message.trim()
 
-  switch (choice) {
-    case "1": // Register Complaint
-      return await initializeComplaintFlow(phoneNumber, language)
+  // Get dynamic mapping: menu number → handler_type
+  const actionMap = await getMenuActionMap()
+  const handlerType = actionMap.get(choice)
 
-    case "2": // Check Complaint Status
-      return await initializeStatusFlow(profile, phoneNumber, language)
-
-    case "3": // Cancel Complaint
-      return await initializeCancelFlow(profile, phoneNumber, language)
-
-    case "4": // My Staff Management
-      return await initializeStaffFlow(phoneNumber, language)
-
-    case "5": // Check Maintenance Dues
-      return await getMaintenanceStatus(profile, language)
-
-    case "6": // Community Hall
-      return await initializeHallFlow(phoneNumber, language)
-
-    case "7": // Visitor Entry Pass
-      return await initializeVisitorFlow(phoneNumber, language)
-
-    case "8": // View My Profile
-      return await getProfileInfo(profile, language)
-
-    case "9": // Suggestions/Feedback
-      return await initializeFeedbackFlow(phoneNumber, language)
-
-    case "10": // Emergency Contacts
-      return await getEmergencyContacts(language)
-
-    case "11": // Submit Payment
-      return await initializePaymentFlow(profile, phoneNumber, language)
-
-    case "12": // Amenities
-      return await initializeAmenityFlow(phoneNumber, language)
-
-    default:
-      const menu = await getMainMenu(profile.name, language)
-      return await getMessage(MSG.INVALID_MAIN_MENU, { 
-        menu,
-        max_option: String(12),
-      }, language)
+  if (handlerType) {
+    const handler = ACTION_HANDLERS[handlerType]
+    if (handler) {
+      return await handler(profile, phoneNumber, language)
+    }
+    // handler_type exists in DB but no matching handler function — log and fall through
+    console.warn(`[handleMainMenu] No handler found for handler_type: ${handlerType}`)
   }
+
+  // Invalid selection — show menu again with dynamic option count
+  const dynamicOptions = await getMenuOptions()
+  const menu = await getMainMenu(profile.name, language)
+  return await getMessage(MSG.INVALID_MAIN_MENU, {
+    menu,
+    max_option: String(dynamicOptions.length),
+  }, language)
 }
 
 /**
