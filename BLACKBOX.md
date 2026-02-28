@@ -256,7 +256,12 @@ When adding a new conversational flow to the WhatsApp bot, you **must** update a
    - Add to `FLOW_GROUP_LABELS`: `your_flow: "Your Flow Name"`
    - Add to `FLOW_GROUP_ORDER`: `"your_flow"` (in desired position)
 
-8. **SQL Seed File** (`sql/database-seed-bot-messages.sql`):
+8. **Translation Editor UI** (`components/admin/translation-editor.tsx`):
+   - Add to `FLOW_GROUP_LABELS`: `your_flow: "Your Flow Name"`
+   - Add to `FLOW_GROUP_ORDER`: `"your_flow"` (in desired position)
+   - **Important:** Both editor components must have matching flow groups
+
+9. **SQL Seed File** (`sql/database-seed-bot-messages.sql`):
    - Add `INSERT INTO bot_messages` statement with all new messages
    - Use `ON CONFLICT (message_key) DO NOTHING` for idempotency
 
@@ -353,8 +358,10 @@ Configured in `vercel.json`. All 3 cron routes validate `CRON_SECRET` via the `x
 - Create cron routes without `CRON_SECRET` validation
 - Hardcode WhatsApp bot response strings — use `getMessage()` from `lib/webhook/messages.ts`
 - Hardcode menu labels — use `getLabels()` for translatable labels
+- Hardcode `Reply 1-N` in bot messages — use `{max_option}` variable instead
 - Forget `unit_id` when creating maintenance payments or profiles
 - Modify RLS policies without testing both anon and service_role clients
+- Add flow groups to `bot-messages-editor.tsx` without also adding to `translation-editor.tsx`
 
 ### Do
 
