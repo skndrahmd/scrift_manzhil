@@ -172,6 +172,10 @@ export const MSG = {
   AMENITY_INVALID_SELECTION: "amenity.invalid_selection",
   AMENITY_NO_AMENITIES: "amenity.no_amenities",
 
+  // === Prayer Times Flow ===
+  PRAYER_TIMES_DISPLAY: "prayer_times.display",
+  PRAYER_TIMES_DISABLED: "prayer_times.disabled",
+
   // === Translatable Labels (newline-delimited for getLabels()) ===
   LABELS_MAIN_MENU_OPTIONS: "labels.main_menu_options",
   LABELS_HALL_MENU_OPTIONS: "labels.hall_menu_options",

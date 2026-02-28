@@ -1070,6 +1070,19 @@ No amenities are currently configured.
 
 Reply *0* for menu`,
 
+  // === Prayer Times Flow ===
+  "prayer_times.display": `🕌 *Prayer Times*
+
+{prayers}
+
+Reply *0* for menu`,
+
+  "prayer_times.disabled": `🕌 *Prayer Times*
+
+Prayer times are currently unavailable.
+
+Reply *0* for menu`,
+
   // === Back Navigation ===
   "nav.back_complaint_sub_building": `🔙 *Going Back*
 

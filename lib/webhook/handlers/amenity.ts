@@ -18,6 +18,17 @@ interface Amenity {
   sort_order: number
 }
 
+interface PrayerTime {
+  id: string
+  prayer_name: string
+  prayer_time: string | null
+  sort_order: number
+}
+
+interface PrayerTimesSettings {
+  is_enabled: boolean
+}
+
 /**
  * Format time from HH:MM:SS to 12-hour format
  */
@@ -56,6 +67,55 @@ async function getActiveAmenities(): Promise<Amenity[]> {
 }
 
 /**
+ * Fetch prayer times settings and times
+ */
+async function getPrayerTimes(): Promise<{ times: PrayerTime[]; isEnabled: boolean }> {
+  try {
+    // Fetch settings
+    const { data: settings } = await supabaseAdmin
+      .from("prayer_times_settings")
+      .select("is_enabled")
+      .eq("id", 1)
+      .single()
+
+    // Fetch prayer times
+    const { data: times } = await supabaseAdmin
+      .from("prayer_times")
+      .select("id, prayer_name, prayer_time, sort_order")
+      .order("sort_order")
+
+    return {
+      times: times || [],
+      isEnabled: settings?.is_enabled || false,
+    }
+  } catch (error) {
+    console.error("[Amenity] Prayer times fetch error:", error)
+    return { times: [], isEnabled: false }
+  }
+}
+
+/**
+ * Build prayer times display string
+ */
+function buildPrayerTimesDisplay(prayerTimes: PrayerTime[]): string {
+  const prayerEmojis: Record<string, string> = {
+    Fajr: "🌅",
+    Zuhr: "☀️",
+    Asr: "🌤️",
+    Maghrib: "🌇",
+    Isha: "🌙",
+  }
+
+  return prayerTimes
+    .map((p) => {
+      const emoji = prayerEmojis[p.prayer_name] || "🕌"
+      const time = p.prayer_time ? formatTime(p.prayer_time) : "Not set"
+      return `${emoji} *${p.prayer_name}:* ${time}`
+    })
+    .join("\n")
+}
+
+/**
  * Initialize amenity flow - show list of amenities
  */
 export async function initializeAmenityFlow(
@@ -63,8 +123,26 @@ export async function initializeAmenityFlow(
   language?: string
 ): Promise<string> {
   const amenities = await getActiveAmenities()
+  const prayerTimes = await getPrayerTimes()
 
-  if (amenities.length === 0) {
+  // Build options list
+  const options: string[] = []
+  const amenityIds: { id: string; name: string; type: "amenity" | "prayer_times" }[] = []
+
+  // Add regular amenities
+  amenities.forEach((a, i) => {
+    options.push(`${i + 1}. 🏟️ ${a.name}`)
+    amenityIds.push({ id: a.id, name: a.name, type: "amenity" })
+  })
+
+  // Add Prayer Times option if enabled
+  if (prayerTimes.isEnabled) {
+    const prayerOptionNum = options.length + 1
+    options.push(`${prayerOptionNum}. 🕌 Prayer Times`)
+    amenityIds.push({ id: "prayer_times", name: "Prayer Times", type: "prayer_times" })
+  }
+
+  if (options.length === 0) {
     return await getMessage(MSG.AMENITY_NO_AMENITIES, undefined, language)
   }
 
@@ -72,17 +150,12 @@ export async function initializeAmenityFlow(
   await setState(phoneNumber, {
     step: "amenity_selection",
     type: "amenity",
-    amenities: amenities.map((a) => ({ id: a.id, name: a.name })),
+    amenities: amenityIds,
   })
 
-  // Build options list
-  const options = amenities
-    .map((a, i) => `${i + 1}. 🏟️ ${a.name}`)
-    .join("\n")
-
   return await getMessage(MSG.AMENITY_MENU, {
-    options,
-    max: String(amenities.length),
+    options: options.join("\n"),
+    max: String(options.length),
   }, language)
 }
 
@@ -109,6 +182,23 @@ export async function handleAmenityFlow(
     }
 
     const selectedAmenity = amenities[choice - 1]
+
+    // Handle Prayer Times selection
+    if (selectedAmenity.type === "prayer_times") {
+      await clearState(phoneNumber)
+      
+      const prayerTimes = await getPrayerTimes()
+      
+      if (!prayerTimes.isEnabled) {
+        return await getMessage(MSG.PRAYER_TIMES_DISABLED, undefined, language)
+      }
+
+      const prayersDisplay = buildPrayerTimesDisplay(prayerTimes.times)
+      
+      return await getMessage(MSG.PRAYER_TIMES_DISPLAY, {
+        prayers: prayersDisplay,
+      }, language)
+    }
 
     // Fetch full amenity details
     const { data: amenity, error } = await supabaseAdmin
