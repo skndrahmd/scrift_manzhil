@@ -61,6 +61,9 @@ export async function POST(request: NextRequest) {
     // Cache for unit lookups to avoid repeated queries
     const unitCache = new Map<string, string>()
 
+    // Track units that have had a primary resident assigned during this import
+    const unitsWithPrimaryAssigned = new Set<string>()
+
     // Insert residents sequentially to handle errors gracefully
     for (const resident of residents) {
       const { rowNumber, ...residentData } = resident
@@ -104,6 +107,24 @@ export async function POST(request: NextRequest) {
         continue
       }
 
+      // Check if this unit already has active residents to determine primary status
+      const { data: existingResidents } = await supabaseAdmin
+        .from('profiles')
+        .select('id')
+        .eq('unit_id', unitId)
+        .eq('is_active', true)
+        .limit(1)
+
+      // First resident for this unit becomes primary
+      const shouldBePrimary = 
+        (!existingResidents || existingResidents.length === 0) && 
+        !unitsWithPrimaryAssigned.has(unitId)
+
+      // Track that we've assigned primary for this unit during this import
+      if (shouldBePrimary) {
+        unitsWithPrimaryAssigned.add(unitId)
+      }
+
       const { data, error } = await supabaseAdmin
         .from('profiles')
         .insert({
@@ -115,6 +136,7 @@ export async function POST(request: NextRequest) {
           building_block: residentData.building_block || null,
           resident_type: residentData.resident_type || 'tenant',
           is_active: true,
+          is_primary_resident: shouldBePrimary,
         })
         .select()
         .single()
