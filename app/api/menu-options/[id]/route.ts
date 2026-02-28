@@ -2,6 +2,8 @@ import { NextResponse } from "next/server"
 import { isSuperAdmin } from "@/lib/auth"
 import { supabaseAdmin } from "@/lib/supabase"
 
+export const dynamic = "force-dynamic"
+
 /**
  * PATCH /api/menu-options/[id]
  * Update a single menu option's label, emoji, or is_enabled.

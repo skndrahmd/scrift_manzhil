@@ -2,6 +2,8 @@ import { NextResponse } from "next/server"
 import { isSuperAdmin } from "@/lib/auth"
 import { supabaseAdmin } from "@/lib/supabase"
 
+export const dynamic = "force-dynamic"
+
 /**
  * GET /api/menu-options
  * Returns all menu options (including disabled) for the admin UI.
