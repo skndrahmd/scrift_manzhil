@@ -6,7 +6,7 @@ This file provides guidance to Blackbox AI when working with code in this reposi
 
 **Manzhil by Scrift** is a comprehensive Building Management System (BMS) for apartment complexes built with **Next.js 14 (App Router)**, **TypeScript**, **Supabase (PostgreSQL with RLS)**, and **Twilio WhatsApp Business API**.
 
-It manages units, residents, hall bookings, maintenance payments, complaints, visitor passes, parcel tracking, broadcast messaging, accounting, and a multilingual WhatsApp conversational bot.
+It manages units, residents, hall bookings, maintenance payments, complaints, visitor passes, parcel tracking, broadcast messaging, accounting, amenities management, prayer times, payment verifications, and a multilingual WhatsApp conversational bot with dynamic main menu options.
 
 ### Tech Stack
 
@@ -71,7 +71,18 @@ cp .env.example .env.local
 
 ### Database Setup
 
-Run `database-complete-schema.sql` in the Supabase SQL Editor to create all 22 tables, RLS policies, indexes, triggers, and default data. Optionally run seed files for bot messages, WhatsApp templates, and label messages.
+Run `database-complete-schema.sql` in the Supabase SQL Editor to create all core tables, RLS policies, indexes, triggers, and default data. Additionally run these schema files for new features:
+
+| File | Purpose |
+|------|---------|
+| `database-amenities-schema.sql` | Amenities and prayer times management |
+| `database-payment-methods.sql` | Payment method configuration |
+| `database-payment-verifications.sql` | Payment receipt verification system |
+| `database-menu-options-schema.sql` | Dynamic main menu options |
+| `database-seed-bot-messages.sql` | ~125 bot messages |
+| `database-seed-whatsapp-templates.sql` | 20 WhatsApp templates |
+| `database-seed-label-messages.sql` | 10 translatable label keys |
+| `database-multilingual-schema.sql` | Multilingual tables |
 
 ### Docker Deployment
 
@@ -86,9 +97,9 @@ docker run -p 3000:3000 --env-file .env.local manzhil-bms
 
 ```
 app/
-├── admin/                  # Admin dashboard (12 page groups + settings sub-pages)
-│   └── settings/           # Super admin only: bot-messages, whatsapp-templates, languages
-├── api/                    # 40+ API endpoints
+├── admin/                  # Admin dashboard (13 page groups + settings sub-pages)
+│   └── settings/           # Super admin only: bot-messages, whatsapp-templates, languages, amenities, menu-options
+├── api/                    # 55+ API endpoints
 │   ├── auth/               # OTP authentication (send-otp, verify-otp)
 │   ├── units/              # Unit CRUD, bulk-import, check-duplicates, toggle-primary
 │   ├── residents/          # Bulk-import, check-duplicates, welcome-message
@@ -100,9 +111,15 @@ app/
 │   ├── visitors/           # notify-arrival
 │   ├── accounting/         # categories, expenses, summary, transactions
 │   ├── admin/staff/        # Staff CRUD & permissions
+│   ├── admin/payment-methods/ # Payment method management
 │   ├── bot-messages/       # Bot message customization API
 │   ├── whatsapp-templates/ # Template management + test-send
 │   ├── languages/          # Language CRUD, translations, retranslation
+│   ├── amenities/          # Amenity CRUD + prayer times
+│   ├── prayer-times/       # Prayer times CRUD
+│   ├── payment-methods/    # Public payment methods for bot
+│   ├── payment-verifications/ # Payment receipt verification
+│   ├── menu-options/       # Dynamic main menu options CRUD
 │   ├── cron/               # daily-reports, maintenance-reminder, pending-complaints
 │   └── webhook/route.ts    # WhatsApp conversational bot endpoint
 ├── booking-invoice/        # Public invoice PDF pages
@@ -116,18 +133,24 @@ lib/
 ├── auth/                   # verifyAdminAccess(), isSuperAdmin(), auth context
 ├── twilio/                 # Client, templates, send logic, notifications/
 ├── webhook/                # WhatsApp bot: router, state, menu, handlers/, messages
-├── services/               # Shared business logic (booking, complaint, maintenance, broadcast)
+├── services/               # Shared business logic (booking, complaint, maintenance, broadcast, payment-verification)
 ├── pdf/                    # PDF generation, CSV export, invoice, reports, theme
 ├── date/                   # Pakistan timezone (PST/UTC+5) utilities
 ├── admin/                  # Notification recipient fetchers
 ├── bulk-import/            # Resident CSV import
 ├── bulk-import-units/      # Unit CSV import
 ├── google-translate.ts     # Google Translate API v2 with placeholder protection
+├── validation/             # Input validation utilities
 └── utils.ts                # Tailwind cn() helper
 
 components/
 ├── ui/                     # 50+ Radix UI primitives
 ├── admin/                  # Feature-specific admin components (tables, editors, modals)
+│   ├── amenities-manager.tsx
+│   ├── menu-options-manager.tsx
+│   ├── payment-methods-manager.tsx
+│   ├── prayer-times-manager.tsx
+│   └── payment-verifications-table.tsx
 ├── accounting/             # Financial dashboard components
 └── *.tsx                   # Root-level shared components (auth-provider, theme-provider, etc.)
 
@@ -139,6 +162,16 @@ tests/                      # Vitest tests
 ├── date/                   # Date utility tests
 ├── mocks/                  # Shared test mocks
 └── setup.ts                # Test setup file
+
+sql/
+├── database-complete-schema.sql     # Core schema (27 tables)
+├── database-amenities-schema.sql   # Amenities + prayer times
+├── database-payment-methods.sql     # Payment methods
+├── database-payment-verifications.sql # Payment receipt verification
+├── database-menu-options-schema.sql # Dynamic menu options
+├── database-multilingual-schema.sql # Multilingual support
+├── database-seed-*.sql             # Seed data files
+└── seed-template-bodies.sql        # Template body references
 
 middleware.ts               # Auth & RBAC route protection
 ```
@@ -181,7 +214,7 @@ export async function POST(req: Request) {
 }
 ```
 
-The 12 page keys for RBAC: `dashboard`, `residents`, `units`, `bookings`, `complaints`, `visitors`, `parcels`, `analytics`, `feedback`, `accounting`, `broadcast`, `settings`.
+The 13 page keys for RBAC: `dashboard`, `residents`, `units`, `bookings`, `complaints`, `visitors`, `parcels`, `analytics`, `feedback`, `accounting`, `broadcast`, `settings`, `amenities`.
 
 ### Error Handling
 
@@ -241,16 +274,19 @@ When adding a new conversational flow to the WhatsApp bot, you **must** update a
 3. **Handler** (`lib/webhook/handlers/your-flow.ts`):
    - Create `initializeYourFlow()` and `handleYourFlow()` functions
    - Use `getMessage(MSG.YOUR_KEY, { variable }, language)` for all responses
+   - Export both functions from `lib/webhook/handlers/index.ts`
 
-4. **Handler Index** (`lib/webhook/handlers/index.ts`):
-   - Export the new handler functions
+4. **Config** (`lib/webhook/config.ts`):
+   - Add to `MAIN_MENU_OPTIONS` array with key, label, and emoji
+   - Add handler mapping to `FALLBACK_HANDLER_MAP`
 
 5. **Router** (`lib/webhook/router.ts`):
-   - Add a new `case "N"` in the main menu switch statement
-   - Call `initializeYourFlow()` for the new option
+   - Add to `ACTION_HANDLERS` record mapping `handler_type` to handler functions
+   - The main menu routing now uses dynamic dispatch via `getMenuActionMap()`
 
-6. **Config** (`lib/webhook/config.ts`):
-   - Add to `MAIN_MENU_OPTIONS` array with key, label, and emoji
+6. **Database** (`sql/database-menu-options-schema.sql`):
+   - Add INSERT statement for new menu option with unique `action_key`
+   - Use `ON CONFLICT DO NOTHING` for idempotency
 
 7. **Bot Messages Editor UI** (`components/admin/bot-messages-editor.tsx`):
    - Add to `FLOW_GROUP_LABELS`: `your_flow: "Your Flow Name"`
@@ -261,26 +297,49 @@ When adding a new conversational flow to the WhatsApp bot, you **must** update a
    - Add to `FLOW_GROUP_ORDER`: `"your_flow"` (in desired position)
    - **Important:** Both editor components must have matching flow groups
 
-9. **SQL Seed File** (`sql/database-seed-bot-messages.sql`):
-   - Add `INSERT INTO bot_messages` statement with all new messages
-   - Use `ON CONFLICT (message_key) DO NOTHING` for idempotency
-
 **Example flow_group naming:** Use lowercase underscore format (e.g., `amenity`, `hall`, `staff`).
 
-### Main Menu Options — Dynamic Count
+### Dynamic Main Menu Options
 
-The main menu uses a `{max_option}` variable instead of hardcoded numbers. When adding a new main menu option:
+The WhatsApp bot main menu is now **database-driven** with the `menu_options` table. Each menu option has:
+- `action_key` — Unique identifier (e.g., "complaint", "status", "maintenance_status")
+- `label` — Display text (e.g., "Register Complaint")
+- `emoji` — Icon (e.g., "📝")
+- `is_enabled` — Enable/disable toggle
+- `sort_order` — Display order (1 = first)
+- `handler_type` — Maps to handler functions in `lib/webhook/handlers/`
 
-1. **Add to `MAIN_MENU_OPTIONS`** in `lib/webhook/config.ts`
-2. **Add label to `labels.main_menu_options`** in:
-   - `lib/webhook/message-defaults.ts`
-   - `sql/database-seed-label-messages.sql`
-3. **Update the router** — Add a new `case "N"` in `handleMainMenu()` switch statement
-4. **Update `max_option` in router.ts** — Change the hardcoded value in the `default` case to match the new total count
+**Handler Types** (12 total):
+| handler_type | Handler File | Flow |
+|-------------|--------------|------|
+| `complaint` | handlers/complaint.ts | Complaint registration |
+| `status` | handlers/status.ts | Check complaint status |
+| `cancel` | handlers/cancel.ts | Cancel complaint |
+| `staff` | handlers/staff.ts | Staff management |
+| `maintenance_status` | handlers/booking.ts | Check maintenance dues |
+| `hall` | handlers/hall.ts | Community hall bookings |
+| `visitor` | handlers/visitor.ts | Visitor pass |
+| `profile_info` | handlers/status.ts | View profile |
+| `feedback` | handlers/feedback.ts | Submit feedback |
+| `emergency_contacts` | handlers/status.ts | Emergency contacts |
+| `payment` | handlers/payment.ts | Submit payment receipt |
+| `amenity` | handlers/amenity.ts | Amenities & prayer times |
 
-The `{max_option}` variable is passed by `getMainMenu()` in `menu.ts` and ensures "Reply 1-{max_option}" always shows the correct count.
+**Config Functions** (`lib/webhook/config.ts`):
+- `getMenuOptions()` — Returns enabled options only, in sort_order, with sequential keys (1, 2, 3...)
+- `getAllMenuOptions()` — Returns all options for admin UI
+- `getMenuActionMap()` — Returns Map of key position → handler_type for routing
 
-**Important:** After adding new menu options, existing translations in `bot_message_translations` will be outdated. Users must re-translate via the admin panel (Languages → Retranslate).
+**API Routes** (`app/api/menu-options/`):
+- `GET /api/menu-options` — List all (super_admin)
+- `PUT /api/menu-options` — Bulk update sort_order/is_enabled
+- `PATCH /api/menu-options/[id]` — Update single label/emoji/is_enabled
+
+**Admin UI** (`components/admin/menu-options-manager.tsx`):
+- Reorder with up/down arrows
+- Toggle enable/disable
+- Inline edit label and emoji
+- WhatsApp preview panel
 
 ### File Naming
 
@@ -362,6 +421,7 @@ Configured in `vercel.json`. All 3 cron routes validate `CRON_SECRET` via the `x
 - Forget `unit_id` when creating maintenance payments or profiles
 - Modify RLS policies without testing both anon and service_role clients
 - Add flow groups to `bot-messages-editor.tsx` without also adding to `translation-editor.tsx`
+- Forget to add new menu options to all three places: config, database, and handler mapping
 
 ### Do
 
@@ -379,9 +439,10 @@ Configured in `vercel.json`. All 3 cron routes validate `CRON_SECRET` via the `x
 - `docs/DEVELOPER_GUIDE.md` — Comprehensive developer onboarding guide
 - `docs/new-instance-setup.md` — Guide for setting up a new Manzhil instance
 - `changes.md` — Codebase cleanup and reorganization changelog
-- `database-complete-schema.sql` — Full DB schema (22 tables)
+- `database-complete-schema.sql` — Full DB schema (27 tables)
 - `database-seed-bot-messages.sql` — Seed data for ~125 bot messages
 - `database-seed-whatsapp-templates.sql` — Seed data for 20 WhatsApp templates
 - `sql/database-seed-label-messages.sql` — Seed data for 10 translatable label keys
 - `sql/database-multilingual-schema.sql` — Schema for multilingual tables
+- `sql/database-menu-options-schema.sql` — Dynamic main menu options
 - `.env.example` — Complete list of all environment variables
