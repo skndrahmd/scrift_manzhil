@@ -228,6 +228,40 @@ const labels = await getLabels(MSG.LABELS_MAIN_MENU_OPTIONS, language)
 
 Template SIDs resolve in order: DB (`whatsapp_templates` table) → env var → static fallback. Never hardcode SIDs. Use the helper functions in `lib/twilio/notifications/`.
 
+### Adding New WhatsApp Bot Flows
+
+When adding a new conversational flow to the WhatsApp bot, you **must** update all of the following files:
+
+1. **Message Keys** (`lib/webhook/message-keys.ts`):
+   - Add new `MSG.YOUR_FLOW_*` constants
+
+2. **Message Defaults** (`lib/webhook/message-defaults.ts`):
+   - Add default text for each new message key
+
+3. **Handler** (`lib/webhook/handlers/your-flow.ts`):
+   - Create `initializeYourFlow()` and `handleYourFlow()` functions
+   - Use `getMessage(MSG.YOUR_KEY, { variable }, language)` for all responses
+
+4. **Handler Index** (`lib/webhook/handlers/index.ts`):
+   - Export the new handler functions
+
+5. **Router** (`lib/webhook/router.ts`):
+   - Add a new `case "N"` in the main menu switch statement
+   - Call `initializeYourFlow()` for the new option
+
+6. **Config** (`lib/webhook/config.ts`):
+   - Add to `MAIN_MENU_OPTIONS` array with key, label, and emoji
+
+7. **Bot Messages Editor UI** (`components/admin/bot-messages-editor.tsx`):
+   - Add to `FLOW_GROUP_LABELS`: `your_flow: "Your Flow Name"`
+   - Add to `FLOW_GROUP_ORDER`: `"your_flow"` (in desired position)
+
+8. **SQL Seed File** (`sql/database-seed-bot-messages.sql`):
+   - Add `INSERT INTO bot_messages` statement with all new messages
+   - Use `ON CONFLICT (message_key) DO NOTHING` for idempotency
+
+**Example flow_group naming:** Use lowercase underscore format (e.g., `amenity`, `hall`, `staff`).
+
 ### File Naming
 
 - Pages: `page.tsx` (Next.js convention)

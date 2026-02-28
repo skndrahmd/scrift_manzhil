@@ -74,7 +74,7 @@ export async function PATCH(req: Request) {
 
   try {
     const body = await req.json()
-    const { id, name, open_time, close_time, is_under_maintenance, is_active } = body
+    const { id, name, open_time, close_time, is_under_maintenance, is_active, sort_order } = body
 
     if (!id) {
       return NextResponse.json({ error: "Amenity ID is required" }, { status: 400 })
@@ -87,20 +87,25 @@ export async function PATCH(req: Request) {
     if (close_time !== undefined) updateData.close_time = close_time
     if (is_under_maintenance !== undefined) updateData.is_under_maintenance = is_under_maintenance
     if (is_active !== undefined) updateData.is_active = is_active
+    if (sort_order !== undefined) updateData.sort_order = sort_order
 
-    const { data, error: dbError } = await supabaseAdmin
+    const { data, error: dbError, count } = await supabaseAdmin
       .from("amenities")
       .update(updateData)
       .eq("id", id)
       .select()
-      .single()
 
     if (dbError) {
       console.error("Failed to update amenity:", dbError)
       return NextResponse.json({ error: dbError.message }, { status: 500 })
     }
 
-    return NextResponse.json({ amenity: data })
+    if (!data || data.length === 0) {
+      console.error("No amenity found with id:", id)
+      return NextResponse.json({ error: "Amenity not found" }, { status: 404 })
+    }
+
+    return NextResponse.json({ amenity: data[0] })
   } catch (err) {
     console.error("Error updating amenity:", err)
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
