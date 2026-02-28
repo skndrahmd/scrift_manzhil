@@ -57,16 +57,16 @@ SET default_text = E'Register Complaint\nCheck Complaint Status\nCancel Complain
 WHERE message_key = 'labels.main_menu_options'
   AND default_text NOT LIKE '%Amenities%';
 
--- Fix existing installs where menu.main_menu has hardcoded "Reply 1-10"
+-- Fix existing installs where menu.main_menu has hardcoded "Reply 1-10" or "Reply 1-11"
 UPDATE bot_messages
 SET default_text = E'👋 Hello {name}!\n\nWelcome to *Manzhil*\n\n{options}\n\nReply 1-{max_option}',
     variables = '["name", "options", "max_option"]'::jsonb
 WHERE message_key = 'menu.main_menu'
-  AND default_text LIKE '%Reply 1-10%';
+  AND (default_text LIKE '%Reply 1-10%' OR default_text LIKE '%Reply 1-11%');
 
--- Fix existing installs where menu.invalid_selection has hardcoded "1-10"
+-- Fix existing installs where menu.invalid_selection has hardcoded "1-10" or "1-11"
 UPDATE bot_messages
 SET default_text = E'❓ *Invalid Selection*\n\nPlease reply 1-{max_option}.\n\n{menu}',
     variables = '["menu", "max_option"]'::jsonb
 WHERE message_key = 'menu.invalid_selection'
-  AND default_text LIKE '%1-10%';
+  AND (default_text LIKE '%1-10%' OR default_text LIKE '%1-11%');

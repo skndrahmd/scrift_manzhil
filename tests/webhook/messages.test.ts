@@ -17,7 +17,7 @@ describe('getMessage', () => {
     const result = await getMessage(MSG.MAIN_MENU, {
       name: 'Ahmed',
       options: '1. Test\n2. Test2',
-      max_option: '11',
+      max_option: '12',
     })
     expect(result).toContain('Ahmed')
     expect(result).toContain('1. Test')
@@ -27,7 +27,7 @@ describe('getMessage', () => {
     const result = await getMessage(MSG.MAIN_MENU, {
       name: undefined,
       options: 'test',
-      max_option: '11',
+      max_option: '12',
     })
     expect(result).not.toContain('{name}')
     expect(result).toContain('test')
@@ -43,7 +43,7 @@ describe('getLabels', () => {
   it('splits newline-delimited strings into array', async () => {
     const labels = await getLabels(MSG.LABELS_MAIN_MENU_OPTIONS)
     expect(Array.isArray(labels)).toBe(true)
-    expect(labels.length).toBe(11)
+    expect(labels.length).toBe(12)
   })
 
   it('trims whitespace from labels', async () => {

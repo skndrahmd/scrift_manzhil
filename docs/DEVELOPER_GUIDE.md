@@ -762,7 +762,7 @@ Admin visits /admin/bookings
 Resident sends WhatsApp message to Twilio number
   → Twilio forwards to POST /api/webhook
   → lib/webhook/router.ts matches the message:
-    → New conversation? Show main menu (reply 1-10)
+    → New conversation? Show main menu (reply 1-12)
     → In a flow? Resume the handler
   → lib/webhook/state.ts tracks conversation state
   → Handler (e.g., handlers/complaint.ts) runs:

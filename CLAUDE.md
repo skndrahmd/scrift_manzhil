@@ -329,7 +329,7 @@ middleware.ts               # Authentication & RBAC route protection
 **6. WhatsApp Integration**
 - **Outbound notifications:** Uses Twilio Content Templates (HX SIDs stored in env vars) via `lib/twilio/` modules
 - **Inbound webhook bot:** `lib/webhook/` handles resident conversations via WhatsApp
-  - Menu-driven interaction (reply 1-10 for main menu options)
+  - Menu-driven interaction (reply 1-12 for main menu options)
   - Conversation state management with flow handlers for complaints, bookings, visitors, parcels, feedback, staff
   - Processes incoming messages at `/api/webhook/` route
 - Template SIDs configured in `.env` (see `.env.example` for full list)
