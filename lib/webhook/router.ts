@@ -232,7 +232,10 @@ async function handleMainMenu(
 
     default:
       const menu = await getMainMenu(profile.name, language)
-      return await getMessage(MSG.INVALID_MAIN_MENU, { menu }, language)
+      return await getMessage(MSG.INVALID_MAIN_MENU, { 
+        menu,
+        max_option: String(12),
+      }, language)
   }
 }
 

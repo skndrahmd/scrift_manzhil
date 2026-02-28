@@ -262,6 +262,21 @@ When adding a new conversational flow to the WhatsApp bot, you **must** update a
 
 **Example flow_group naming:** Use lowercase underscore format (e.g., `amenity`, `hall`, `staff`).
 
+### Main Menu Options — Dynamic Count
+
+The main menu uses a `{max_option}` variable instead of hardcoded numbers. When adding a new main menu option:
+
+1. **Add to `MAIN_MENU_OPTIONS`** in `lib/webhook/config.ts`
+2. **Add label to `labels.main_menu_options`** in:
+   - `lib/webhook/message-defaults.ts`
+   - `sql/database-seed-label-messages.sql`
+3. **Update the router** — Add a new `case "N"` in `handleMainMenu()` switch statement
+4. **Update `max_option` in router.ts** — Change the hardcoded value in the `default` case to match the new total count
+
+The `{max_option}` variable is passed by `getMainMenu()` in `menu.ts` and ensures "Reply 1-{max_option}" always shows the correct count.
+
+**Important:** After adding new menu options, existing translations in `bot_message_translations` will be outdated. Users must re-translate via the admin panel (Languages → Retranslate).
+
 ### File Naming
 
 - Pages: `page.tsx` (Next.js convention)

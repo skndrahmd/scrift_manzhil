@@ -50,7 +50,7 @@ Reply *0* for menu`,
 
   "menu.invalid_selection": `❓ *Invalid Selection*
 
-Please reply 1-12.
+Please reply 1-{max_option}.
 
 {menu}`,
 

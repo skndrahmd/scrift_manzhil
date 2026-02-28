@@ -9,7 +9,7 @@
 INSERT INTO bot_messages (message_key, flow_group, label, description, default_text, variables, sort_order)
 VALUES
   ('labels.main_menu_options', 'main_menu', 'Main Menu Options', 'Main menu option labels (one per line)',
-   E'Register Complaint\nCheck Complaint Status\nCancel Complaint\nMy Staff Management\nCheck Maintenance Dues\nCommunity Hall\nVisitor Entry Pass\nView My Profile\nSuggestions/Feedback\nEmergency Contacts\nSubmit Payment',
+   E'Register Complaint\nCheck Complaint Status\nCancel Complaint\nMy Staff Management\nCheck Maintenance Dues\nCommunity Hall\nVisitor Entry Pass\nView My Profile\nSuggestions/Feedback\nEmergency Contacts\nSubmit Payment\nAmenities',
    '[]'::jsonb, 100),
 
   ('labels.hall_menu_options', 'booking', 'Hall Menu Options', 'Hall menu option labels (one per line)',
@@ -50,8 +50,23 @@ VALUES
 
 ON CONFLICT (message_key) DO NOTHING;
 
--- Fix existing installs where labels.main_menu_options was seeded with only 10 items
+-- Fix existing installs where labels.main_menu_options was seeded with fewer items
+-- This updates to include all 12 options (including Amenities)
 UPDATE bot_messages
-SET default_text = E'Register Complaint\nCheck Complaint Status\nCancel Complaint\nMy Staff Management\nCheck Maintenance Dues\nCommunity Hall\nVisitor Entry Pass\nView My Profile\nSuggestions/Feedback\nEmergency Contacts\nSubmit Payment'
+SET default_text = E'Register Complaint\nCheck Complaint Status\nCancel Complaint\nMy Staff Management\nCheck Maintenance Dues\nCommunity Hall\nVisitor Entry Pass\nView My Profile\nSuggestions/Feedback\nEmergency Contacts\nSubmit Payment\nAmenities'
 WHERE message_key = 'labels.main_menu_options'
-  AND default_text NOT LIKE '%Submit Payment%';
+  AND default_text NOT LIKE '%Amenities%';
+
+-- Fix existing installs where menu.main_menu has hardcoded "Reply 1-10"
+UPDATE bot_messages
+SET default_text = E'👋 Hello {name}!\n\nWelcome to *Manzhil*\n\n{options}\n\nReply 1-{max_option}',
+    variables = '["name", "options", "max_option"]'::jsonb
+WHERE message_key = 'menu.main_menu'
+  AND default_text LIKE '%Reply 1-10%';
+
+-- Fix existing installs where menu.invalid_selection has hardcoded "1-10"
+UPDATE bot_messages
+SET default_text = E'❓ *Invalid Selection*\n\nPlease reply 1-{max_option}.\n\n{menu}',
+    variables = '["menu", "max_option"]'::jsonb
+WHERE message_key = 'menu.invalid_selection'
+  AND default_text LIKE '%1-10%';
