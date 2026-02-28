@@ -165,6 +165,13 @@ export const MSG = {
   PAYMENT_APPROVED: "payment.approved",
   PAYMENT_REJECTED: "payment.rejected",
 
+  // === Amenity Flow ===
+  AMENITY_MENU: "amenity.menu",
+  AMENITY_TIMINGS: "amenity.timings",
+  AMENITY_UNDER_MAINTENANCE: "amenity.under_maintenance",
+  AMENITY_INVALID_SELECTION: "amenity.invalid_selection",
+  AMENITY_NO_AMENITIES: "amenity.no_amenities",
+
   // === Translatable Labels (newline-delimited for getLabels()) ===
   LABELS_MAIN_MENU_OPTIONS: "labels.main_menu_options",
   LABELS_HALL_MENU_OPTIONS: "labels.hall_menu_options",
@@ -176,6 +183,7 @@ export const MSG = {
   LABELS_STAFF_EDIT_FIELDS: "labels.staff_edit_fields",
   LABELS_TOWER_SELECTION: "labels.tower_selection",
   LABELS_PAYMENT_MENU_OPTIONS: "labels.payment_menu_options",
+  LABELS_AMENITY_OPTIONS: "labels.amenity_options",
   LABELS_REPLY_MENU: "labels.reply_menu",
 
   // === Back Navigation ===

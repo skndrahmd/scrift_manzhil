@@ -208,3 +208,14 @@ VALUES
 ('nav.back_visitor_name', 'navigation', 'Back: Visitor Name', 'Navigation back to visitor name entry', E'🔙 *Going Back*\n\n🎫 *Visitor Entry Pass*\n\nEnter the *visitor''s name* ✍️\n\n*B* to go back, *0* for menu', '[]'::jsonb, 10),
 ('nav.back_visitor_car', 'navigation', 'Back: Visitor Car', 'Navigation back to visitor car entry', E'🔙 *Going Back*\n\n🚗 Enter the visitor''s *car number* (license plate).\n\n*B* to go back, *0* for menu', '[]'::jsonb, 11)
 ON CONFLICT (message_key) DO NOTHING;
+
+-- === Amenity Flow ===
+
+INSERT INTO bot_messages (message_key, flow_group, label, description, default_text, variables, sort_order)
+VALUES
+('amenity.menu', 'amenity', 'Amenity Menu', 'List of building amenities', E'🏟️ *Amenities*\n\n{options}\n\nReply with number, or *0* for menu', '["options"]'::jsonb, 1),
+('amenity.timings', 'amenity', 'Amenity Timings', 'Operating hours for an amenity', E'🏟️ *{name}*\n\n⏰ *Timings*\n{timings}\n\nReply *0* for menu', '["name", "timings"]'::jsonb, 2),
+('amenity.under_maintenance', 'amenity', 'Amenity Under Maintenance', 'Shown when amenity is under maintenance', E'🏟️ *{name}*\n\n🔧 *Under Maintenance*\n\nThis amenity is currently under maintenance. Please check back later.\n\nReply *0* for menu', '["name"]'::jsonb, 3),
+('amenity.invalid_selection', 'amenity', 'Invalid Amenity Selection', 'Invalid amenity number selected', E'❓ *Invalid Selection*\n\nPlease choose 1-{max}.\n\nReply *0* for menu', '["max"]'::jsonb, 4),
+('amenity.no_amenities', 'amenity', 'No Amenities Available', 'Shown when no active amenities exist', E'📋 *No Amenities Available*\n\nNo amenities are currently configured.\n\nReply *0* for menu', '[]'::jsonb, 5)
+ON CONFLICT (message_key) DO NOTHING;

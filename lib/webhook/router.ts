@@ -32,6 +32,8 @@ import {
   handleVisitorFlow,
   initializePaymentFlow,
   handlePaymentFlow,
+  initializeAmenityFlow,
+  handleAmenityFlow,
 } from "./handlers"
 import { getMessage } from "./messages"
 import { MSG } from "./message-keys"
@@ -168,6 +170,8 @@ export async function processMessage(
         return await handleVisitorFlow(trimmedMessage, profile, phoneNumber, userState)
       case "payment":
         return await handlePaymentFlow(trimmedMessage, profile, phoneNumber, userState, mediaInfo)
+      case "amenity":
+        return await handleAmenityFlow(trimmedMessage, profile, phoneNumber, userState)
       default:
         return await getMainMenu(profile.name, userState.language)
     }
@@ -222,6 +226,9 @@ async function handleMainMenu(
 
     case "11": // Submit Payment
       return await initializePaymentFlow(profile, phoneNumber, language)
+
+    case "12": // Amenities
+      return await initializeAmenityFlow(phoneNumber, language)
 
     default:
       const menu = await getMainMenu(profile.name, language)

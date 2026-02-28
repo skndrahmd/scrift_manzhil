@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Settings, Save, Users, Calendar, MessageSquare, Send, Globe, CreditCard } from "lucide-react"
+import { Settings, Save, Users, Calendar, MessageSquare, Send, Globe, CreditCard, Building2 } from "lucide-react"
 import Link from "next/link"
 import { useToast } from "@/hooks/use-toast"
 import { StaffManagement } from "./staff-management"
@@ -104,6 +104,10 @@ export function SettingsForm() {
                             <CreditCard className="h-4 w-4 shrink-0" />
                             <span className="hidden sm:inline">Payments</span>
                         </TabsTrigger>
+                        <TabsTrigger value="amenities" className="flex flex-1 items-center gap-2">
+                            <Building2 className="h-4 w-4 shrink-0" />
+                            <span className="hidden sm:inline">Amenities</span>
+                        </TabsTrigger>
                     </TabsList>
 
                     <TabsContent value="booking" className="mt-6">
@@ -180,6 +184,25 @@ export function SettingsForm() {
 
                     <TabsContent value="payments" className="mt-6">
                         <PaymentMethodsManager />
+                    </TabsContent>
+
+                    <TabsContent value="amenities" className="mt-6">
+                        <Card className="border-0 shadow-lg shadow-manzhil-teal/5">
+                            <CardHeader>
+                                <CardTitle className="text-lg">Building Amenities</CardTitle>
+                            </CardHeader>
+                            <CardContent className="space-y-4">
+                                <p className="text-sm text-gray-500">
+                                    Manage building amenities like swimming pool, gym, tennis court, etc. Set operating hours and maintenance status that will be shown to residents via WhatsApp.
+                                </p>
+                                <Link href="/admin/settings/amenities">
+                                    <Button className="bg-gradient-to-r from-manzhil-dark to-manzhil-teal hover:shadow-lg hover:shadow-manzhil-teal/30 transition-all">
+                                        <Building2 className="h-4 w-4 mr-2" />
+                                        Open Amenities Manager
+                                    </Button>
+                                </Link>
+                            </CardContent>
+                        </Card>
                     </TabsContent>
                 </Tabs>
             ) : (

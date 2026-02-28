@@ -108,6 +108,7 @@ export const MAIN_MENU_OPTIONS = [
   { key: "9", label: "Suggestions/Feedback", emoji: "💬" },
   { key: "10", label: "Emergency Contacts", emoji: "🆘" },
   { key: "11", label: "Submit Payment", emoji: "💳" },
+  { key: "12", label: "Amenities", emoji: "🏟️" },
 ]
 
 /**

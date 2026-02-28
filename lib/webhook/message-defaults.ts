@@ -50,7 +50,7 @@ Reply *0* for menu`,
 
   "menu.invalid_selection": `❓ *Invalid Selection*
 
-Please reply 1-11.
+Please reply 1-12.
 
 {menu}`,
 
@@ -887,7 +887,8 @@ Visitor Entry Pass
 View My Profile
 Suggestions/Feedback
 Emergency Contacts
-Submit Payment`,
+Submit Payment
+Amenities`,
 
   "labels.hall_menu_options": `New Booking
 Cancel Booking
@@ -941,6 +942,12 @@ Tower D`,
 
   "labels.payment_menu_options": `Maintenance
 Hall Booking`,
+
+  "labels.amenity_options": `Gym
+Swimming Pool
+Snooker Room
+Play Area
+Jogging Track`,
 
   "labels.reply_menu": `Reply *0* for menu`,
 
@@ -1024,6 +1031,42 @@ Your receipt for {description} was not accepted.
 📝 Reason: {reason}
 
 Please submit a valid receipt again.
+
+Reply *0* for menu`,
+
+  // === Amenity Flow ===
+  "amenity.menu": `🏟️ *Amenities*
+
+{options}
+
+Reply 1-{max}, or *0* for menu`,
+
+  "amenity.timings": `🏟️ *{name}*
+
+⏰ *Timings:*
+{timings}
+
+Reply *0* for menu`,
+
+  "amenity.under_maintenance": `🏟️ *{name}*
+
+⚠️ *Under Maintenance*
+
+This amenity is temporarily unavailable.
+
+{maintenance_note}
+
+Reply *0* for menu`,
+
+  "amenity.invalid_selection": `❓ *Invalid Selection*
+
+Please choose 1-{max}.
+
+Reply *0* for menu`,
+
+  "amenity.no_amenities": `📋 *No Amenities Available*
+
+No amenities are currently configured.
 
 Reply *0* for menu`,
 
