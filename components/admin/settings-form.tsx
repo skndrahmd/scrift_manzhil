@@ -79,32 +79,32 @@ export function SettingsForm() {
 
             {isSuperAdmin ? (
                 <Tabs defaultValue="booking" className="w-full">
-                    <TabsList className="flex w-full max-w-4xl">
-                        <TabsTrigger value="booking" className="flex flex-1 items-center gap-2">
+                    <TabsList className="flex flex-wrap h-auto gap-1 p-1">
+                        <TabsTrigger value="booking" className="flex items-center gap-2">
                             <Calendar className="h-4 w-4 shrink-0" />
-                            <span className="hidden sm:inline">Booking Settings</span>
+                            <span className="hidden sm:inline">Booking</span>
                         </TabsTrigger>
-                        <TabsTrigger value="staff" className="flex flex-1 items-center gap-2">
+                        <TabsTrigger value="staff" className="flex items-center gap-2">
                             <Users className="h-4 w-4 shrink-0" />
-                            <span className="hidden sm:inline">Staff Management</span>
+                            <span className="hidden sm:inline">Staff</span>
                         </TabsTrigger>
-                        <TabsTrigger value="bot" className="flex flex-1 items-center gap-2">
+                        <TabsTrigger value="bot" className="flex items-center gap-2">
                             <MessageSquare className="h-4 w-4 shrink-0" />
                             <span className="hidden sm:inline">Bot Messages</span>
                         </TabsTrigger>
-                        <TabsTrigger value="templates" className="flex flex-1 items-center gap-2">
+                        <TabsTrigger value="templates" className="flex items-center gap-2">
                             <Send className="h-4 w-4 shrink-0" />
                             <span className="hidden sm:inline">WA Templates</span>
                         </TabsTrigger>
-                        <TabsTrigger value="languages" className="flex flex-1 items-center gap-2">
+                        <TabsTrigger value="languages" className="flex items-center gap-2">
                             <Globe className="h-4 w-4 shrink-0" />
                             <span className="hidden sm:inline">Languages</span>
                         </TabsTrigger>
-                        <TabsTrigger value="payments" className="flex flex-1 items-center gap-2">
+                        <TabsTrigger value="payments" className="flex items-center gap-2">
                             <CreditCard className="h-4 w-4 shrink-0" />
                             <span className="hidden sm:inline">Payments</span>
                         </TabsTrigger>
-                        <TabsTrigger value="amenities" className="flex flex-1 items-center gap-2">
+                        <TabsTrigger value="amenities" className="flex items-center gap-2">
                             <Building2 className="h-4 w-4 shrink-0" />
                             <span className="hidden sm:inline">Amenities</span>
                         </TabsTrigger>

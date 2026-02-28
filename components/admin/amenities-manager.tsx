@@ -13,11 +13,12 @@ import {
   Plus,
   Pencil,
   Trash2,
-  GripVertical,
   Clock,
   Wrench,
   ArrowLeft,
   Loader2,
+  ChevronUp,
+  ChevronDown,
 } from "lucide-react"
 import Link from "next/link"
 import {
@@ -273,6 +274,49 @@ export function AmenitiesManager() {
     }
   }
 
+  const handleReorder = async (amenity: Amenity, direction: "up" | "down") => {
+    const currentIndex = amenities.findIndex((a) => a.id === amenity.id)
+    if (currentIndex === -1) return
+
+    const newIndex = direction === "up" ? currentIndex - 1 : currentIndex + 1
+    if (newIndex < 0 || newIndex >= amenities.length) return
+
+    const swapAmenity = amenities[newIndex]
+
+    // Optimistically update UI
+    const newAmenities = [...amenities]
+    newAmenities[currentIndex] = { ...amenity, sort_order: swapAmenity.sort_order }
+    newAmenities[newIndex] = { ...swapAmenity, sort_order: amenity.sort_order }
+    setAmenities(newAmenities.sort((a, b) => a.sort_order - b.sort_order))
+
+    try {
+      // Update both amenities in parallel
+      const [res1, res2] = await Promise.all([
+        fetch("/api/amenities", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id: amenity.id, sort_order: swapAmenity.sort_order }),
+        }),
+        fetch("/api/amenities", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id: swapAmenity.id, sort_order: amenity.sort_order }),
+        }),
+      ])
+
+      if (!res1.ok || !res2.ok) throw new Error("Failed to reorder")
+
+      toast({ title: "Success", description: "Order updated" })
+    } catch {
+      toast({
+        title: "Error",
+        description: "Failed to reorder amenities",
+        variant: "destructive",
+      })
+      fetchAmenities() // Revert on error
+    }
+  }
+
   const openEditModal = (amenity: Amenity) => {
     setSelectedAmenity(amenity)
     setFormData({
@@ -341,7 +385,7 @@ export function AmenitiesManager() {
         </Card>
       ) : (
         <div className="space-y-3">
-          {amenities.map((amenity) => (
+          {amenities.map((amenity, index) => (
             <Card
               key={amenity.id}
               className={`border-0 shadow-lg shadow-manzhil-teal/5 ${
@@ -351,8 +395,26 @@ export function AmenitiesManager() {
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-4">
-                    <div className="text-gray-400 cursor-grab">
-                      <GripVertical className="h-5 w-5" />
+                    {/* Reorder buttons */}
+                    <div className="flex flex-col gap-0.5">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6"
+                        disabled={index === 0}
+                        onClick={() => handleReorder(amenity, "up")}
+                      >
+                        <ChevronUp className="h-4 w-4 text-gray-400" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6"
+                        disabled={index === amenities.length - 1}
+                        onClick={() => handleReorder(amenity, "down")}
+                      >
+                        <ChevronDown className="h-4 w-4 text-gray-400" />
+                      </Button>
                     </div>
                     <div>
                       <div className="flex items-center gap-2">
@@ -391,7 +453,7 @@ export function AmenitiesManager() {
                     <div className="flex items-center gap-2">
                       <Label
                         htmlFor={`maintenance-${amenity.id}`}
-                        className="text-sm text-gray-500"
+                        className="text-sm text-gray-500 hidden md:block"
                       >
                         Maintenance
                       </Label>
@@ -406,7 +468,7 @@ export function AmenitiesManager() {
                     <div className="flex items-center gap-2">
                       <Label
                         htmlFor={`active-${amenity.id}`}
-                        className="text-sm text-gray-500"
+                        className="text-sm text-gray-500 hidden md:block"
                       >
                         Active
                       </Label>
