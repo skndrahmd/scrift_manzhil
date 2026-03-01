@@ -1,10 +1,10 @@
 /**
  * POST /api/menu-options/retranslate
- * Retranslate all stale menu option translations for a specific language.
- * If no language_code provided, retranslate stale translations for all languages.
+ * Retranslate menu option translations.
  *
- * Request body:
- * { language_code?: string } - Optional, if provided only retranslate for that language
+ * Request body options:
+ * - { language_code?: string } - Retranslate stale translations for a specific language (or all if not provided)
+ * - { menu_option_id: string } - Retranslate ALL translations for a specific menu option
  */
 
 import { NextResponse } from "next/server"
@@ -21,8 +21,80 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json().catch(() => ({}))
-    const { language_code } = body
+    const { language_code, menu_option_id } = body
 
+    // Case 1: Retranslate all translations for a specific menu option
+    if (menu_option_id) {
+      // Get the menu option label
+      const { data: menuOpt, error: optError } = await supabaseAdmin
+        .from("menu_options")
+        .select("id, label")
+        .eq("id", menu_option_id)
+        .single()
+
+      if (optError || !menuOpt) {
+        return NextResponse.json({ error: "Menu option not found" }, { status: 404 })
+      }
+
+      // Get all enabled languages
+      const { data: enabledLangs, error: langError } = await supabaseAdmin
+        .from("enabled_languages")
+        .select("language_code")
+        .eq("is_enabled", true)
+
+      if (langError || !enabledLangs || enabledLangs.length === 0) {
+        return NextResponse.json({
+          message: "No enabled languages",
+          retranslated_count: 0,
+        })
+      }
+
+      // Translate the label for each language
+      let retranslatedCount = 0
+      const errors: string[] = []
+
+      for (const lang of enabledLangs) {
+        try {
+          const [translatedLabel] = await translateBatch([menuOpt.label], lang.language_code)
+
+          // Upsert the translation
+          const { error: upsertError } = await supabaseAdmin
+            .from("menu_option_translations")
+            .upsert({
+              menu_option_id: menuOpt.id,
+              language_code: lang.language_code,
+              translated_label: translatedLabel,
+              is_stale: false,
+              is_auto_translated: true,
+              updated_at: new Date().toISOString(),
+            }, { onConflict: "menu_option_id,language_code" })
+
+          if (upsertError) {
+            errors.push(`Failed to upsert for ${lang.language_code}: ${upsertError.message}`)
+          } else {
+            retranslatedCount++
+          }
+        } catch (err) {
+          errors.push(`Translation failed for ${lang.language_code}: ${err}`)
+        }
+      }
+
+      if (errors.length > 0) {
+        console.error("[Retranslate Menu Option] Errors:", errors)
+        return NextResponse.json({
+          message: "Partial success",
+          retranslated_count: retranslatedCount,
+          errors,
+        })
+      }
+
+      return NextResponse.json({
+        message: "Menu option retranslated for all languages",
+        retranslated_count: retranslatedCount,
+      })
+    }
+
+    // Case 2: Retranslate stale translations (existing behavior)
     // Build query for stale translations
     let query = supabaseAdmin
       .from("menu_option_translations")

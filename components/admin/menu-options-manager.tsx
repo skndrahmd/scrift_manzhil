@@ -27,6 +27,7 @@ import {
   RotateCcw,
   Languages,
   AlertCircle,
+  RefreshCw,
 } from "lucide-react"
 import Link from "next/link"
 
@@ -72,6 +73,7 @@ export function MenuOptionsManager() {
   const [selectedOptionId, setSelectedOptionId] = useState<string | null>(null)
   const [editingTranslation, setEditingTranslation] = useState<string | null>(null)
   const [editTranslationText, setEditTranslationText] = useState("")
+  const [retranslating, setRetranslating] = useState(false)
   const { toast } = useToast()
 
   const fetchOptions = useCallback(async () => {
@@ -143,6 +145,40 @@ export function MenuOptionsManager() {
         description: "Failed to save translation",
         variant: "destructive",
       })
+    }
+  }
+
+  const retranslateAll = async () => {
+    if (!selectedOptionId) return
+    
+    try {
+      setRetranslating(true)
+      const res = await fetch("/api/menu-options/retranslate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ menu_option_id: selectedOptionId }),
+      })
+      
+      if (!res.ok) throw new Error("Failed to retranslate")
+      
+      const data = await res.json()
+      
+      // Refresh translations
+      await fetchTranslations(selectedOptionId)
+      
+      toast({ 
+        title: "Retranslated", 
+        description: `${data.retranslated_count || 0} translations updated` 
+      })
+    } catch (err) {
+      console.error("Failed to retranslate:", err)
+      toast({
+        title: "Error",
+        description: "Failed to retranslate",
+        variant: "destructive",
+      })
+    } finally {
+      setRetranslating(false)
     }
   }
 
@@ -521,6 +557,24 @@ export function MenuOptionsManager() {
                 : "Menu option translations"}
             </DialogDescription>
           </DialogHeader>
+          
+          {/* Retranslate button */}
+          <div className="flex justify-end">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={retranslateAll}
+              disabled={retranslating || languages.filter(l => l.is_enabled).length === 0}
+            >
+              {retranslating ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <RefreshCw className="h-4 w-4 mr-2" />
+              )}
+              Retranslate All
+            </Button>
+          </div>
+          
           <div className="space-y-3">
             {languages.filter(l => l.is_enabled).length === 0 ? (
               <p className="text-sm text-muted-foreground">
