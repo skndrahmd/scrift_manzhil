@@ -824,7 +824,7 @@ import { Button } from '@/components/ui/button'
 ## Additional Documentation
 
 - `docs/` — Developer guide, new instance setup guide, and other documentation
-- `database-complete-schema.sql` — Complete database setup (core 22 tables)
+- `database-complete-schema.sql` — Complete database setup (all 30 tables, single source of truth)
 - `database-seed-bot-messages.sql` — Seed data for all ~125 bot messages (includes 10 label keys)
 - `database-seed-whatsapp-templates.sql` — Seed data for all 20 WhatsApp templates
 - `sql/database-seed-label-messages.sql` — Seed data for 10 translatable label message keys
