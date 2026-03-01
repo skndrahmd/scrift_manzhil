@@ -214,7 +214,7 @@ export function LanguageSettings() {
 
       toast({
         title: "Retranslation Complete",
-        description: `${data.translations_count} messages retranslated for ${lang.language_name}`,
+        description: `${data.bot_translations_count || 0} bot messages + ${data.menu_translations_count || 0} menu options retranslated for ${lang.language_name}`,
       })
     } catch {
       toast({ title: "Error", description: "Failed to retranslate", variant: "destructive" })
