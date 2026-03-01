@@ -75,14 +75,17 @@ Run `database-complete-schema.sql` in the Supabase SQL Editor to create all core
 
 | File | Purpose |
 |------|---------|
-| `database-amenities-schema.sql` | Amenities and prayer times management |
+| `database-amenities-schema.sql` | Amenities management |
+| `database-prayer-times-schema.sql` | Prayer times management (5 daily prayers) |
 | `database-payment-methods.sql` | Payment method configuration |
 | `database-payment-verifications.sql` | Payment receipt verification system |
 | `database-menu-options-schema.sql` | Dynamic main menu options |
+| `database-menu-option-translations.sql` | Menu option translations table |
+| `database-multilingual-schema.sql` | Multilingual tables |
 | `database-seed-bot-messages.sql` | ~125 bot messages |
 | `database-seed-whatsapp-templates.sql` | 20 WhatsApp templates |
 | `database-seed-label-messages.sql` | 10 translatable label keys |
-| `database-multilingual-schema.sql` | Multilingual tables |
+| `database-seed-payment-messages.sql` | Payment receipt flow messages |
 
 ### Docker Deployment
 
@@ -115,11 +118,15 @@ app/
 │   ├── bot-messages/       # Bot message customization API
 │   ├── whatsapp-templates/ # Template management + test-send
 │   ├── languages/          # Language CRUD, translations, retranslation
-│   ├── amenities/          # Amenity CRUD + prayer times
+│   ├── amenities/          # Amenity CRUD
 │   ├── prayer-times/       # Prayer times CRUD
 │   ├── payment-methods/    # Public payment methods for bot
 │   ├── payment-verifications/ # Payment receipt verification
 │   ├── menu-options/       # Dynamic main menu options CRUD
+│   │   ├── [id]/           # Single menu option CRUD
+│   │   │   └── translations/ # Per-option translations
+│   │   ├── retranslate/    # Retranslate all menu labels
+│   │   └── translations/   # Bulk translation management
 │   ├── cron/               # daily-reports, maintenance-reminder, pending-complaints
 │   └── webhook/route.ts    # WhatsApp conversational bot endpoint
 ├── booking-invoice/        # Public invoice PDF pages
@@ -133,7 +140,7 @@ lib/
 ├── auth/                   # verifyAdminAccess(), isSuperAdmin(), auth context
 ├── twilio/                 # Client, templates, send logic, notifications/
 ├── webhook/                # WhatsApp bot: router, state, menu, handlers/, messages
-├── services/               # Shared business logic (booking, complaint, maintenance, broadcast, payment-verification)
+├── services/               # Shared business logic (booking, complaint, maintenance, broadcast, payment-verification, resident-type-sync)
 ├── pdf/                    # PDF generation, CSV export, invoice, reports, theme
 ├── date/                   # Pakistan timezone (PST/UTC+5) utilities
 ├── admin/                  # Notification recipient fetchers
@@ -164,13 +171,18 @@ tests/                      # Vitest tests
 └── setup.ts                # Test setup file
 
 sql/
-├── database-complete-schema.sql     # Core schema (27 tables)
-├── database-amenities-schema.sql   # Amenities + prayer times
+├── database-complete-schema.sql     # Core schema (22 tables)
+├── database-amenities-schema.sql   # Amenities management
+├── database-prayer-times-schema.sql # Prayer times (5 daily prayers)
 ├── database-payment-methods.sql     # Payment methods
 ├── database-payment-verifications.sql # Payment receipt verification
 ├── database-menu-options-schema.sql # Dynamic menu options
+├── database-menu-option-translations.sql # Menu option translations
 ├── database-multilingual-schema.sql # Multilingual support
-├── database-seed-*.sql             # Seed data files
+├── database-seed-bot-messages.sql   # ~125 bot messages
+├── database-seed-whatsapp-templates.sql # 20 WhatsApp templates
+├── database-seed-label-messages.sql # 10 translatable label keys
+├── database-seed-payment-messages.sql # Payment flow messages
 └── seed-template-bodies.sql        # Template body references
 
 middleware.ts               # Auth & RBAC route protection
@@ -326,7 +338,7 @@ The WhatsApp bot main menu is now **database-driven** with the `menu_options` ta
 | `amenity` | handlers/amenity.ts | Amenities & prayer times |
 
 **Config Functions** (`lib/webhook/config.ts`):
-- `getMenuOptions()` — Returns enabled options only, in sort_order, with sequential keys (1, 2, 3...)
+- `getMenuOptions(language?)` — Returns enabled options only, in sort_order, with sequential keys (1, 2, 3...). Optionally translated if language is provided.
 - `getAllMenuOptions()` — Returns all options for admin UI
 - `getMenuActionMap()` — Returns Map of key position → handler_type for routing
 
@@ -334,12 +346,33 @@ The WhatsApp bot main menu is now **database-driven** with the `menu_options` ta
 - `GET /api/menu-options` — List all (super_admin)
 - `PUT /api/menu-options` — Bulk update sort_order/is_enabled
 - `PATCH /api/menu-options/[id]` — Update single label/emoji/is_enabled
+- `GET /api/menu-options/[id]/translations` — Get translations for a menu option
+- `PUT /api/menu-options/[id]/translations` — Update translation for a language
+- `POST /api/menu-options/retranslate` — Retranslate all stale menu translations
 
 **Admin UI** (`components/admin/menu-options-manager.tsx`):
 - Reorder with up/down arrows
 - Toggle enable/disable
 - Inline edit label and emoji
 - WhatsApp preview panel
+
+### Menu Option Translations
+
+Menu options support multilingual translations via the `menu_option_translations` table. When a new language is enabled, all menu option labels are auto-translated.
+
+**Table Structure** (`menu_option_translations`):
+- `menu_option_id` — FK to menu_options
+- `language_code` — FK to enabled_languages
+- `translated_label` — Translated text
+- `is_stale` — True when source label changes, needs retranslation
+- `is_auto_translated` — True if translated by Google Translate API
+
+**Translation Workflow**:
+1. When a menu option's `label` is updated, all its translations are marked `is_stale = true`
+2. Admin can retranslate stale translations via `POST /api/menu-options/retranslate`
+3. `getMenuOptions(language)` returns translated labels if available
+
+**Trigger**: `trigger_mark_translations_stale` automatically marks translations stale when the source label changes.
 
 ### File Naming
 
@@ -438,11 +471,18 @@ Configured in `vercel.json`. All 3 cron routes validate `CRON_SECRET` via the `x
 
 - `docs/DEVELOPER_GUIDE.md` — Comprehensive developer onboarding guide
 - `docs/new-instance-setup.md` — Guide for setting up a new Manzhil instance
+- `docs/presentation-client-deck.md` — Client presentation deck
+- `docs/presentation-designer-brief.md` — Designer brief for presentations
+- `docs/marketing/` — Marketing materials
+- `docs/plans/` — Planning documents
 - `changes.md` — Codebase cleanup and reorganization changelog
-- `database-complete-schema.sql` — Full DB schema (27 tables)
+- `database-complete-schema.sql` — Full DB schema (22 tables)
 - `database-seed-bot-messages.sql` — Seed data for ~125 bot messages
 - `database-seed-whatsapp-templates.sql` — Seed data for 20 WhatsApp templates
 - `sql/database-seed-label-messages.sql` — Seed data for 10 translatable label keys
+- `sql/database-seed-payment-messages.sql` — Seed data for payment flow messages
 - `sql/database-multilingual-schema.sql` — Schema for multilingual tables
 - `sql/database-menu-options-schema.sql` — Dynamic main menu options
+- `sql/database-menu-option-translations.sql` — Menu option translations
+- `sql/database-prayer-times-schema.sql` — Prayer times management
 - `.env.example` — Complete list of all environment variables

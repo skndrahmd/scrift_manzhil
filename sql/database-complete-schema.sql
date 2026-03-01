@@ -2,15 +2,15 @@
 -- Manzhil by Scrift - Complete Database Setup
 -- ============================================
 -- This is the SINGLE master SQL file containing ALL database setup:
---   - Schema (22 tables with RLS, indexes, triggers)
---   - Seed data (bot messages, whatsapp templates, label messages)
+--   - Schema (30 tables with RLS, indexes, triggers)
+--   - Seed data (bot messages, whatsapp templates, label messages, amenities, menu options)
 --
 -- Run this ONCE in your Supabase SQL Editor for a fresh installation.
 -- Everything is idempotent where possible (ON CONFLICT DO NOTHING).
 --
--- Last Updated: 2026-02-17
+-- Last Updated: 2026-03-02
 --
--- Tables (22):
+-- Tables (30):
 --   1.  units                      - Apartment unit entities (first-class)
 --   2.  profiles                   - Resident/user information (FK -> units)
 --   3.  maintenance_payments       - Monthly maintenance fee tracking (FK -> profiles, units)
@@ -29,10 +29,18 @@
 --  16.  visitor_passes             - Visitor entry tracking (FK -> profiles)
 --  17.  parcels                    - Parcel/delivery tracking (FK -> profiles)
 --  18.  broadcast_logs             - Broadcast rate limiting & history
---  19.  bot_messages               - Customizable WhatsApp bot messages
---  20.  whatsapp_templates         - Twilio WhatsApp content template management
---  21.  enabled_languages          - Enabled languages for multilingual bot support
---  22.  bot_message_translations   - Per-language translations of bot messages
+--  19.  payment_methods            - Payment method configuration
+--  20.  payment_verifications      - Payment receipt verification
+--  21.  bot_messages               - Customizable WhatsApp bot messages
+--  22.  whatsapp_templates         - Twilio WhatsApp content template management
+--  23.  enabled_languages          - Enabled languages for multilingual bot support
+--  24.  bot_message_translations   - Per-language translations of bot messages
+--  25.  bot_sessions               - WhatsApp bot persistent session state
+--  26.  amenities                  - Building amenities with operating hours
+--  27.  prayer_times               - 5 daily prayer times
+--  28.  prayer_times_settings      - Prayer times master enable/disable toggle
+--  29.  menu_options               - Dynamic WhatsApp bot main menu configuration
+--  30.  menu_option_translations   - Per-language translations for menu option labels
 --
 -- ============================================
 
@@ -43,6 +51,14 @@
 -- WARNING: This will DELETE ALL existing data!
 -- Comment out this section if you want to preserve existing data.
 
+DROP TABLE IF EXISTS menu_option_translations CASCADE;
+DROP TABLE IF EXISTS menu_options CASCADE;
+DROP TABLE IF EXISTS prayer_times_settings CASCADE;
+DROP TABLE IF EXISTS prayer_times CASCADE;
+DROP TABLE IF EXISTS amenities CASCADE;
+DROP TABLE IF EXISTS bot_sessions CASCADE;
+DROP TABLE IF EXISTS payment_verifications CASCADE;
+DROP TABLE IF EXISTS payment_methods CASCADE;
 DROP TABLE IF EXISTS bot_message_translations CASCADE;
 DROP TABLE IF EXISTS enabled_languages CASCADE;
 DROP TABLE IF EXISTS whatsapp_templates CASCADE;
@@ -110,7 +126,47 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- 2.5 Dedicated updated_at function for parcels
+-- 2.5 Dedicated updated_at function for amenities
+CREATE OR REPLACE FUNCTION update_amenities_updated_at()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_at = NOW();
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- 2.6 Dedicated updated_at function for prayer_times
+CREATE OR REPLACE FUNCTION update_prayer_times_updated_at()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_at = NOW();
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- 2.7 Dedicated updated_at function for prayer_times_settings
+CREATE OR REPLACE FUNCTION update_prayer_times_settings_updated_at()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_at = NOW();
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- 2.8 Mark menu option translations stale when label changes
+CREATE OR REPLACE FUNCTION mark_menu_option_translations_stale()
+RETURNS TRIGGER AS $$
+BEGIN
+  IF OLD.label IS DISTINCT FROM NEW.label THEN
+    UPDATE menu_option_translations
+    SET is_stale = true, updated_at = now()
+    WHERE menu_option_id = NEW.id;
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- 2.9 Dedicated updated_at function for parcels
 CREATE OR REPLACE FUNCTION update_parcels_updated_at()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -1023,6 +1079,131 @@ CREATE POLICY "Service role full access on bot_sessions"
 
 CREATE INDEX idx_bot_sessions_last_activity ON bot_sessions(last_activity);
 
+-- --------------------------------------------
+-- 7.6 AMENITIES TABLE
+-- Building amenities with operating hours and maintenance status.
+-- --------------------------------------------
+CREATE TABLE IF NOT EXISTS amenities (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name TEXT NOT NULL,
+  is_active BOOLEAN DEFAULT true,
+  is_under_maintenance BOOLEAN DEFAULT false,
+  open_time TIME,
+  close_time TIME,
+  sort_order INTEGER DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE amenities ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Service role full access on amenities"
+  ON amenities FOR ALL
+  USING (true) WITH CHECK (true);
+
+CREATE POLICY "Anon can read active amenities"
+  ON amenities FOR SELECT
+  USING (is_active = true);
+
+CREATE INDEX IF NOT EXISTS idx_amenities_sort_order ON amenities(sort_order);
+CREATE INDEX IF NOT EXISTS idx_amenities_active ON amenities(is_active);
+
+-- --------------------------------------------
+-- 7.7 PRAYER TIMES TABLE
+-- Stores the 5 daily prayers with their times.
+-- --------------------------------------------
+CREATE TABLE IF NOT EXISTS prayer_times (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  prayer_name TEXT NOT NULL UNIQUE,
+  prayer_time TIME,
+  sort_order INTEGER DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE prayer_times ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Service role full access on prayer_times"
+  ON prayer_times FOR ALL
+  USING (true) WITH CHECK (true);
+
+CREATE POLICY "Anon can read prayer_times"
+  ON prayer_times FOR SELECT
+  USING (true);
+
+CREATE INDEX IF NOT EXISTS idx_prayer_times_sort_order ON prayer_times(sort_order);
+
+-- --------------------------------------------
+-- 7.8 PRAYER TIMES SETTINGS TABLE
+-- Master enable/disable toggle (single row).
+-- --------------------------------------------
+CREATE TABLE IF NOT EXISTS prayer_times_settings (
+  id INTEGER PRIMARY KEY DEFAULT 1 CHECK (id = 1),
+  is_enabled BOOLEAN DEFAULT false,
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE prayer_times_settings ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Service role full access on prayer_times_settings"
+  ON prayer_times_settings FOR ALL
+  USING (true) WITH CHECK (true);
+
+CREATE POLICY "Anon can read prayer_times_settings"
+  ON prayer_times_settings FOR SELECT
+  USING (true);
+
+-- --------------------------------------------
+-- 7.9 MENU OPTIONS TABLE
+-- Dynamic WhatsApp bot main menu configuration.
+-- --------------------------------------------
+CREATE TABLE IF NOT EXISTS menu_options (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  action_key VARCHAR(50) NOT NULL UNIQUE,
+  label VARCHAR(200) NOT NULL,
+  emoji VARCHAR(10) NOT NULL DEFAULT '📋',
+  is_enabled BOOLEAN NOT NULL DEFAULT true,
+  sort_order INTEGER NOT NULL DEFAULT 0,
+  handler_type VARCHAR(50) NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+ALTER TABLE menu_options ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Service role full access on menu_options"
+  ON menu_options FOR ALL
+  USING (true) WITH CHECK (true);
+
+CREATE INDEX IF NOT EXISTS idx_menu_options_sort ON menu_options(sort_order);
+CREATE INDEX IF NOT EXISTS idx_menu_options_enabled ON menu_options(is_enabled);
+
+-- --------------------------------------------
+-- 7.10 MENU OPTION TRANSLATIONS TABLE
+-- Per-language translations for menu option labels.
+-- --------------------------------------------
+CREATE TABLE IF NOT EXISTS menu_option_translations (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  menu_option_id UUID NOT NULL REFERENCES menu_options(id) ON DELETE CASCADE,
+  language_code VARCHAR(10) NOT NULL REFERENCES enabled_languages(language_code) ON DELETE CASCADE,
+  translated_label VARCHAR(200) NOT NULL,
+  is_stale BOOLEAN DEFAULT false,
+  is_auto_translated BOOLEAN DEFAULT true,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now(),
+  UNIQUE(menu_option_id, language_code)
+);
+
+ALTER TABLE menu_option_translations ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Service role full access on menu_option_translations"
+  ON menu_option_translations FOR ALL
+  USING (true) WITH CHECK (true);
+
+CREATE INDEX IF NOT EXISTS idx_menu_opt_trans_lang ON menu_option_translations(language_code);
+CREATE INDEX IF NOT EXISTS idx_menu_opt_trans_option ON menu_option_translations(menu_option_id);
+CREATE INDEX IF NOT EXISTS idx_menu_opt_trans_stale ON menu_option_translations(is_stale);
+
 
 -- ============================================
 -- PART 8: TRIGGERS
@@ -1098,7 +1279,39 @@ CREATE TRIGGER trigger_parcels_updated_at
   BEFORE UPDATE ON parcels
   FOR EACH ROW EXECUTE FUNCTION update_parcels_updated_at();
 
--- 8.3 Complaint ID auto-generation
+-- 8.3 Updated_at triggers for amenities, prayer times, menu options
+CREATE TRIGGER update_amenities_updated_at
+  BEFORE UPDATE ON amenities
+  FOR EACH ROW
+  EXECUTE FUNCTION update_amenities_updated_at();
+
+CREATE TRIGGER update_prayer_times_updated_at
+  BEFORE UPDATE ON prayer_times
+  FOR EACH ROW
+  EXECUTE FUNCTION update_prayer_times_updated_at();
+
+CREATE TRIGGER update_prayer_times_settings_updated_at
+  BEFORE UPDATE ON prayer_times_settings
+  FOR EACH ROW
+  EXECUTE FUNCTION update_prayer_times_settings_updated_at();
+
+CREATE TRIGGER update_menu_options_updated_at
+  BEFORE UPDATE ON menu_options
+  FOR EACH ROW
+  EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_menu_opt_trans_updated_at
+  BEFORE UPDATE ON menu_option_translations
+  FOR EACH ROW
+  EXECUTE FUNCTION update_updated_at_column();
+
+-- 8.4 Mark menu option translations stale when label changes
+CREATE TRIGGER trigger_mark_translations_stale
+  AFTER UPDATE OF label ON menu_options
+  FOR EACH ROW
+  EXECUTE FUNCTION mark_menu_option_translations_stale();
+
+-- 8.5 Complaint ID auto-generation
 CREATE TRIGGER set_complaint_id
   BEFORE INSERT ON complaints
   FOR EACH ROW EXECUTE FUNCTION generate_complaint_id();
@@ -1383,8 +1596,122 @@ VALUES
 
 ON CONFLICT (message_key) DO NOTHING;
 
+-- === Amenity Flow ===
+
+INSERT INTO bot_messages (message_key, flow_group, label, description, default_text, variables, sort_order)
+VALUES
+('amenity.menu', 'amenity', 'Amenity Menu', 'List of building amenities', E'🏟️ *Amenities*\n\n{options}\n\nReply with number, or *0* for menu', '["options"]'::jsonb, 1),
+('amenity.timings', 'amenity', 'Amenity Timings', 'Operating hours for an amenity', E'🏟️ *{name}*\n\n⏰ *Timings*\n{timings}\n\nReply *0* for menu', '["name", "timings"]'::jsonb, 2),
+('amenity.under_maintenance', 'amenity', 'Amenity Under Maintenance', 'Shown when amenity is under maintenance', E'🏟️ *{name}*\n\n🔧 *Under Maintenance*\n\nThis amenity is currently under maintenance. Please check back later.\n\nReply *0* for menu', '["name"]'::jsonb, 3),
+('amenity.invalid_selection', 'amenity', 'Invalid Amenity Selection', 'Invalid amenity number selected', E'❓ *Invalid Selection*\n\nPlease choose 1-{max}.\n\nReply *0* for menu', '["max"]'::jsonb, 4),
+('amenity.no_amenities', 'amenity', 'No Amenities Available', 'Shown when no active amenities exist', E'📋 *No Amenities Available*\n\nNo amenities are currently configured.\n\nReply *0* for menu', '[]'::jsonb, 5)
+ON CONFLICT (message_key) DO NOTHING;
+
+-- === Payment Receipt Flow ===
+
+INSERT INTO bot_messages (message_key, flow_group, label, description, default_text, variables, sort_order)
+VALUES
+('payment.menu', 'payment', 'Payment Menu', 'Payment type selection (maintenance vs booking)', E'💳 *Submit Payment*\n\nWhat are you paying for?\n\n{options}\n\nReply 1-2, or *0* for menu', '["options"]'::jsonb, 1),
+('payment.no_methods', 'payment', 'No Payment Methods', 'Shown when no payment methods are configured', E'❌ *Online Payment Not Available*\n\nNo payment methods are currently configured. Please contact your building admin.\n\nReply *0* for menu', '[]'::jsonb, 2),
+('payment.no_pending', 'payment', 'No Pending Payments', 'Shown when there are no unpaid payments', E'✅ *No Pending Payments*\n\nYou don''t have any unpaid {type} payments.\n\nReply *0* for menu', '["type"]'::jsonb, 3),
+('payment.select', 'payment', 'Select Payment', 'List of pending payments for selection', E'💰 *Select Payment*\n\n{list}\n\nReply with number, or *0* for menu', '["list"]'::jsonb, 4),
+('payment.already_submitted', 'payment', 'Already Submitted', 'Shown when a receipt was already submitted for this payment', E'⏳ *Receipt Already Submitted*\n\nYou already submitted a receipt for this payment. It''s being verified by admin.\n\nReply *0* for menu', '[]'::jsonb, 5),
+('payment.methods_list', 'payment', 'Payment Methods List', 'Shows payment account details and amount', E'💳 *Payment Details*\n\n💰 Amount: *{amount}*\n📝 For: {description}\n\nPlease send payment to one of these accounts:\n\n{methods}\n\nAfter paying, send a *screenshot* of your receipt.\n\nReply *0* for menu', '["amount", "description", "methods"]'::jsonb, 6),
+('payment.send_image', 'payment', 'Send Receipt Image', 'Prompt to send receipt screenshot', E'📸 *Send Receipt*\n\nPlease send a *photo/screenshot* of your payment receipt.\n\nReply *0* for menu', '[]'::jsonb, 7),
+('payment.receipt_received', 'payment', 'Receipt Received', 'Confirmation after receipt is uploaded', E'✅ *Receipt Received!*\n\n📝 {description}\n💰 Amount: {amount}\n\nYour receipt has been submitted for verification. We''ll notify you once it''s reviewed.\n\nReply *0* for menu', '["description", "amount"]'::jsonb, 8),
+('payment.upload_error', 'payment', 'Upload Error', 'Shown when receipt upload fails', E'❌ *Upload Failed*\n\nWe couldn''t upload your receipt. Please try again.\n\nReply *0* for menu', '[]'::jsonb, 9)
+ON CONFLICT (message_key) DO NOTHING;
+
+-- === Payment Labels ===
+
+INSERT INTO bot_messages (message_key, flow_group, label, description, default_text, variables, sort_order)
+VALUES
+('labels.payment_menu_options', 'payment', 'Payment Menu Labels', 'Translatable labels for payment type options (newline-delimited)', E'Maintenance\nHall Booking', '[]'::jsonb, 10)
+ON CONFLICT (message_key) DO NOTHING;
+
+-- === Payment Verification Notifications ===
+
+INSERT INTO bot_messages (message_key, flow_group, label, description, default_text, variables, sort_order)
+VALUES
+('payment.approved', 'payment', 'Payment Approved', 'Sent to resident when admin approves their receipt', E'✅ *Payment Verified!*\n\nYour payment for {description} (PKR {amount}) has been verified and marked as paid.\n\nReply *0* for menu', '["description", "amount"]'::jsonb, 11),
+('payment.rejected', 'payment', 'Payment Rejected', 'Sent to resident when admin rejects their receipt', E'❌ *Receipt Not Accepted*\n\nYour receipt for {description} was not accepted.\n\n📝 Reason: {reason}\n\nPlease submit a valid receipt again.\n\nReply *0* for menu', '["description", "reason"]'::jsonb, 12)
+ON CONFLICT (message_key) DO NOTHING;
+
+-- === Payment Back Navigation ===
+
+INSERT INTO bot_messages (message_key, flow_group, label, description, default_text, variables, sort_order)
+VALUES
+('nav.back_payment_type', 'navigation', 'Back to Payment Type', 'Back navigation to payment type selection', E'🔙 *Going Back*\n\n💳 *Submit Payment*\n\nWhat are you paying for?\n\n1. 💰 Maintenance\n2. 🏛️ Hall Booking\n\nReply 1-2, or *0* for menu', '[]'::jsonb, 20)
+ON CONFLICT (message_key) DO NOTHING;
+
+-- === Label Message Fixes (for existing installs) ===
+
+-- Fix existing installs where labels.main_menu_options was seeded with fewer items
+UPDATE bot_messages
+SET default_text = E'Register Complaint\nCheck Complaint Status\nCancel Complaint\nMy Staff Management\nCheck Maintenance Dues\nCommunity Hall\nVisitor Entry Pass\nView My Profile\nSuggestions/Feedback\nEmergency Contacts\nSubmit Payment\nAmenities'
+WHERE message_key = 'labels.main_menu_options'
+  AND default_text NOT LIKE '%Amenities%';
+
+-- Fix existing installs where menu.main_menu has hardcoded "Reply 1-10" or "Reply 1-11"
+UPDATE bot_messages
+SET default_text = E'👋 Hello {name}!\n\nWelcome to *Manzhil*\n\n{options}\n\nReply 1-{max_option}',
+    variables = '["name", "options", "max_option"]'::jsonb
+WHERE message_key = 'menu.main_menu'
+  AND (default_text LIKE '%Reply 1-10%' OR default_text LIKE '%Reply 1-11%');
+
+-- Fix existing installs where menu.invalid_selection has hardcoded "1-10" or "1-11"
+UPDATE bot_messages
+SET default_text = E'❓ *Invalid Selection*\n\nPlease reply 1-{max_option}.\n\n{menu}',
+    variables = '["menu", "max_option"]'::jsonb
+WHERE message_key = 'menu.invalid_selection'
+  AND (default_text LIKE '%1-10%' OR default_text LIKE '%1-11%');
+
 -- --------------------------------------------
--- 9.4 WhatsApp Templates Seed Data (20 templates)
+-- 9.5 Amenity Seed Data
+-- Default amenities, prayer times, and menu options.
+-- --------------------------------------------
+
+-- Default amenities
+INSERT INTO amenities (name, is_active, is_under_maintenance, open_time, close_time, sort_order)
+VALUES
+  ('Gym', true, false, '06:00:00', '22:00:00', 1),
+  ('Swimming Pool', true, false, '06:00:00', '20:00:00', 2),
+  ('Snooker Room', true, false, '10:00:00', '22:00:00', 3),
+  ('Play Area', true, false, '08:00:00', '21:00:00', 4),
+  ('Jogging Track', true, false, '05:00:00', '22:00:00', 5)
+ON CONFLICT DO NOTHING;
+
+-- Default prayer times
+INSERT INTO prayer_times (prayer_name, prayer_time, sort_order) VALUES
+  ('Fajr', '05:30:00', 1),
+  ('Zuhr', '13:00:00', 2),
+  ('Asr', '16:30:00', 3),
+  ('Maghrib', '18:30:00', 4),
+  ('Isha', '20:00:00', 5)
+ON CONFLICT (prayer_name) DO NOTHING;
+
+-- Default prayer times settings (disabled by default)
+INSERT INTO prayer_times_settings (is_enabled) VALUES (false)
+ON CONFLICT (id) DO NOTHING;
+
+-- Default 12 menu options
+INSERT INTO menu_options (action_key, label, emoji, is_enabled, sort_order, handler_type) VALUES
+  ('register_complaint',    'Register Complaint',      '📝', true,  1,  'complaint'),
+  ('check_status',          'Check Complaint Status',  '🔍', true,  2,  'status'),
+  ('cancel_complaint',      'Cancel Complaint',        '❌', true,  3,  'cancel'),
+  ('staff_management',      'My Staff Management',     '👥', true,  4,  'staff'),
+  ('maintenance_dues',      'Check Maintenance Dues',  '💰', true,  5,  'maintenance_status'),
+  ('community_hall',        'Community Hall',           '🏛️', true,  6,  'hall'),
+  ('visitor_pass',          'Visitor Entry Pass',      '🎫', true,  7,  'visitor'),
+  ('view_profile',          'View My Profile',         '👤', true,  8,  'profile_info'),
+  ('feedback',              'Suggestions/Feedback',    '💬', true,  9,  'feedback'),
+  ('emergency_contacts',    'Emergency Contacts',      '🆘', true,  10, 'emergency_contacts'),
+  ('submit_payment',        'Submit Payment',          '💳', true,  11, 'payment'),
+  ('amenities',             'Amenities',               '🏟️', true,  12, 'amenity')
+ON CONFLICT (action_key) DO NOTHING;
+
+-- --------------------------------------------
+-- 9.6 WhatsApp Templates Seed Data (20 templates)
 -- Populates whatsapp_templates table with all template definitions.
 -- Idempotent: uses ON CONFLICT DO NOTHING.
 -- --------------------------------------------
@@ -1586,7 +1913,7 @@ ALTER PUBLICATION supabase_realtime ADD TABLE broadcast_logs;
 -- PART 12: VERIFICATION
 -- ============================================
 
--- Verify all 22 tables were created
+-- Verify all 30 tables were created
 SELECT
   table_name,
   (SELECT COUNT(*) FROM information_schema.columns c WHERE c.table_name = t.table_name AND c.table_schema = 'public') as column_count
@@ -1599,12 +1926,16 @@ WHERE table_schema = 'public'
     'daily_reports', 'transactions', 'expense_categories', 'expenses',
     'admin_users', 'admin_permissions', 'admin_otp',
     'visitor_passes', 'parcels', 'broadcast_logs',
+    'payment_methods', 'payment_verifications',
     'bot_messages', 'whatsapp_templates',
-    'enabled_languages', 'bot_message_translations'
+    'enabled_languages', 'bot_message_translations',
+    'bot_sessions',
+    'amenities', 'prayer_times', 'prayer_times_settings',
+    'menu_options', 'menu_option_translations'
   )
 ORDER BY table_name;
 
--- Verify RLS is enabled on all 22 tables
+-- Verify RLS is enabled on all 30 tables
 SELECT
   schemaname,
   tablename,
@@ -1617,8 +1948,12 @@ WHERE schemaname = 'public'
     'daily_reports', 'transactions', 'expense_categories', 'expenses',
     'admin_users', 'admin_permissions', 'admin_otp',
     'visitor_passes', 'parcels', 'broadcast_logs',
+    'payment_methods', 'payment_verifications',
     'bot_messages', 'whatsapp_templates',
-    'enabled_languages', 'bot_message_translations'
+    'enabled_languages', 'bot_message_translations',
+    'bot_sessions',
+    'amenities', 'prayer_times', 'prayer_times_settings',
+    'menu_options', 'menu_option_translations'
   )
 ORDER BY tablename;
 
@@ -1629,10 +1964,16 @@ SELECT 'whatsapp_templates', COUNT(*) FROM whatsapp_templates
 UNION ALL
 SELECT 'expense_categories', COUNT(*) FROM expense_categories
 UNION ALL
-SELECT 'booking_settings', COUNT(*) FROM booking_settings;
+SELECT 'booking_settings', COUNT(*) FROM booking_settings
+UNION ALL
+SELECT 'amenities', COUNT(*) FROM amenities
+UNION ALL
+SELECT 'prayer_times', COUNT(*) FROM prayer_times
+UNION ALL
+SELECT 'menu_options', COUNT(*) FROM menu_options;
 
 -- Final status
 SELECT
   'Manzhil by Scrift - Database setup complete!' as status,
-  '22 tables created with RLS, triggers, and seed data' as summary,
+  '30 tables created with RLS, triggers, and seed data' as summary,
   NOW() as completed_at;

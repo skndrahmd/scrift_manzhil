@@ -17,6 +17,11 @@ This is **Manzhil by Scrift**, a comprehensive Building Management System (BMS) 
 - Enhanced analytics dashboard with PDF & CSV reports
 - Configurable per-admin notification preferences
 - Multilingual WhatsApp bot with Google Translate integration
+- Amenities management with prayer times integration
+- Payment method management & payment receipt verification
+- Tenant/Owner resident type tracking with auto-sync
+- Dynamic database-driven WhatsApp bot main menu
+- Vitest test suite (20+ tests)
 
 **Tech Stack:**
 - **Framework:** Next.js 14 (App Router, SSR)
@@ -26,7 +31,9 @@ This is **Manzhil by Scrift**, a comprehensive Building Management System (BMS) 
 - **Messaging:** Twilio WhatsApp Business API
 - **PDF Generation:** jsPDF + jspdf-autotable
 - **CSV Parsing:** PapaParse
+- **Validation:** Zod + React Hook Form
 - **Translation:** Google Cloud Translation API v2
+- **Testing:** Vitest + Testing Library + jsdom
 - **Deployment:** Vercel (primary) or Hostinger VPS + Docker
 
 ## Development Commands
@@ -44,6 +51,15 @@ npm start
 
 # Linting
 npm run lint
+
+# Run all tests once
+npm run test
+
+# Watch mode
+npm run test:watch
+
+# Coverage report
+npm run test:coverage
 ```
 
 ### Testing API Endpoints
@@ -87,6 +103,8 @@ app/
 │   ├── settings/           # Admin settings & RBAC (super_admin only)
 │   │   ├── bot-messages/   # Bot message customization editor page
 │   │   ├── whatsapp-templates/ # WhatsApp template manager page
+│   │   ├── amenities/      # Amenities management page
+│   │   ├── menu-options/   # Dynamic main menu editor page
 │   │   └── languages/      # Multilingual settings
 │   │       ├── page.tsx     # Language management (add, toggle, remove)
 │   │       └── [code]/page.tsx # Per-language translation editor
@@ -104,11 +122,13 @@ app/
 │   │   ├── bulk-import/    # Bulk import residents from CSV
 │   │   ├── check-duplicates/ # Duplicate phone detection
 │   │   └── welcome-message/ # Send welcome WhatsApp
-│   ├── admin/staff/        # Staff CRUD & permissions
-│   │   ├── route.ts
-│   │   └── [id]/
-│   │       ├── route.ts
-│   │       └── permissions/route.ts
+│   ├── admin/
+│   │   ├── staff/          # Staff CRUD & permissions
+│   │   │   ├── route.ts
+│   │   │   └── [id]/
+│   │   │       ├── route.ts
+│   │   │       └── permissions/route.ts
+│   │   └── payment-methods/ # Payment method management
 │   ├── bookings/           # Booking APIs
 │   │   ├── send-reminder/
 │   │   └── update-payment-status/
@@ -156,6 +176,17 @@ app/
 │   │           └── [key]/
 │   │               ├── route.ts          # PATCH update translation
 │   │               └── retranslate/route.ts # POST re-translate single message
+│   ├── amenities/          # Amenity CRUD
+│   ├── prayer-times/       # Prayer times CRUD
+│   ├── payment-verifications/ # Payment receipt verification
+│   │   ├── route.ts        # List/create verifications
+│   │   └── [id]/route.ts   # Update verification status
+│   ├── menu-options/       # Dynamic main menu CRUD
+│   │   ├── route.ts        # GET all, PUT bulk update
+│   │   ├── [id]/           # Single menu option CRUD
+│   │   │   └── translations/ # Per-option translations
+│   │   ├── retranslate/    # Retranslate all menu labels
+│   │   └── translations/   # Bulk translation management
 │   ├── webhook/route.ts    # WhatsApp conversational bot endpoint
 │   ├── twilio/             # WhatsApp template sender
 │   │   └── send-template/
@@ -204,7 +235,9 @@ lib/
 │   ├── booking.ts          # Booking payment status updates & confirmations
 │   ├── broadcast.ts        # Broadcast message sending with rate limiting
 │   ├── complaint.ts        # Complaint status updates & notifications
-│   └── maintenance.ts      # Maintenance payment processing & confirmations
+│   ├── maintenance.ts      # Maintenance payment processing & confirmations
+│   ├── payment-verification.ts # Payment verification approve/reject logic
+│   └── resident-type-sync.ts # Tenant/owner sync across units
 ├── supabase/               # Database clients, types & constants
 │   ├── client.ts           # supabase (anon) and supabaseAdmin (service role) clients
 │   ├── constants.ts        # PAGE_KEYS, BROADCAST_LIMITS
@@ -241,10 +274,12 @@ lib/
     ├── message-defaults.ts # Hardcoded fallback defaults for all messages (includes 10 label defaults)
     └── handlers/           # Conversation flow handlers
         ├── index.ts
+        ├── amenity.ts      # Amenities & prayer times flow
         ├── booking.ts      # Hall booking flow
         ├── complaint.ts    # Complaint registration flow
         ├── feedback.ts     # Feedback submission flow
         ├── hall.ts         # Hall info & availability
+        ├── payment.ts      # Payment receipt submission flow
         ├── staff.ts        # Staff management flow
         ├── status.ts       # Status check flow
         └── visitor.ts      # Visitor pass flow
@@ -268,11 +303,16 @@ components/
 │   ├── bot-messages-editor.tsx  # Bot message customization editor
 │   ├── whatsapp-template-manager.tsx # WhatsApp template management UI
 │   ├── language-settings.tsx    # Language management UI with retranslate
-│   └── translation-editor.tsx   # Per-language translation editing UI
+│   ├── translation-editor.tsx   # Per-language translation editing UI
+│   ├── amenities-manager.tsx    # Amenities CRUD UI
+│   ├── prayer-times-manager.tsx # Prayer times management
+│   ├── payment-methods-manager.tsx # Payment method management
+│   └── menu-options-manager.tsx # Dynamic main menu editor
 ├── accounting/             # Financial dashboard components
 │   ├── accounting-tab.tsx
 │   ├── expenses-manager.tsx
 │   ├── financial-summary-cards.tsx
+│   ├── payment-verifications-table.tsx # Payment verification dashboard
 │   ├── revenue-charts.tsx
 │   ├── transactions-table.tsx  # Includes invoice view buttons for income rows
 │   └── index.ts
@@ -281,6 +321,15 @@ components/
 ├── settings-dialog.tsx
 ├── theme-provider.tsx
 └── user-menu.tsx
+
+tests/
+├── api/                    # API route tests
+├── services/               # Service layer tests
+├── webhook/                # Bot handler tests
+├── bulk-import/            # Import logic tests
+├── date/                   # Date utility tests
+├── mocks/                  # Shared test mocks
+└── setup.ts                # Test setup file
 
 middleware.ts               # Authentication & RBAC route protection
 ```
@@ -306,11 +355,11 @@ middleware.ts               # Authentication & RBAC route protection
 - Two roles: `super_admin` (full access) and `staff` (permission-based)
 - Permissions stored in `admin_permissions` table per page
 - API routes use `verifyAdminAccess(pageKey)` from `lib/auth`
-- Page keys (12 total):
+- Page keys (13 total):
   ```typescript
   PageKey = "dashboard" | "residents" | "units" | "bookings" | "complaints" |
             "visitors" | "parcels" | "analytics" | "feedback" | "accounting" |
-            "broadcast" | "settings"
+            "broadcast" | "settings" | "amenities"
   ```
 - Settings page restricted to super admins only
 
@@ -329,8 +378,9 @@ middleware.ts               # Authentication & RBAC route protection
 **6. WhatsApp Integration**
 - **Outbound notifications:** Uses Twilio Content Templates (HX SIDs stored in env vars) via `lib/twilio/` modules
 - **Inbound webhook bot:** `lib/webhook/` handles resident conversations via WhatsApp
-  - Menu-driven interaction (reply 1-12 for main menu options)
-  - Conversation state management with flow handlers for complaints, bookings, visitors, parcels, feedback, staff
+  - Menu-driven interaction with dynamic, database-driven main menu options
+  - Database-persistent conversation state via `bot_sessions` table (survives server restarts)
+  - Flow handlers for complaints, bookings, visitors, parcels, feedback, staff, amenities, payment receipts
   - Processes incoming messages at `/api/webhook/` route
 - Template SIDs configured in `.env` (see `.env.example` for full list)
 - **Important:** All fallback messages use this format: "Hello, this is Manzhil by Scrift.\n\nHi {Resident Name}, your..." (system introduces itself in 3rd person, then addresses user in 2nd person)
@@ -375,6 +425,8 @@ middleware.ts               # Authentication & RBAC route protection
 - `broadcast.ts` — Broadcast message sending with rate limiting
 - `complaint.ts` — Complaint status updates and notifications; exports `ServiceError` class
 - `maintenance.ts` — Maintenance payment processing and confirmations
+- `payment-verification.ts` — Payment verification approve/reject with WhatsApp notifications
+- `resident-type-sync.ts` — Tenant/owner type sync across units
 
 **11. PDF Generation & Reports**
 - Uses jsPDF for server-side PDF rendering with shared theme (`lib/pdf/theme.ts`)
@@ -409,14 +461,14 @@ middleware.ts               # Authentication & RBAC route protection
 - Configuration in `lib/supabase/client.ts`: `eventsPerSecond: 10`
 
 **14. Bot Message Customization**
-- All ~115 WhatsApp bot messages are stored in the `bot_messages` database table
+- All ~125 WhatsApp bot messages are stored in the `bot_messages` database table
 - Admin UI at `/admin/settings/bot-messages` (super_admin only) allows editing all messages without code changes
 - Core module: `lib/webhook/messages.ts` with `getMessage(key, variables?)` function
 - Messages use `{variable}` interpolation syntax (e.g., `{name}`, `{date}`, `{options}`)
 - 5-minute in-memory cache (matches `SETTINGS_CACHE_DURATION`), cleared on admin save
 - Falls back to hardcoded defaults in `lib/webhook/message-defaults.ts` if DB is unavailable
 - Message keys defined as TypeScript constants in `lib/webhook/message-keys.ts` (`MSG.MAIN_MENU`, `MSG.HALL_BOOKING_DATE`, etc.)
-- Flow groups (tabs in admin UI): `main_menu`, `complaint`, `booking`, `hall`, `staff`, `visitor`, `feedback`, `status`, `errors`, `navigation`
+- Flow groups (tabs in admin UI): `main_menu`, `complaint`, `booking`, `hall`, `staff`, `visitor`, `feedback`, `status`, `amenity`, `payment`, `errors`, `navigation`
 - API routes: `GET /api/bot-messages` (list all), `PATCH /api/bot-messages/[key]` (update/reset)
 - Seed data: `database-seed-bot-messages.sql` (idempotent, uses `ON CONFLICT DO NOTHING`)
 
@@ -446,6 +498,46 @@ middleware.ts               # Authentication & RBAC route protection
 - API routes under `/api/languages/` for language CRUD, translation CRUD, and retranslation
 - When a new language is added, all ~125 bot messages are auto-translated via Google Translate
 - Seed data: `sql/database-seed-label-messages.sql` (label message keys), `sql/database-multilingual-schema.sql` (tables)
+
+**17. Amenities System**
+- Admin CRUD at `/admin/settings/amenities` with reordering
+- WhatsApp bot flow via `lib/webhook/handlers/amenity.ts`
+- DB tables: `amenities` (name, open/close time, maintenance status, sort_order)
+- Prayer times integrated as sub-feature (tables: `prayer_times`, `prayer_times_settings`)
+- API routes: `/api/amenities`, `/api/prayer-times`
+
+**18. Payment Methods & Verification**
+- Payment methods (JazzCash, EasyPaisa, Bank Transfer) managed via admin settings
+- Payment verification workflow: resident submits receipt via WhatsApp → admin approves/rejects
+- DB tables: `payment_methods`, `payment_verifications`
+- API: `/api/admin/payment-methods`, `/api/payment-verifications`
+- WhatsApp bot handler: `lib/webhook/handlers/payment.ts`
+- Service: `lib/services/payment-verification.ts`
+
+**19. Tenant/Owner Resident Types**
+- `resident_type` field on profiles (`owner` | `tenant`)
+- Auto-sync: changing one resident's type syncs all residents in same unit
+- Service: `lib/services/resident-type-sync.ts`
+- Supported in bulk CSV import (optional column, defaults to `tenant`)
+
+**20. Database-Persistent Bot State**
+- Conversation state persisted to `bot_sessions` table (phone_number PK, JSONB state)
+- Functions: `getState()`, `setState()`, `updateState()`, `clearState()`, `hasActiveFlow()`, `isSessionExpired()`
+- Sessions survive server restarts; stale sessions can be cleaned up via `cleanupExpiredSessions()`
+
+**21. Dynamic Main Menu System**
+- Main menu options stored in `menu_options` DB table (no longer hardcoded)
+- Each option: `action_key`, `label`, `emoji`, `is_enabled`, `sort_order`, `handler_type`
+- 12 handler types mapping to handler functions
+- Admin UI at `/admin/settings/menu-options` — reorder, toggle, edit labels/emojis
+- Translations via `menu_option_translations` table with stale-marking trigger
+- Config functions: `getMenuOptions()`, `getAllMenuOptions()`, `getMenuActionMap()`
+
+**22. Testing (Vitest)**
+- Vitest with jsdom environment, v8 coverage
+- 20+ test files in `tests/` directory
+- Coverage targets: `lib/**` and `app/api/**`
+- Shared mocks in `tests/mocks/`
 
 ## Important Development Guidelines
 
@@ -547,7 +639,7 @@ Required variables (see `.env.example` for complete list):
 
 ## Database Schema
 
-Complete schema in `database-complete-schema.sql` — all 22 tables, RLS policies, indexes, triggers, and default data. Run once in Supabase SQL Editor for a fresh instance.
+Complete schema in `database-complete-schema.sql` — all 30 tables, RLS policies, indexes, triggers, and seed data. **This is the single source of truth for new instance setup.** Run once in Supabase SQL Editor for a fresh instance. Always keep this file updated when adding new tables or schema changes.
 
 **Core Tables:**
 - `units` — Apartment units with maintenance tracking
@@ -583,6 +675,22 @@ Complete schema in `database-complete-schema.sql` — all 22 tables, RLS policie
 **Multilingual Tables:**
 - `enabled_languages` — Enabled languages with language_code, language_name, native_name, is_enabled, sort_order
 - `bot_message_translations` — Per-language translations with message_key FK, language_code FK, translated_text, is_auto_translated, updated_by
+
+**Amenity Tables:**
+- `amenities` — Building amenities with operating hours and maintenance status
+- `prayer_times` — 5 daily prayer times
+- `prayer_times_settings` — Prayer times master toggle
+
+**Payment Tables:**
+- `payment_methods` — Configured payment methods (JazzCash, EasyPaisa, bank)
+- `payment_verifications` — Payment receipt submissions and admin review status
+
+**Menu Tables:**
+- `menu_options` — Dynamic WhatsApp bot main menu configuration
+- `menu_option_translations` — Per-language translations for menu option labels
+
+**Bot State:**
+- `bot_sessions` — Persistent conversation state per phone number
 
 **Additional Tables:**
 - `admin_otp` — WhatsApp OTP codes for admin authentication
@@ -664,6 +772,30 @@ Complete schema in `database-complete-schema.sql` — all 22 tables, RLS policie
 6. Toggle languages on/off without deleting translations
 7. Residents select their preferred language via WhatsApp bot menu option "0"
 
+### Managing Amenities
+1. Navigate to Admin > Settings > Amenities (super admin only)
+2. Add, edit, reorder amenities with name, open/close times
+3. Toggle maintenance status for individual amenities
+4. Amenities are displayed to residents via WhatsApp bot
+
+### Managing Payment Methods
+1. Navigate to Admin > Settings > Payments (super admin only)
+2. Add JazzCash, EasyPaisa, or Bank Transfer payment methods
+3. Configure account details for each method
+4. Payment methods are shown to residents when submitting receipts via WhatsApp bot
+
+### Reviewing Payment Receipts
+1. Navigate to Admin > Accounting > Verifications tab
+2. View submitted payment receipts with images
+3. Approve or reject with WhatsApp notification sent to resident
+
+### Editing Main Menu
+1. Navigate to Admin > Settings > Menu Options (super admin only)
+2. Reorder menu options with up/down arrows
+3. Enable/disable individual options
+4. Edit labels and emojis inline
+5. WhatsApp preview panel shows live preview
+
 ### Modifying Booking Slots
 1. Update `booking_settings` table in database
 2. Slot calculations automatically update (see `lib/date/time-slots.ts:generateTimeSlots()`)
@@ -686,17 +818,24 @@ import { Button } from '@/components/ui/button'
 6. **Permission checks** — Middleware queries DB directly on every request (no caching)
 7. **SUPABASE_SERVICE_ROLE_KEY is required** — Middleware redirects to `/admin/unauthorized` if this env var is missing. It is not optional.
 8. **Supabase storage** — CNIC and parcel images stored in Supabase Storage buckets
-9. **Schema completeness** — `database-complete-schema.sql` contains all 22 tables for a fresh install
+9. **Schema completeness** — `database-complete-schema.sql` contains all 30 tables for a fresh install (single source of truth)
 10. **Bot message cache** — 5-min in-memory cache; call `clearMessageCache()` after admin updates; falls back to hardcoded defaults if DB fails
 
 ## Additional Documentation
 
 - `docs/` — Developer guide, new instance setup guide, and other documentation
-- `database-complete-schema.sql` — Complete database setup (all 22 tables)
+- `database-complete-schema.sql` — Complete database setup (core 22 tables)
 - `database-seed-bot-messages.sql` — Seed data for all ~125 bot messages (includes 10 label keys)
 - `database-seed-whatsapp-templates.sql` — Seed data for all 20 WhatsApp templates
 - `sql/database-seed-label-messages.sql` — Seed data for 10 translatable label message keys
 - `sql/database-multilingual-schema.sql` — Schema for `enabled_languages` and `bot_message_translations` tables
+- `sql/database-amenities-schema.sql` — Amenities management schema
+- `sql/database-prayer-times-schema.sql` — Prayer times management schema
+- `sql/database-payment-methods.sql` — Payment methods schema
+- `sql/database-payment-verifications.sql` — Payment verification schema
+- `sql/database-menu-options-schema.sql` — Dynamic main menu options schema
+- `sql/database-menu-option-translations.sql` — Menu option translations schema
+- `sql/database-seed-payment-messages.sql` — Seed data for payment flow messages
 
 ## Common Pitfalls
 
@@ -714,6 +853,10 @@ import { Button } from '@/components/ui/button'
 - Hardcode WhatsApp bot response strings — use `getMessage()` from `lib/webhook/messages.ts`
 - Hardcode menu labels — use `getLabels()` from `lib/webhook/messages.ts` for translatable labels
 - Strip `{variable}` placeholders when translating — use `lib/google-translate.ts` which preserves them automatically
+- Add flow groups to `bot-messages-editor.tsx` without also adding to `translation-editor.tsx`
+- Forget to add new menu options to all three places: config, database, and handler mapping
+- Hardcode `Reply 1-N` in bot messages — use `{max_option}` variable instead
+- Add new DB tables in separate SQL files without also adding them to `database-complete-schema.sql` — it must always be the single source of truth for new instance setup
 
 **Do:**
 - Use `supabaseAdmin` for operations that need to bypass RLS
@@ -729,3 +872,6 @@ import { Button } from '@/components/ui/button'
 - Use `getLabels(MSG.LABELS_KEY, language)` for translatable menu labels in menu builders
 - Pass the resident's `language` parameter through to `getMessage()` and `getLabels()` for multilingual support
 - Store new translatable menu options as `\n`-delimited strings in `bot_messages` with a `labels.` prefixed key
+- Use barrel imports from module `index.ts` files (e.g., `@/lib/supabase`, `@/lib/auth`, `@/lib/date`)
+- When adding new bot flows, update all 8 required files (see "Adding New WhatsApp Bot Flows" pattern in BLACKBOX.md)
+- Always update `database-complete-schema.sql` when adding new tables, columns, indexes, RLS policies, triggers, or seed data — this file must be runnable standalone for fresh client instances
