@@ -129,7 +129,54 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    return NextResponse.json({ language: lang, translations_count: rows.length })
+    // 5. Fetch all menu options
+    const { data: menuOptions, error: menuError } = await supabaseAdmin
+      .from("menu_options")
+      .select("id, label")
+
+    if (menuError || !menuOptions) {
+      console.error("[Languages API] Failed to fetch menu options:", menuError)
+      // Don't fail - bot messages were translated successfully
+      return NextResponse.json({
+        language: lang,
+        translations_count: rows.length,
+        warning: "Language added but menu option translations failed",
+      })
+    }
+
+    // 6. Translate all menu option labels
+    const menuLabels = menuOptions.map((opt) => opt.label)
+    const translatedLabels = await translateBatch(menuLabels, language_code)
+
+    // 7. Insert menu option translations
+    const menuTranslationRows = menuOptions.map((opt, i) => ({
+      menu_option_id: opt.id,
+      language_code,
+      translated_label: translatedLabels[i],
+      is_auto_translated: true,
+      is_stale: false,
+    }))
+
+    const { error: menuInsertError } = await supabaseAdmin
+      .from("menu_option_translations")
+      .insert(menuTranslationRows)
+
+    if (menuInsertError) {
+      console.error("[Languages API] Menu option translation insert error:", menuInsertError)
+      // Don't fail - bot messages were translated successfully
+      return NextResponse.json({
+        language: lang,
+        translations_count: rows.length,
+        menu_translations_count: 0,
+        warning: "Language added but menu option translations failed",
+      })
+    }
+
+    return NextResponse.json({
+      language: lang,
+      translations_count: rows.length,
+      menu_translations_count: menuTranslationRows.length,
+    })
   } catch (error) {
     console.error("[Languages API] POST error:", error)
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })

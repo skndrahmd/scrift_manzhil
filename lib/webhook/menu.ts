@@ -41,11 +41,13 @@ function safeLabels(
  * admin changes to order, labels, emojis, and enabled/disabled state are
  * reflected in real time. Falls back to the static MAIN_MENU_OPTIONS array
  * if the database is unavailable.
+ * Translations are fetched from menu_option_translations table when language is provided.
  */
 export async function getMainMenu(name: string, language?: string): Promise<string> {
-  const dynamicOptions = await getMenuOptions()
+  // Fetch menu options with translated labels (if language provided)
+  const dynamicOptions = await getMenuOptions(language)
 
-  // Build the menu string from dynamic options
+  // Build the menu string with translated labels
   const options = dynamicOptions.map(
     (opt) => `${opt.key}. ${opt.emoji} ${opt.label}`
   ).join("\n")

@@ -137,12 +137,15 @@ const FALLBACK_HANDLER_MAP: Record<string, string> = {
  * Fetches enabled menu options from the database, ordered by sort_order.
  * Falls back to the static MAIN_MENU_OPTIONS if the DB query fails.
  * Each returned item has a sequential `key` (1-based) for display numbering.
+ *
+ * @param language - Optional language code. If provided, returns translated labels.
  */
-export async function getMenuOptions(): Promise<{ key: string; label: string; emoji: string; handler_type: string }[]> {
+export async function getMenuOptions(language?: string): Promise<{ key: string; label: string; emoji: string; handler_type: string }[]> {
   try {
+    // Base query for enabled menu options
     const { data, error } = await supabaseAdmin
       .from("menu_options")
-      .select("label, emoji, handler_type, sort_order")
+      .select("id, label, emoji, handler_type, sort_order")
       .eq("is_enabled", true)
       .order("sort_order", { ascending: true })
 
@@ -151,10 +154,28 @@ export async function getMenuOptions(): Promise<{ key: string; label: string; em
       return MAIN_MENU_OPTIONS.map(opt => ({ ...opt, handler_type: FALLBACK_HANDLER_MAP[opt.key] || opt.key }))
     }
 
+    // If language is provided, fetch translations
+    let translations: Record<string, string> = {}
+    if (language) {
+      const menuOptionIds = data.map(opt => opt.id)
+      const { data: transData } = await supabaseAdmin
+        .from("menu_option_translations")
+        .select("menu_option_id, translated_label")
+        .eq("language_code", language)
+        .in("menu_option_id", menuOptionIds)
+
+      if (transData) {
+        for (const t of transData) {
+          translations[t.menu_option_id] = t.translated_label
+        }
+      }
+    }
+
     // Assign sequential keys (1-based) based on sort order
+    // Use translated label if available, otherwise fall back to English
     return data.map((opt, index) => ({
       key: String(index + 1),
-      label: opt.label,
+      label: translations[opt.id] || opt.label,
       emoji: opt.emoji,
       handler_type: opt.handler_type,
     }))

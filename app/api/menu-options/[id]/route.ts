@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { isSuperAdmin } from "@/lib/auth"
 import { supabaseAdmin } from "@/lib/supabase"
+import { translateBatch } from "@/lib/google-translate"
 
 export const dynamic = "force-dynamic"
 
@@ -8,6 +9,8 @@ export const dynamic = "force-dynamic"
  * PATCH /api/menu-options/[id]
  * Update a single menu option's label, emoji, or is_enabled.
  * Requires super_admin role.
+ *
+ * When label changes, automatically retranslate all translations.
  *
  * Request body (all fields optional):
  * {
@@ -59,6 +62,55 @@ export async function PATCH(
 
     if (!data) {
       return NextResponse.json({ error: "Menu option not found" }, { status: 404 })
+    }
+
+    // If label changed, retranslate all stale translations for this menu option
+    if (updateData.label) {
+      try {
+        // Fetch stale translations for this menu option
+        const { data: staleTrans, error: staleError } = await supabaseAdmin
+          .from("menu_option_translations")
+          .select("id, language_code")
+          .eq("menu_option_id", id)
+          .eq("is_stale", true)
+
+        if (!staleError && staleTrans && staleTrans.length > 0) {
+          // Group by language and translate
+          const byLanguage: Record<string, string[]> = {}
+          for (const t of staleTrans) {
+            if (!byLanguage[t.language_code]) {
+              byLanguage[t.language_code] = []
+            }
+            byLanguage[t.language_code].push(t.id)
+          }
+
+          // Translate the new label for each language
+          for (const [langCode, translationIds] of Object.entries(byLanguage)) {
+            try {
+              const [translatedLabel] = await translateBatch([data.label], langCode)
+
+              // Update all translations for this language
+              await supabaseAdmin
+                .from("menu_option_translations")
+                .update({
+                  translated_label: translatedLabel,
+                  is_stale: false,
+                  is_auto_translated: true,
+                  updated_at: new Date().toISOString(),
+                })
+                .in("id", translationIds)
+
+              console.log(`[PATCH /api/menu-options/${id}] Retranslated for ${langCode}`)
+            } catch (transErr) {
+              console.error(`[PATCH /api/menu-options/${id}] Translation error for ${langCode}:`, transErr)
+              // Don't fail the request - translations remain stale for manual retranslation
+            }
+          }
+        }
+      } catch (retransErr) {
+        console.error(`[PATCH /api/menu-options/${id}] Retranslation error:`, retransErr)
+        // Don't fail the request - translations remain stale
+      }
     }
 
     return NextResponse.json({ option: data })

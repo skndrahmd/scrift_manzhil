@@ -6,6 +6,13 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Switch } from "@/components/ui/switch"
 import { Badge } from "@/components/ui/badge"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog"
 import { useToast } from "@/hooks/use-toast"
 import {
   ArrowUp,
@@ -18,6 +25,8 @@ import {
   X,
   Check,
   RotateCcw,
+  Languages,
+  AlertCircle,
 } from "lucide-react"
 import Link from "next/link"
 
@@ -33,23 +42,54 @@ interface MenuOption {
   updated_at: string
 }
 
+interface Language {
+  language_code: string
+  language_name: string
+  native_name: string | null
+  is_enabled: boolean
+}
+
+interface MenuOptionTranslation {
+  id: string
+  menu_option_id: string
+  language_code: string
+  translated_label: string
+  is_stale: boolean
+  is_auto_translated: boolean
+}
+
 export function MenuOptionsManager() {
   const [options, setOptions] = useState<MenuOption[]>([])
+  const [languages, setLanguages] = useState<Language[]>([])
+  const [translations, setTranslations] = useState<MenuOptionTranslation[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [hasChanges, setHasChanges] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editLabel, setEditLabel] = useState("")
   const [editEmoji, setEditEmoji] = useState("")
+  const [translationsDialogOpen, setTranslationsDialogOpen] = useState(false)
+  const [selectedOptionId, setSelectedOptionId] = useState<string | null>(null)
+  const [editingTranslation, setEditingTranslation] = useState<string | null>(null)
+  const [editTranslationText, setEditTranslationText] = useState("")
   const { toast } = useToast()
 
   const fetchOptions = useCallback(async () => {
     try {
       setLoading(true)
-      const res = await fetch("/api/menu-options")
-      if (!res.ok) throw new Error("Failed to fetch menu options")
-      const data = await res.json()
-      setOptions(data.options || [])
+      const [optionsRes, languagesRes] = await Promise.all([
+        fetch("/api/menu-options"),
+        fetch("/api/languages"),
+      ])
+      
+      if (!optionsRes.ok) throw new Error("Failed to fetch menu options")
+      if (!languagesRes.ok) throw new Error("Failed to fetch languages")
+      
+      const optionsData = await optionsRes.json()
+      const languagesData = await languagesRes.json()
+      
+      setOptions(optionsData.options || [])
+      setLanguages(languagesData.languages || [])
       setHasChanges(false)
     } catch (err) {
       console.error("Failed to fetch menu options:", err)
@@ -62,6 +102,67 @@ export function MenuOptionsManager() {
       setLoading(false)
     }
   }, [toast])
+
+  const fetchTranslations = async (menuOptionId: string) => {
+    try {
+      const res = await fetch(`/api/menu-options/${menuOptionId}/translations`)
+      if (res.ok) {
+        const data = await res.json()
+        setTranslations(data.translations || [])
+      }
+    } catch (err) {
+      console.error("Failed to fetch translations:", err)
+    }
+  }
+
+  const openTranslationsDialog = (optionId: string) => {
+    setSelectedOptionId(optionId)
+    setTranslationsDialogOpen(true)
+    fetchTranslations(optionId)
+  }
+
+  const saveTranslation = async (translationId: string, newText: string) => {
+    try {
+      const res = await fetch(`/api/menu-options/translations/${translationId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ translated_label: newText }),
+      })
+      
+      if (!res.ok) throw new Error("Failed to update translation")
+      
+      setTranslations(prev =>
+        prev.map(t => t.id === translationId ? { ...t, translated_label: newText, is_stale: false } : t)
+      )
+      setEditingTranslation(null)
+      toast({ title: "Updated", description: "Translation saved" })
+    } catch (err) {
+      console.error("Failed to save translation:", err)
+      toast({
+        title: "Error",
+        description: "Failed to save translation",
+        variant: "destructive",
+      })
+    }
+  }
+
+  const getTranslationStatus = (optionId: string) => {
+    const optionTranslations = translations.filter(t => t.menu_option_id === optionId)
+    const enabledLanguages = languages.filter(l => l.is_enabled)
+    
+    if (enabledLanguages.length === 0) return null
+    
+    const translatedCount = optionTranslations.filter(t => !t.is_stale).length
+    const staleCount = optionTranslations.filter(t => t.is_stale).length
+    
+    if (staleCount > 0) {
+      return { status: "stale" as const, translated: translatedCount, total: enabledLanguages.length }
+    }
+    if (translatedCount === enabledLanguages.length) {
+      return { status: "complete" as const, translated: translatedCount, total: enabledLanguages.length }
+    }
+    return { status: "partial" as const, translated: translatedCount, total: enabledLanguages.length }
+  }
 
   useEffect(() => {
     fetchOptions()
@@ -333,6 +434,18 @@ export function MenuOptionsManager() {
                     >
                       <Pencil className="h-3 w-3" />
                     </Button>
+                    {/* Translations button */}
+                    {languages.filter(l => l.is_enabled).length > 0 && (
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        onClick={() => openTranslationsDialog(opt.id)}
+                        className="h-7 w-7 ml-1"
+                        title="View translations"
+                      >
+                        <Languages className="h-3 w-3" />
+                      </Button>
+                    )}
                   </div>
                 )}
               </div>
@@ -393,6 +506,102 @@ export function MenuOptionsManager() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Translations Dialog */}
+      <Dialog open={translationsDialogOpen} onOpenChange={setTranslationsDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Languages className="h-5 w-5" />
+              Translations
+            </DialogTitle>
+            <DialogDescription>
+              {selectedOptionId
+                ? options.find(o => o.id === selectedOptionId)?.label
+                : "Menu option translations"}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            {languages.filter(l => l.is_enabled).length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                No languages enabled. Enable languages in Settings to see translations.
+              </p>
+            ) : (
+              languages
+                .filter(l => l.is_enabled)
+                .map(lang => {
+                  const trans = translations.find(
+                    t => t.language_code === lang.language_code && t.menu_option_id === selectedOptionId
+                  )
+                  const isEditing = editingTranslation === lang.language_code
+                  
+                  return (
+                    <div key={lang.language_code} className="flex items-center gap-2">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-sm font-medium">
+                            {lang.native_name || lang.language_name}
+                          </span>
+                          {trans?.is_stale && (
+                            <Badge variant="destructive" className="text-xs">
+                              <AlertCircle className="h-3 w-3 mr-1" />
+                              Needs retranslation
+                            </Badge>
+                          )}
+                        </div>
+                        {isEditing ? (
+                          <div className="flex items-center gap-2">
+                            <Input
+                              value={editTranslationText}
+                              onChange={e => setEditTranslationText(e.target.value)}
+                              className="flex-1"
+                              autoFocus
+                            />
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              onClick={() => trans && saveTranslation(trans.id, editTranslationText)}
+                              className="text-green-600"
+                            >
+                              <Check className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              onClick={() => setEditingTranslation(null)}
+                              className="text-red-600"
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm text-muted-foreground">
+                              {trans?.translated_label || "Not translated"}
+                            </span>
+                            {trans && (
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                onClick={() => {
+                                  setEditingTranslation(lang.language_code)
+                                  setEditTranslationText(trans.translated_label)
+                                }}
+                                className="h-6 w-6"
+                              >
+                                <Pencil className="h-3 w-3" />
+                              </Button>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )
+                })
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
