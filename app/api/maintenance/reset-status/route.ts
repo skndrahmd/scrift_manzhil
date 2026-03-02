@@ -1,20 +1,22 @@
 import type { NextRequest } from "next/server"
 import { NextResponse } from "next/server"
 import { verifyAdminAccess } from "@/lib/auth/api-auth"
-import { resetAllUnitsMaintenanceStatus } from "@/lib/services/maintenance-notification"
+import { smartResetStaleMaintenanceStatus } from "@/lib/services/maintenance-notification"
 
 /**
  * POST /api/maintenance/reset-status
- * Manually reset all units' maintenance_paid status to false.
+ * Smart reset: Only resets units with stale maintenance status.
  *
- * This is useful when:
- * - The cron job didn't run on the 1st of the month
- * - Testing the maintenance flow
- * - Correcting stale status data
+ * A unit is considered stale if:
+ * - maintenance_paid = true (shows as paid)
+ * - But current month's invoice has status = 'unpaid'
+ *
+ * This is safer than resetting all units, as it won't affect units
+ * that have legitimately paid their maintenance.
  *
  * Response:
  * - success: boolean
- * - unitsReset: number - Count of units reset to unpaid
+ * - unitsReset: number - Count of stale units reset to unpaid
  * - error?: string - Error message if failed
  */
 export async function POST(request: NextRequest) {
@@ -24,9 +26,9 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    console.log(`[RESET STATUS] Admin ${adminUser?.id} triggered manual maintenance status reset`)
+    console.log(`[RESET STATUS] Admin ${adminUser?.id} triggered smart maintenance status reset`)
 
-    const result = await resetAllUnitsMaintenanceStatus()
+    const result = await smartResetStaleMaintenanceStatus()
 
     if (result.success) {
       console.log(`[RESET STATUS] Successfully reset ${result.unitsReset} units to unpaid status`)
