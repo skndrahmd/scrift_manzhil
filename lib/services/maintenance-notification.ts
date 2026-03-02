@@ -459,10 +459,10 @@ export async function sendMonthlyInvoices(
         primaryResident.id
       )
 
-      // Check if current month invoice exists
+      // Check if current month invoice exists and its status
       const { data: existingPayment } = await supabaseAdmin
         .from("maintenance_payments")
-        .select("id")
+        .select("id, status")
         .eq("unit_id", unit.id)
         .eq("year", currentYear)
         .eq("month", currentMonth)
@@ -471,6 +471,11 @@ export async function sendMonthlyInvoices(
       let paymentId: string
 
       if (existingPayment) {
+        // Skip if already paid for current month
+        if (existingPayment.status === "paid") {
+          console.log(`[MAINTENANCE INVOICE] Unit ${unit.apartment_number}: Already paid for ${monthYearLabel}, skipping invoice`)
+          continue
+        }
         paymentId = existingPayment.id
       } else {
         // Create new payment record
