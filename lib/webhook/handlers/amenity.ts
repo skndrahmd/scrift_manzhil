@@ -207,6 +207,7 @@ export async function initializeAmenityFlow(
     step: "amenity_selection",
     type: "amenity",
     amenities: amenityIds,
+    language,
   })
 
   return await getMessage(MSG.AMENITY_MENU, {

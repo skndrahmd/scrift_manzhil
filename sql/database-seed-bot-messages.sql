@@ -217,5 +217,14 @@ VALUES
 ('amenity.timings', 'amenity', 'Amenity Timings', 'Operating hours for an amenity', E'🏟️ *{name}*\n\n⏰ *Timings*\n{timings}\n\nReply *0* for menu', '["name", "timings"]'::jsonb, 2),
 ('amenity.under_maintenance', 'amenity', 'Amenity Under Maintenance', 'Shown when amenity is under maintenance', E'🏟️ *{name}*\n\n🔧 *Under Maintenance*\n\nThis amenity is currently under maintenance. Please check back later.\n\nReply *0* for menu', '["name"]'::jsonb, 3),
 ('amenity.invalid_selection', 'amenity', 'Invalid Amenity Selection', 'Invalid amenity number selected', E'❓ *Invalid Selection*\n\nPlease choose 1-{max}.\n\nReply *0* for menu', '["max"]'::jsonb, 4),
-('amenity.no_amenities', 'amenity', 'No Amenities Available', 'Shown when no active amenities exist', E'📋 *No Amenities Available*\n\nNo amenities are currently configured.\n\nReply *0* for menu', '[]'::jsonb, 5)
+('amenity.no_amenities', 'amenity', 'No Amenities Available', 'Shown when no active amenities exist', E'📋 *No Amenities Available*\n\nNo amenities are currently configured.\n\nReply *0* for menu', '[]'::jsonb, 5),
+('amenity.prayer_times_label', 'amenity', 'Prayer Times Label', 'Label for Prayer Times option in amenity menu', 'Prayer Times', '[]'::jsonb, 6)
+ON CONFLICT (message_key) DO NOTHING;
+
+-- === Prayer Times Flow ===
+
+INSERT INTO bot_messages (message_key, flow_group, label, description, default_text, variables, sort_order)
+VALUES
+('prayer_times.display', 'prayer_times', 'Prayer Times Display', 'Shows all prayer times', E'🕌 *Prayer Times*\n\n{prayers}\n\nReply *0* for menu', '[\"prayers\"]'::jsonb, 1),
+('prayer_times.disabled', 'prayer_times', 'Prayer Times Disabled', 'Shown when prayer times are disabled', E'🕌 *Prayer Times*\n\nPrayer times are currently unavailable.\n\nReply *0* for menu', '[]'::jsonb, 2)
 ON CONFLICT (message_key) DO NOTHING;
