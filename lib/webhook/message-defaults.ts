@@ -1070,6 +1070,8 @@ No amenities are currently configured.
 
 Reply *0* for menu`,
 
+  "amenity.prayer_times_label": `Prayer Times`,
+
   // === Prayer Times Flow ===
   "prayer_times.display": `🕌 *Prayer Times*
 

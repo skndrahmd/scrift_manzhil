@@ -171,6 +171,7 @@ export const MSG = {
   AMENITY_UNDER_MAINTENANCE: "amenity.under_maintenance",
   AMENITY_INVALID_SELECTION: "amenity.invalid_selection",
   AMENITY_NO_AMENITIES: "amenity.no_amenities",
+  AMENITY_PRAYER_TIMES_LABEL: "amenity.prayer_times_label",
 
   // === Prayer Times Flow ===
   PRAYER_TIMES_DISPLAY: "prayer_times.display",

@@ -20,7 +20,8 @@ interface Amenity {
 
 interface PrayerTime {
   id: string
-  prayer_name: string
+  prayer_name: string           // Translated name for display
+  original_prayer_name: string  // Original English name for emoji lookup
   prayer_time: string | null
   sort_order: number
 }
@@ -127,14 +128,18 @@ async function getPrayerTimes(language?: string): Promise<{ times: PrayerTime[];
       return {
         times: times.map((p) => ({
           ...p,
-          prayer_name: translationMap.get(p.id) || p.prayer_name,
+          original_prayer_name: p.prayer_name,  // Keep original for emoji lookup
+          prayer_name: translationMap.get(p.id) || p.prayer_name,  // Use translated for display
         })),
         isEnabled: settings?.is_enabled || false,
       }
     }
 
     return {
-      times: times || [],
+      times: (times || []).map((p) => ({
+        ...p,
+        original_prayer_name: p.prayer_name,  // Same as prayer_name when no translation
+      })),
       isEnabled: settings?.is_enabled || false,
     }
   } catch (error) {
@@ -145,6 +150,7 @@ async function getPrayerTimes(language?: string): Promise<{ times: PrayerTime[];
 
 /**
  * Build prayer times display string
+ * Uses original_prayer_name for emoji lookup, prayer_name for display
  */
 function buildPrayerTimesDisplay(prayerTimes: PrayerTime[]): string {
   const prayerEmojis: Record<string, string> = {
@@ -157,7 +163,7 @@ function buildPrayerTimesDisplay(prayerTimes: PrayerTime[]): string {
 
   return prayerTimes
     .map((p) => {
-      const emoji = prayerEmojis[p.prayer_name] || "🕌"
+      const emoji = prayerEmojis[p.original_prayer_name] || "🕌"
       const time = p.prayer_time ? formatTime(p.prayer_time) : "Not set"
       return `${emoji} *${p.prayer_name}:* ${time}`
     })
@@ -187,8 +193,9 @@ export async function initializeAmenityFlow(
   // Add Prayer Times option if enabled
   if (prayerTimes.isEnabled) {
     const prayerOptionNum = options.length + 1
-    options.push(`${prayerOptionNum}. 🕌 Prayer Times`)
-    amenityIds.push({ id: "prayer_times", name: "Prayer Times", type: "prayer_times" })
+    const prayerLabel = await getMessage(MSG.AMENITY_PRAYER_TIMES_LABEL, undefined, language)
+    options.push(`${prayerOptionNum}. 🕌 ${prayerLabel}`)
+    amenityIds.push({ id: "prayer_times", name: prayerLabel, type: "prayer_times" })
   }
 
   if (options.length === 0) {
