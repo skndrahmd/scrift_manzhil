@@ -3,6 +3,8 @@ import { NextResponse } from "next/server"
 import { verifyAdminAccess } from "@/lib/auth/api-auth"
 import { supabaseAdmin } from "@/lib/supabase"
 
+export const dynamic = "force-dynamic"
+
 /**
  * GET /api/maintenance/logs
  * Fetch maintenance notification logs with optional filters.
