@@ -357,7 +357,7 @@ export default function UnitsPage() {
                         variant="outline"
                         size="sm"
                         onClick={handleSendInvoices}
-                        disabled={sendingInvoices}
+                        disabled={sendingInvoices || unpaidUnits === 0}
                     >
                         {sendingInvoices ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <FileText className="h-4 w-4 mr-2" />}
                         Send Monthly Invoices
