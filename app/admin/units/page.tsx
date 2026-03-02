@@ -341,7 +341,8 @@ export default function UnitsPage() {
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
                     <MaintenanceLogsModal />
-                    <Button
+
+                    {/* <Button
                         variant="outline"
                         size="sm"
                         onClick={handleResetStatus}
@@ -350,7 +351,8 @@ export default function UnitsPage() {
                     >
                         {resettingStatus ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <RotateCcw className="h-4 w-4 mr-2" />}
                         Reset All Status
-                    </Button>
+                    </Button> */}
+
                     <Button
                         variant="outline"
                         size="sm"
