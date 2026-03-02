@@ -27,12 +27,16 @@ import {
     Loader2,
     Bell,
     Trash2,
+    FileText,
+    History,
+    RotateCcw,
 } from "lucide-react"
 import Link from "next/link"
 import { useMemo, useState } from "react"
 import type { Complaint } from "@/lib/supabase"
 import { useToast } from "@/hooks/use-toast"
 import { BulkImportUnitsModal } from "@/components/admin/bulk-import-units-modal"
+import { MaintenanceLogsModal } from "@/components/admin/maintenance-logs-table"
 
 export default function UnitsPage() {
     const { units, complaints, loading, fetchUnits } = useAdmin()
@@ -55,6 +59,12 @@ export default function UnitsPage() {
 
     // Bulk reminder state
     const [sendingBulk, setSendingBulk] = useState(false)
+
+    // Send invoices state
+    const [sendingInvoices, setSendingInvoices] = useState(false)
+
+    // Reset status state
+    const [resettingStatus, setResettingStatus] = useState(false)
 
     // Delete state
     const [deletingUnitId, setDeletingUnitId] = useState<string | null>(null)
@@ -214,6 +224,57 @@ export default function UnitsPage() {
         }
     }
 
+    // Send monthly invoices handler
+    const handleSendInvoices = async () => {
+        if (!confirm("Send monthly maintenance invoices to ALL units? This will create new invoice records for the current month if they don't exist.")) {
+            return
+        }
+
+        setSendingInvoices(true)
+        try {
+            const res = await fetch("/api/maintenance/send-invoices", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({}), // Empty = all units
+            })
+            const result = await res.json()
+            if (!res.ok) throw new Error(result.error || "Failed to send invoices")
+            toast({
+                title: "Invoices Sent",
+                description: `Sent: ${result.sent}, Failed: ${result.failed} out of ${result.total} units`,
+            })
+        } catch (error: any) {
+            toast({ title: "Error", description: error?.message || "Failed to send invoices", variant: "destructive" })
+        } finally {
+            setSendingInvoices(false)
+        }
+    }
+
+    // Reset all maintenance status handler
+    const handleResetStatus = async () => {
+        if (!confirm("Reset ALL units' maintenance status to UNPAID? This will set all units to show as having dues pending. Use this if the monthly reset didn't run automatically.")) {
+            return
+        }
+
+        setResettingStatus(true)
+        try {
+            const res = await fetch("/api/maintenance/reset-status", {
+                method: "POST",
+            })
+            const result = await res.json()
+            if (!res.ok) throw new Error(result.error || "Failed to reset status")
+            toast({
+                title: "Status Reset",
+                description: result.message || `Reset ${result.unitsReset} units to unpaid status`,
+            })
+            await fetchUnits()
+        } catch (error: any) {
+            toast({ title: "Error", description: error?.message || "Failed to reset status", variant: "destructive" })
+        } finally {
+            setResettingStatus(false)
+        }
+    }
+
     // Delete unit handler
     const handleDeleteUnit = async (unitId: string, apartmentNumber: string, e: React.MouseEvent) => {
         e.preventDefault() // Prevent Link navigation
@@ -279,6 +340,26 @@ export default function UnitsPage() {
                     <Badge variant="outline" className="text-sm">{totalUnits} total</Badge>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
+                    <MaintenanceLogsModal />
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleResetStatus}
+                        disabled={resettingStatus}
+                        className="text-amber-600 hover:bg-amber-50"
+                    >
+                        {resettingStatus ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <RotateCcw className="h-4 w-4 mr-2" />}
+                        Reset All Status
+                    </Button>
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleSendInvoices}
+                        disabled={sendingInvoices}
+                    >
+                        {sendingInvoices ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <FileText className="h-4 w-4 mr-2" />}
+                        Send Monthly Invoices
+                    </Button>
                     <Button
                         variant="outline"
                         size="sm"

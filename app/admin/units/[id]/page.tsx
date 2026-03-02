@@ -38,10 +38,13 @@ import {
     Pencil,
     Bell,
     Download,
+    FileText,
+    History,
 } from "lucide-react"
 import { generateMaintenanceInvoicePdf, generateBookingInvoicePdf } from "@/lib/pdf/invoice"
 import { syncResidentTypeForUnit } from "@/lib/services/resident-type-sync"
 import { validateResident, checkPhoneExists } from "@/lib/validation/resident"
+import { MaintenanceLogsModal } from "@/components/admin/maintenance-logs-table"
 
 function formatMonth(year: number, month: number) {
     const date = new Date(year, month - 1, 1)
@@ -158,6 +161,9 @@ export default function UnitDetailPage({ params }: { params: { id: string } }) {
     const [isEditChargesOpen, setIsEditChargesOpen] = useState(false)
     const [editCharges, setEditCharges] = useState(0)
     const [savingCharges, setSavingCharges] = useState(false)
+
+    // Send invoice state
+    const [sendingInvoice, setSendingInvoice] = useState(false)
 
     // Fetch staff by unit_id
     async function loadStaff() {
@@ -495,6 +501,29 @@ export default function UnitDetailPage({ params }: { params: { id: string } }) {
             toast({ title: "Error", description: error?.message || "Failed to send reminder", variant: "destructive" })
         } finally {
             setSendingReminderId(null)
+        }
+    }
+
+    async function sendInvoiceToUnit() {
+        if (!unit) return
+        setSendingInvoice(true)
+        try {
+            const res = await fetch("/api/maintenance/send-invoices", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ unitIds: [unitId] }),
+            })
+            const result = await res.json()
+            if (!res.ok) throw new Error(result.error || "Failed to send invoice")
+            if (result.sent > 0) {
+                toast({ title: "Invoice Sent", description: `Invoice sent to ${primaryResident?.name || "resident"}` })
+            } else {
+                toast({ title: "Failed", description: result.errors?.[0] || "Could not send invoice", variant: "destructive" })
+            }
+        } catch (error: any) {
+            toast({ title: "Error", description: error?.message || "Failed to send invoice", variant: "destructive" })
+        } finally {
+            setSendingInvoice(false)
         }
     }
 
@@ -1012,9 +1041,27 @@ export default function UnitDetailPage({ params }: { params: { id: string } }) {
                         <CardHeader className="bg-white">
                             <CardTitle className="flex items-center justify-between">
                                 <span className="text-lg sm:text-xl">Maintenance Payments</span>
-                                <Badge variant="outline" className="text-sm">
-                                    Unit {apartmentNumber}
-                                </Badge>
+                                <div className="flex items-center gap-2">
+                                    <MaintenanceLogsModal unitId={unitId} />
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={sendInvoiceToUnit}
+                                        disabled={sendingInvoice}
+                                        className="text-manzhil-teal hover:bg-manzhil-teal/10"
+                                    >
+                                        {sendingInvoice ? (
+                                            <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                                        ) : (
+                                            <FileText className="h-4 w-4 mr-1" />
+                                        )}
+                                        <span className="hidden sm:inline">Send Invoice</span>
+                                        <span className="sm:hidden">Invoice</span>
+                                    </Button>
+                                    <Badge variant="outline" className="text-sm">
+                                        Unit {apartmentNumber}
+                                    </Badge>
+                                </div>
                             </CardTitle>
                         </CardHeader>
                         <CardContent className="p-0">
