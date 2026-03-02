@@ -116,10 +116,76 @@ export async function POST(
       })
     }
 
+    // 7. Fetch all amenities
+    const { data: amenities, error: amenityError } = await supabaseAdmin
+      .from("amenities")
+      .select("id, name")
+
+    let amenityCount = 0
+    if (amenities && amenities.length > 0) {
+      // Translate all amenity names
+      const amenityNames = amenities.map((a) => a.name)
+      const translatedNames = await translateBatch(amenityNames, code)
+
+      // Upsert amenity translations
+      const amenityRows = amenities.map((a, i) => ({
+        amenity_id: a.id,
+        language_code: code,
+        translated_name: translatedNames[i],
+        is_auto_translated: true,
+        is_stale: false,
+        updated_at: new Date().toISOString(),
+      }))
+
+      const { error: amenityUpsertError } = await supabaseAdmin
+        .from("amenity_translations")
+        .upsert(amenityRows, { onConflict: "amenity_id,language_code" })
+
+      if (amenityUpsertError) {
+        console.error("[Retranslate All] Amenities upsert error:", amenityUpsertError)
+      } else {
+        amenityCount = amenityRows.length
+      }
+    }
+
+    // 8. Fetch all prayer times
+    const { data: prayerTimes, error: prayerError } = await supabaseAdmin
+      .from("prayer_times")
+      .select("id, prayer_name")
+
+    let prayerCount = 0
+    if (prayerTimes && prayerTimes.length > 0) {
+      // Translate all prayer names
+      const prayerNames = prayerTimes.map((p) => p.prayer_name)
+      const translatedPrayers = await translateBatch(prayerNames, code)
+
+      // Upsert prayer time translations
+      const prayerRows = prayerTimes.map((p, i) => ({
+        prayer_time_id: p.id,
+        language_code: code,
+        translated_name: translatedPrayers[i],
+        is_auto_translated: true,
+        is_stale: false,
+        updated_at: new Date().toISOString(),
+      }))
+
+      const { error: prayerUpsertError } = await supabaseAdmin
+        .from("prayer_time_translations")
+        .upsert(prayerRows, { onConflict: "prayer_time_id,language_code" })
+
+      if (prayerUpsertError) {
+        console.error("[Retranslate All] Prayer times upsert error:", prayerUpsertError)
+      } else {
+        prayerCount = prayerRows.length
+      }
+    }
+
     return NextResponse.json({
       language: lang.language_name,
       bot_translations_count: messageRows.length,
       menu_translations_count: menuRows.length,
+      amenity_translations_count: amenityCount,
+      prayer_translations_count: prayerCount,
     })
   } catch (error) {
     console.error("[Retranslate All] Error:", error)

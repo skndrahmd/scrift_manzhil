@@ -44,9 +44,9 @@ function formatTime(time: string | null): string {
 }
 
 /**
- * Fetch all active amenities from database
+ * Fetch all active amenities from database with optional translations
  */
-async function getActiveAmenities(): Promise<Amenity[]> {
+async function getActiveAmenities(language?: string): Promise<Amenity[]> {
   try {
     const { data, error } = await supabaseAdmin
       .from("amenities")
@@ -59,6 +59,29 @@ async function getActiveAmenities(): Promise<Amenity[]> {
       return []
     }
 
+    // If language is provided, fetch translations
+    if (language && data && data.length > 0) {
+      const amenityIds = data.map((a) => a.id)
+      const { data: translations } = await supabaseAdmin
+        .from("amenity_translations")
+        .select("amenity_id, translated_name")
+        .eq("language_code", language)
+        .in("amenity_id", amenityIds)
+
+      const translationMap = new Map<string, string>()
+      if (translations) {
+        for (const t of translations) {
+          translationMap.set(t.amenity_id, t.translated_name)
+        }
+      }
+
+      // Apply translations
+      return data.map((a) => ({
+        ...a,
+        name: translationMap.get(a.id) || a.name,
+      }))
+    }
+
     return data || []
   } catch (error) {
     console.error("[Amenity] Fetch exception:", error)
@@ -67,9 +90,9 @@ async function getActiveAmenities(): Promise<Amenity[]> {
 }
 
 /**
- * Fetch prayer times settings and times
+ * Fetch prayer times settings and times with optional translations
  */
-async function getPrayerTimes(): Promise<{ times: PrayerTime[]; isEnabled: boolean }> {
+async function getPrayerTimes(language?: string): Promise<{ times: PrayerTime[]; isEnabled: boolean }> {
   try {
     // Fetch settings
     const { data: settings } = await supabaseAdmin
@@ -83,6 +106,32 @@ async function getPrayerTimes(): Promise<{ times: PrayerTime[]; isEnabled: boole
       .from("prayer_times")
       .select("id, prayer_name, prayer_time, sort_order")
       .order("sort_order")
+
+    // If language is provided, fetch translations
+    if (language && times && times.length > 0) {
+      const prayerIds = times.map((p) => p.id)
+      const { data: translations } = await supabaseAdmin
+        .from("prayer_time_translations")
+        .select("prayer_time_id, translated_name")
+        .eq("language_code", language)
+        .in("prayer_time_id", prayerIds)
+
+      const translationMap = new Map<string, string>()
+      if (translations) {
+        for (const t of translations) {
+          translationMap.set(t.prayer_time_id, t.translated_name)
+        }
+      }
+
+      // Apply translations
+      return {
+        times: times.map((p) => ({
+          ...p,
+          prayer_name: translationMap.get(p.id) || p.prayer_name,
+        })),
+        isEnabled: settings?.is_enabled || false,
+      }
+    }
 
     return {
       times: times || [],
@@ -122,8 +171,8 @@ export async function initializeAmenityFlow(
   phoneNumber: string,
   language?: string
 ): Promise<string> {
-  const amenities = await getActiveAmenities()
-  const prayerTimes = await getPrayerTimes()
+  const amenities = await getActiveAmenities(language)
+  const prayerTimes = await getPrayerTimes(language)
 
   // Build options list
   const options: string[] = []
@@ -187,7 +236,7 @@ export async function handleAmenityFlow(
     if (selectedAmenity.type === "prayer_times") {
       await clearState(phoneNumber)
       
-      const prayerTimes = await getPrayerTimes()
+      const prayerTimes = await getPrayerTimes(language)
       
       if (!prayerTimes.isEnabled) {
         return await getMessage(MSG.PRAYER_TIMES_DISABLED, undefined, language)
@@ -203,8 +252,9 @@ export async function handleAmenityFlow(
     // Fetch full amenity details
     const { data: amenity, error } = await supabaseAdmin
       .from("amenities")
-      .select("*")
+      .select("*, amenity_translations!left(translated_name)")
       .eq("id", selectedAmenity.id)
+      .eq("amenity_translations.language_code", language || "")
       .single()
 
     if (error || !amenity) {
@@ -212,13 +262,16 @@ export async function handleAmenityFlow(
       return await getMessage(MSG.ERROR_GENERIC, undefined, language)
     }
 
+    // Use translated name if available
+    const amenityName = (amenity as any).amenity_translations?.[0]?.translated_name || amenity.name
+
     // Clear state after showing amenity info
     await clearState(phoneNumber)
 
     // Check if under maintenance
     if (amenity.is_under_maintenance) {
       return await getMessage(MSG.AMENITY_UNDER_MAINTENANCE, {
-        name: amenity.name,
+        name: amenityName,
         maintenance_note: "Please check back later or contact management for updates.",
       }, language)
     }
@@ -229,7 +282,7 @@ export async function handleAmenityFlow(
       : "Timings not available"
 
     return await getMessage(MSG.AMENITY_TIMINGS, {
-      name: amenity.name,
+      name: amenityName,
       timings,
     }, language)
   }
