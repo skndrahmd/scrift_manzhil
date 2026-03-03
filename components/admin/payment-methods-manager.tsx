@@ -74,6 +74,8 @@ export function PaymentMethodsManager() {
     const [dialogOpen, setDialogOpen] = useState(false)
     const [editingMethod, setEditingMethod] = useState<PaymentMethod | null>(null)
     const [formData, setFormData] = useState(defaultFormData)
+    const [deletingId, setDeletingId] = useState<string | null>(null)
+    const [togglingId, setTogglingId] = useState<string | null>(null)
 
     const { toast } = useToast()
 
@@ -156,6 +158,7 @@ export function PaymentMethodsManager() {
     }
 
     const handleDelete = async (id: string) => {
+        setDeletingId(id)
         try {
             const res = await fetch(`/api/admin/payment-methods?id=${id}`, { method: "DELETE" })
             const data = await res.json()
@@ -166,10 +169,13 @@ export function PaymentMethodsManager() {
         } catch (error: any) {
             console.error("Delete error:", error)
             toast({ title: "Error", description: error.message || "Failed to delete", variant: "destructive" })
+        } finally {
+            setDeletingId(null)
         }
     }
 
     const toggleEnabled = async (method: PaymentMethod) => {
+        setTogglingId(method.id)
         try {
             const res = await fetch("/api/admin/payment-methods", {
                 method: "PUT",
@@ -188,6 +194,8 @@ export function PaymentMethodsManager() {
         } catch (error: any) {
             console.error("Toggle error:", error)
             toast({ title: "Error", description: "Failed to update status", variant: "destructive" })
+        } finally {
+            setTogglingId(null)
         }
     }
 
@@ -370,8 +378,12 @@ export function PaymentMethodsManager() {
                                                 <TableCell>
                                                     <Switch
                                                         checked={method.is_enabled}
+                                                        disabled={togglingId === method.id}
                                                         onCheckedChange={() => toggleEnabled(method)}
                                                     />
+                                                    {togglingId === method.id && (
+                                                        <Loader2 className="h-4 w-4 animate-spin inline ml-2 text-manzhil-teal" />
+                                                    )}
                                                 </TableCell>
                                                 <TableCell className="text-right">
                                                     <div className="flex justify-end gap-2">
@@ -388,9 +400,14 @@ export function PaymentMethodsManager() {
                                                                 <Button
                                                                     variant="ghost"
                                                                     size="icon"
+                                                                    disabled={deletingId === method.id}
                                                                     className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-50"
                                                                 >
-                                                                    <Trash2 className="h-4 w-4" />
+                                                                    {deletingId === method.id ? (
+                                                                        <Loader2 className="h-4 w-4 animate-spin" />
+                                                                    ) : (
+                                                                        <Trash2 className="h-4 w-4" />
+                                                                    )}
                                                                 </Button>
                                                             </AlertDialogTrigger>
                                                             <AlertDialogContent>
@@ -404,9 +421,14 @@ export function PaymentMethodsManager() {
                                                                     <AlertDialogCancel>Cancel</AlertDialogCancel>
                                                                     <AlertDialogAction
                                                                         onClick={() => handleDelete(method.id)}
+                                                                        disabled={deletingId === method.id}
                                                                         className="bg-red-500 hover:bg-red-600"
                                                                     >
-                                                                        Delete
+                                                                        {deletingId === method.id ? (
+                                                                            <><Loader2 className="h-4 w-4 animate-spin mr-2" />Deleting...</>
+                                                                        ) : (
+                                                                            "Delete"
+                                                                        )}
                                                                     </AlertDialogAction>
                                                                 </AlertDialogFooter>
                                                             </AlertDialogContent>

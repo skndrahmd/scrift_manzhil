@@ -435,7 +435,12 @@ export function BookingsTable() {
                                                         disabled={updatingPaymentId === booking.id}
                                                         className="text-red-600 border-red-200"
                                                     >
-                                                        <XCircle className="h-4 w-4 mr-1" />Mark Unpaid
+                                                        {updatingPaymentId === booking.id ? (
+                                                            <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                                                        ) : (
+                                                            <XCircle className="h-4 w-4 mr-1" />
+                                                        )}
+                                                        Mark Unpaid
                                                     </Button>
                                                 )}
                                                 {booking.status === "confirmed" && (
@@ -543,6 +548,9 @@ export function BookingsTable() {
                                                     disabled={updatingPaymentId === booking.id}
                                                     className="h-8 text-xs text-red-600 border-red-200 hover:bg-red-50"
                                                 >
+                                                    {updatingPaymentId === booking.id ? (
+                                                        <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                                                    ) : null}
                                                     Mark Unpaid
                                                 </Button>
                                             )}

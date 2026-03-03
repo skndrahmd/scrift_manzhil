@@ -455,6 +455,7 @@ export default function UnitDetailPage({ params }: { params: { id: string } }) {
 
     // Mark payment paid/unpaid
     async function markPayment(row: MaintenancePayment, isPaid: boolean) {
+        setMarkingPaymentId(row.id)
         try {
             const response = await fetch("/api/maintenance/update-status", {
                 method: "POST",
@@ -472,11 +473,14 @@ export default function UnitDetailPage({ params }: { params: { id: string } }) {
             await fetchUnits()
         } catch (error: any) {
             toast({ title: "Error", description: error?.message || "Failed to update", variant: "destructive" })
+        } finally {
+            setMarkingPaymentId(null)
         }
     }
 
     // Send maintenance reminder state
     const [sendingReminderId, setSendingReminderId] = useState<string | null>(null)
+    const [markingPaymentId, setMarkingPaymentId] = useState<string | null>(null)
 
     // Invoice download state
     const [downloadingInvoiceId, setDownloadingInvoiceId] = useState<string | null>(null)
@@ -1105,8 +1109,19 @@ export default function UnitDetailPage({ params }: { params: { id: string } }) {
                                                             )}
                                                         </Button>
                                                         {row.status === "paid" ? (
-                                                            <Button variant="outline" size="sm" onClick={() => markPayment(row, false)} className="text-red-600 hover:bg-red-50">
-                                                                <XCircle className="h-4 w-4 mr-1" /> Unpaid
+                                                            <Button
+                                                                variant="outline"
+                                                                size="sm"
+                                                                onClick={() => markPayment(row, false)}
+                                                                disabled={markingPaymentId === row.id}
+                                                                className="text-red-600 hover:bg-red-50"
+                                                            >
+                                                                {markingPaymentId === row.id ? (
+                                                                    <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                                                                ) : (
+                                                                    <XCircle className="h-4 w-4 mr-1" />
+                                                                )}
+                                                                Unpaid
                                                             </Button>
                                                         ) : (
                                                             <>
@@ -1124,8 +1139,19 @@ export default function UnitDetailPage({ params }: { params: { id: string } }) {
                                                                         <Bell className="h-4 w-4" />
                                                                     )}
                                                                 </Button>
-                                                                <Button variant="outline" size="sm" onClick={() => markPayment(row, true)} className="text-manzhil-teal hover:bg-manzhil-teal/10">
-                                                                    <CheckCircle className="h-4 w-4 mr-1" /> Paid
+                                                                <Button
+                                                                    variant="outline"
+                                                                    size="sm"
+                                                                    onClick={() => markPayment(row, true)}
+                                                                    disabled={markingPaymentId === row.id}
+                                                                    className="text-manzhil-teal hover:bg-manzhil-teal/10"
+                                                                >
+                                                                    {markingPaymentId === row.id ? (
+                                                                        <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                                                                    ) : (
+                                                                        <CheckCircle className="h-4 w-4 mr-1" />
+                                                                    )}
+                                                                    Paid
                                                                 </Button>
                                                             </>
                                                         )}
@@ -1173,8 +1199,19 @@ export default function UnitDetailPage({ params }: { params: { id: string } }) {
                                                         )}
                                                     </Button>
                                                     {row.status === "paid" ? (
-                                                        <Button variant="outline" size="sm" onClick={() => markPayment(row, false)} className="flex-1 text-red-600">
-                                                            <XCircle className="h-4 w-4 mr-2" /> Mark Unpaid
+                                                        <Button
+                                                            variant="outline"
+                                                            size="sm"
+                                                            onClick={() => markPayment(row, false)}
+                                                            disabled={markingPaymentId === row.id}
+                                                            className="flex-1 text-red-600"
+                                                        >
+                                                            {markingPaymentId === row.id ? (
+                                                                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                                            ) : (
+                                                                <XCircle className="h-4 w-4 mr-2" />
+                                                            )}
+                                                            Mark Unpaid
                                                         </Button>
                                                     ) : (
                                                         <>
@@ -1192,8 +1229,19 @@ export default function UnitDetailPage({ params }: { params: { id: string } }) {
                                                                     <Bell className="h-4 w-4" />
                                                                 )}
                                                             </Button>
-                                                            <Button variant="outline" size="sm" onClick={() => markPayment(row, true)} className="flex-1 text-manzhil-teal">
-                                                                <CheckCircle className="h-4 w-4 mr-2" /> Mark Paid
+                                                            <Button
+                                                                variant="outline"
+                                                                size="sm"
+                                                                onClick={() => markPayment(row, true)}
+                                                                disabled={markingPaymentId === row.id}
+                                                                className="flex-1 text-manzhil-teal"
+                                                            >
+                                                                {markingPaymentId === row.id ? (
+                                                                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                                                ) : (
+                                                                    <CheckCircle className="h-4 w-4 mr-2" />
+                                                                )}
+                                                                Mark Paid
                                                             </Button>
                                                         </>
                                                     )}

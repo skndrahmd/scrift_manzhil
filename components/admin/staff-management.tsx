@@ -63,6 +63,8 @@ export function StaffManagement() {
     const [saving, setSaving] = useState(false)
     const [dialogOpen, setDialogOpen] = useState(false)
     const [editingStaff, setEditingStaff] = useState<StaffWithPermissions | null>(null)
+    const [deletingId, setDeletingId] = useState<string | null>(null)
+    const [togglingId, setTogglingId] = useState<string | null>(null)
 
     // Form state
     const [formData, setFormData] = useState({
@@ -255,6 +257,7 @@ export function StaffManagement() {
 
     // Handle delete
     const handleDelete = async (staffMember: StaffWithPermissions) => {
+        setDeletingId(staffMember.id)
         try {
             // Delete via API (will also delete auth user)
             const response = await fetch(`/api/admin/staff/${staffMember.id}`, {
@@ -272,11 +275,14 @@ export function StaffManagement() {
             console.error("Delete error:", error)
             const errorMessage = error instanceof Error ? error.message : "Failed to delete staff member"
             toast({ title: "Error", description: errorMessage, variant: "destructive" })
+        } finally {
+            setDeletingId(null)
         }
     }
 
     // Toggle active status
     const toggleActive = async (staffMember: StaffWithPermissions) => {
+        setTogglingId(staffMember.id)
         try {
             const { error } = await supabase
                 .from("admin_users")
@@ -296,6 +302,8 @@ export function StaffManagement() {
         } catch (error) {
             console.error("Toggle error:", error)
             toast({ title: "Error", description: "Failed to update staff status", variant: "destructive" })
+        } finally {
+            setTogglingId(null)
         }
     }
 
@@ -617,10 +625,16 @@ export function StaffManagement() {
                                                     </div>
                                                 </TableCell>
                                                 <TableCell>
-                                                    <Switch
-                                                        checked={member.is_active}
-                                                        onCheckedChange={() => toggleActive(member)}
-                                                    />
+                                                    <div className="flex items-center gap-2">
+                                                        <Switch
+                                                            checked={member.is_active}
+                                                            disabled={togglingId === member.id}
+                                                            onCheckedChange={() => toggleActive(member)}
+                                                        />
+                                                        {togglingId === member.id && (
+                                                            <Loader2 className="h-4 w-4 animate-spin text-manzhil-teal" />
+                                                        )}
+                                                    </div>
                                                 </TableCell>
                                                 <TableCell className="text-right">
                                                     <div className="flex justify-end gap-2">
@@ -637,9 +651,14 @@ export function StaffManagement() {
                                                                 <Button
                                                                     variant="ghost"
                                                                     size="icon"
+                                                                    disabled={deletingId === member.id}
                                                                     className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-50"
                                                                 >
-                                                                    <Trash2 className="h-4 w-4" />
+                                                                    {deletingId === member.id ? (
+                                                                        <Loader2 className="h-4 w-4 animate-spin" />
+                                                                    ) : (
+                                                                        <Trash2 className="h-4 w-4" />
+                                                                    )}
                                                                 </Button>
                                                             </AlertDialogTrigger>
                                                             <AlertDialogContent>
@@ -653,9 +672,14 @@ export function StaffManagement() {
                                                                     <AlertDialogCancel>Cancel</AlertDialogCancel>
                                                                     <AlertDialogAction
                                                                         onClick={() => handleDelete(member)}
+                                                                        disabled={deletingId === member.id}
                                                                         className="bg-red-500 hover:bg-red-600"
                                                                     >
-                                                                        Delete
+                                                                        {deletingId === member.id ? (
+                                                                            <><Loader2 className="h-4 w-4 animate-spin mr-2" />Deleting...</>
+                                                                        ) : (
+                                                                            "Delete"
+                                                                        )}
                                                                     </AlertDialogAction>
                                                                 </AlertDialogFooter>
                                                             </AlertDialogContent>
@@ -686,8 +710,12 @@ export function StaffManagement() {
                                                     </Badge>
                                                     <Switch
                                                         checked={member.is_active}
+                                                        disabled={togglingId === member.id}
                                                         onCheckedChange={() => toggleActive(member)}
                                                     />
+                                                    {togglingId === member.id && (
+                                                        <Loader2 className="h-4 w-4 animate-spin text-manzhil-teal" />
+                                                    )}
                                                 </div>
                                             </div>
 
@@ -739,9 +767,14 @@ export function StaffManagement() {
                                                             <Button
                                                                 variant="ghost"
                                                                 size="icon"
+                                                                disabled={deletingId === member.id}
                                                                 className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-50"
                                                             >
-                                                                <Trash2 className="h-4 w-4" />
+                                                                {deletingId === member.id ? (
+                                                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                                                ) : (
+                                                                    <Trash2 className="h-4 w-4" />
+                                                                )}
                                                             </Button>
                                                         </AlertDialogTrigger>
                                                         <AlertDialogContent>
@@ -755,9 +788,14 @@ export function StaffManagement() {
                                                                 <AlertDialogCancel>Cancel</AlertDialogCancel>
                                                                 <AlertDialogAction
                                                                     onClick={() => handleDelete(member)}
+                                                                    disabled={deletingId === member.id}
                                                                     className="bg-red-500 hover:bg-red-600"
                                                                 >
-                                                                    Delete
+                                                                    {deletingId === member.id ? (
+                                                                        <><Loader2 className="h-4 w-4 animate-spin mr-2" />Deleting...</>
+                                                                    ) : (
+                                                                        "Delete"
+                                                                    )}
                                                                 </AlertDialogAction>
                                                             </AlertDialogFooter>
                                                         </AlertDialogContent>

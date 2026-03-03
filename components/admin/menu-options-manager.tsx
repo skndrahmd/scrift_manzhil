@@ -74,6 +74,7 @@ export function MenuOptionsManager() {
   const [editingTranslation, setEditingTranslation] = useState<string | null>(null)
   const [editTranslationText, setEditTranslationText] = useState("")
   const [retranslating, setRetranslating] = useState(false)
+  const [savingEditId, setSavingEditId] = useState<string | null>(null)
   const { toast } = useToast()
 
   const fetchOptions = useCallback(async () => {
@@ -261,6 +262,7 @@ export function MenuOptionsManager() {
       return
     }
 
+    setSavingEditId(opt.id)
     try {
       const res = await fetch(`/api/menu-options/${opt.id}`, {
         method: "PATCH",
@@ -290,6 +292,8 @@ export function MenuOptionsManager() {
         description: "Failed to save changes",
         variant: "destructive",
       })
+    } finally {
+      setSavingEditId(null)
     }
   }
 
@@ -442,14 +446,20 @@ export function MenuOptionsManager() {
                       size="icon"
                       variant="ghost"
                       onClick={() => saveEdit(opt)}
+                      disabled={savingEditId === opt.id}
                       className="text-green-600 hover:text-green-700"
                     >
-                      <Check className="h-4 w-4" />
+                      {savingEditId === opt.id ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Check className="h-4 w-4" />
+                      )}
                     </Button>
                     <Button
                       size="icon"
                       variant="ghost"
                       onClick={cancelEditing}
+                      disabled={savingEditId === opt.id}
                       className="text-red-600 hover:text-red-700"
                     >
                       <X className="h-4 w-4" />

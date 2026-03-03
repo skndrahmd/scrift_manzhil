@@ -75,6 +75,9 @@ export function AmenitiesManager() {
     close_time: "22:00",
     is_under_maintenance: false,
   })
+  const [togglingMaintenanceId, setTogglingMaintenanceId] = useState<string | null>(null)
+  const [togglingActiveId, setTogglingActiveId] = useState<string | null>(null)
+  const [reorderingId, setReorderingId] = useState<string | null>(null)
 
   const fetchAmenities = useCallback(async () => {
     try {
@@ -217,6 +220,7 @@ export function AmenitiesManager() {
   }
 
   const handleToggleMaintenance = async (amenity: Amenity) => {
+    setTogglingMaintenanceId(amenity.id)
     try {
       const res = await fetch("/api/amenities", {
         method: "PATCH",
@@ -242,10 +246,13 @@ export function AmenitiesManager() {
         description: "Failed to update amenity",
         variant: "destructive",
       })
+    } finally {
+      setTogglingMaintenanceId(null)
     }
   }
 
   const handleToggleActive = async (amenity: Amenity) => {
+    setTogglingActiveId(amenity.id)
     try {
       const res = await fetch("/api/amenities", {
         method: "PATCH",
@@ -271,6 +278,8 @@ export function AmenitiesManager() {
         description: "Failed to update amenity",
         variant: "destructive",
       })
+    } finally {
+      setTogglingActiveId(null)
     }
   }
 
@@ -281,6 +290,7 @@ export function AmenitiesManager() {
     const newIndex = direction === "up" ? currentIndex - 1 : currentIndex + 1
     if (newIndex < 0 || newIndex >= amenities.length) return
 
+    setReorderingId(amenity.id)
     const swapAmenity = amenities[newIndex]
 
     // Optimistically update UI
@@ -314,6 +324,8 @@ export function AmenitiesManager() {
         variant: "destructive",
       })
       fetchAmenities() // Revert on error
+    } finally {
+      setReorderingId(null)
     }
   }
 
@@ -401,16 +413,20 @@ export function AmenitiesManager() {
                         variant="ghost"
                         size="icon"
                         className="h-6 w-6"
-                        disabled={index === 0}
+                        disabled={index === 0 || reorderingId === amenity.id}
                         onClick={() => handleReorder(amenity, "up")}
                       >
-                        <ChevronUp className="h-4 w-4 text-gray-400" />
+                        {reorderingId === amenity.id ? (
+                          <Loader2 className="h-4 w-4 animate-spin text-gray-400" />
+                        ) : (
+                          <ChevronUp className="h-4 w-4 text-gray-400" />
+                        )}
                       </Button>
                       <Button
                         variant="ghost"
                         size="icon"
                         className="h-6 w-6"
-                        disabled={index === amenities.length - 1}
+                        disabled={index === amenities.length - 1 || reorderingId === amenity.id}
                         onClick={() => handleReorder(amenity, "down")}
                       >
                         <ChevronDown className="h-4 w-4 text-gray-400" />
@@ -460,8 +476,12 @@ export function AmenitiesManager() {
                       <Switch
                         id={`maintenance-${amenity.id}`}
                         checked={amenity.is_under_maintenance}
+                        disabled={togglingMaintenanceId === amenity.id}
                         onCheckedChange={() => handleToggleMaintenance(amenity)}
                       />
+                      {togglingMaintenanceId === amenity.id && (
+                        <Loader2 className="h-4 w-4 animate-spin text-manzhil-teal" />
+                      )}
                     </div>
 
                     {/* Active Toggle */}
@@ -475,8 +495,12 @@ export function AmenitiesManager() {
                       <Switch
                         id={`active-${amenity.id}`}
                         checked={amenity.is_active}
+                        disabled={togglingActiveId === amenity.id}
                         onCheckedChange={() => handleToggleActive(amenity)}
                       />
+                      {togglingActiveId === amenity.id && (
+                        <Loader2 className="h-4 w-4 animate-spin text-manzhil-teal" />
+                      )}
                     </div>
 
                     {/* Actions */}

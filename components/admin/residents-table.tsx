@@ -21,6 +21,7 @@ import {
     Eye,
     Upload,
     Star,
+    Loader2,
 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -62,6 +63,9 @@ export function ResidentsTable() {
         resident_type: "tenant" as "tenant" | "owner",
     })
     const [isBulkImportOpen, setIsBulkImportOpen] = useState(false)
+    const [saving, setSaving] = useState(false)
+    const [savingEdit, setSavingEdit] = useState(false)
+    const [deletingId, setDeletingId] = useState<string | null>(null)
 
     const itemsPerPage = 10
 
@@ -188,94 +192,102 @@ export function ResidentsTable() {
             return
         }
 
-        // Check for duplicate phone number
-        const phoneExists = await checkPhoneExists(normalizedPhone)
-        if (phoneExists) {
-            toast({
-                title: "Duplicate Phone",
-                description: "A resident with this phone number already exists.",
-                variant: "destructive",
-            })
-            return
-        }
+        setSaving(true)
 
-        // Get the selected unit
-        const unit = unitMap.get(newUser.unit_id)
-        if (!unit) {
-            toast({
-                title: "Error",
-                description: "Selected unit not found.",
-                variant: "destructive",
-            })
-            return
-        }
-
-        // Check if this is the first resident in the unit
-        const existingResidents = (unit.profiles || []).filter((r) => r.is_active)
-        const isPrimaryResident = existingResidents.length === 0
-
-        const { error } = await supabase.from("profiles").insert([{
-            name: newUser.name.trim(),
-            phone_number: normalizedPhone,
-            cnic: normalizedCNIC || null,
-            apartment_number: unit.apartment_number,
-            unit_id: unit.id,
-            resident_type: newUser.resident_type,
-            is_primary_resident: isPrimaryResident,
-        }])
-
-        if (error) {
-            toast({
-                title: "Error",
-                description: "Failed to add user: " + error.message,
-                variant: "destructive",
-            })
-        } else {
-            toast({
-                title: "Success",
-                description: isPrimaryResident 
-                    ? "User added successfully as primary resident." 
-                    : "User added successfully.",
-            })
-
-            // Send welcome message
-            if (sendWelcomeMessage) {
-                try {
-                    await fetch("/api/residents/welcome-message", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({
-                            name: newUser.name.trim(),
-                            phone_number: normalizedPhone,
-                            apartment_number: unit.apartment_number,
-                        }),
-                    })
-                } catch (e) {
-                    console.error("Welcome message error:", e)
-                }
+        try {
+            // Check for duplicate phone number
+            const phoneExists = await checkPhoneExists(normalizedPhone)
+            if (phoneExists) {
+                toast({
+                    title: "Duplicate Phone",
+                    description: "A resident with this phone number already exists.",
+                    variant: "destructive",
+                })
+                return
             }
 
-            // Sync resident_type across all residents in the unit
-            syncResidentTypeForUnit(unit.id, newUser.resident_type).catch(e =>
-                console.error("Failed to sync resident_type:", e)
-            )
+            // Get the selected unit
+            const unit = unitMap.get(newUser.unit_id)
+            if (!unit) {
+                toast({
+                    title: "Error",
+                    description: "Selected unit not found.",
+                    variant: "destructive",
+                })
+                return
+            }
 
-            setNewUser({
-                name: "",
-                phone_number: "",
-                cnic: "",
-                unit_id: "",
-                resident_type: "tenant",
-            })
-            setSendWelcomeMessage(true)
-            setIsAddUserOpen(false)
-            fetchProfiles()
-            fetchUnits()
+            // Check if this is the first resident in the unit
+            const existingResidents = (unit.profiles || []).filter((r) => r.is_active)
+            const isPrimaryResident = existingResidents.length === 0
+
+            const { error } = await supabase.from("profiles").insert([{
+                name: newUser.name.trim(),
+                phone_number: normalizedPhone,
+                cnic: normalizedCNIC || null,
+                apartment_number: unit.apartment_number,
+                unit_id: unit.id,
+                resident_type: newUser.resident_type,
+                is_primary_resident: isPrimaryResident,
+            }])
+
+            if (error) {
+                toast({
+                    title: "Error",
+                    description: "Failed to add user: " + error.message,
+                    variant: "destructive",
+                })
+            } else {
+                toast({
+                    title: "Success",
+                    description: isPrimaryResident 
+                        ? "User added successfully as primary resident." 
+                        : "User added successfully.",
+                })
+
+                // Send welcome message
+                if (sendWelcomeMessage) {
+                    try {
+                        await fetch("/api/residents/welcome-message", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({
+                                name: newUser.name.trim(),
+                                phone_number: normalizedPhone,
+                                apartment_number: unit.apartment_number,
+                            }),
+                        })
+                    } catch (e) {
+                        console.error("Welcome message error:", e)
+                    }
+                }
+
+                // Sync resident_type across all residents in the unit
+                syncResidentTypeForUnit(unit.id, newUser.resident_type).catch(e =>
+                    console.error("Failed to sync resident_type:", e)
+                )
+
+                setNewUser({
+                    name: "",
+                    phone_number: "",
+                    cnic: "",
+                    unit_id: "",
+                    resident_type: "tenant",
+                })
+                setSendWelcomeMessage(true)
+                setIsAddUserOpen(false)
+                fetchProfiles()
+                fetchUnits()
+            }
+        } finally {
+            setSaving(false)
         }
     }
 
     const editUser = async () => {
         if (!editingUser) return
+
+        setSavingEdit(true)
 
         // Get the selected unit
         const unit = editingUser.unit_id ? unitMap.get(editingUser.unit_id) : null
@@ -313,18 +325,24 @@ export function ResidentsTable() {
             fetchProfiles()
             fetchUnits()
         }
+        setSavingEdit(false)
     }
 
     const deleteUser = async (userId: string, userName: string) => {
         if (!confirm(`Are you sure you want to delete ${userName}?`)) return
 
-        const { error } = await supabase.from("profiles").delete().eq("id", userId)
+        setDeletingId(userId)
+        try {
+            const { error } = await supabase.from("profiles").delete().eq("id", userId)
 
-        if (error) {
-            toast({ title: "Error", description: "Failed to delete user", variant: "destructive" })
-        } else {
-            toast({ title: "Success", description: "User deleted successfully" })
-            fetchProfiles()
+            if (error) {
+                toast({ title: "Error", description: "Failed to delete user", variant: "destructive" })
+            } else {
+                toast({ title: "Success", description: "User deleted successfully" })
+                fetchProfiles()
+            }
+        } finally {
+            setDeletingId(null)
         }
     }
 
@@ -502,8 +520,14 @@ export function ResidentsTable() {
                                     </div>
                                 </div>
                                 <div className="flex justify-end gap-3">
-                                    <Button variant="outline" onClick={() => setIsAddUserOpen(false)}>Cancel</Button>
-                                    <Button onClick={addNewUser} className="bg-gradient-to-r from-manzhil-dark to-manzhil-teal hover:shadow-lg transition-all">Add Resident</Button>
+                                    <Button variant="outline" onClick={() => setIsAddUserOpen(false)} disabled={saving}>Cancel</Button>
+                                    <Button onClick={addNewUser} disabled={saving} className="bg-gradient-to-r from-manzhil-dark to-manzhil-teal hover:shadow-lg transition-all">
+                                        {saving ? (
+                                            <><Loader2 className="h-4 w-4 animate-spin mr-2" />Adding...</>
+                                        ) : (
+                                            "Add Resident"
+                                        )}
+                                    </Button>
                                 </div>
                             </DialogContent>
                         </Dialog>
@@ -603,9 +627,14 @@ export function ResidentsTable() {
                                                     variant="outline"
                                                     size="sm"
                                                     className="h-8 w-8 p-0 text-red-600 hover:bg-red-50 border-red-200"
+                                                    disabled={deletingId === profile.id}
                                                     onClick={() => deleteUser(profile.id, profile.name)}
                                                 >
-                                                    <Trash2 className="h-4 w-4" />
+                                                    {deletingId === profile.id ? (
+                                                        <Loader2 className="h-4 w-4 animate-spin" />
+                                                    ) : (
+                                                        <Trash2 className="h-4 w-4" />
+                                                    )}
                                                 </Button>
                                             </div>
                                         </TableCell>
@@ -702,9 +731,14 @@ export function ResidentsTable() {
                                                 variant="ghost"
                                                 size="icon"
                                                 className="h-8 w-8 text-red-600"
+                                                disabled={deletingId === profile.id}
                                                 onClick={() => deleteUser(profile.id, profile.name)}
                                             >
-                                                <Trash2 className="h-4 w-4" />
+                                                {deletingId === profile.id ? (
+                                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                                ) : (
+                                                    <Trash2 className="h-4 w-4" />
+                                                )}
                                             </Button>
                                         </div>
                                     </div>
@@ -808,8 +842,14 @@ export function ResidentsTable() {
                         </div>
                     )}
                     <div className="flex justify-end gap-3">
-                        <Button variant="outline" onClick={() => setIsEditUserOpen(false)}>Cancel</Button>
-                        <Button onClick={editUser} className="bg-gradient-to-r from-manzhil-dark to-manzhil-teal hover:shadow-lg transition-all">Save Changes</Button>
+                        <Button variant="outline" onClick={() => setIsEditUserOpen(false)} disabled={savingEdit}>Cancel</Button>
+                        <Button onClick={editUser} disabled={savingEdit} className="bg-gradient-to-r from-manzhil-dark to-manzhil-teal hover:shadow-lg transition-all">
+                            {savingEdit ? (
+                                <><Loader2 className="h-4 w-4 animate-spin mr-2" />Saving...</>
+                            ) : (
+                                "Save Changes"
+                            )}
+                        </Button>
                     </div>
                 </DialogContent>
             </Dialog>
