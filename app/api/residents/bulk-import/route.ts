@@ -3,6 +3,7 @@ import { supabaseAdmin } from '@/lib/supabase'
 import { sendWelcomeMessage } from '@/lib/twilio/notifications/account'
 import { verifyAdminAccess } from '@/lib/auth/api-auth'
 import { syncResidentTypeForUnit } from '@/lib/services/resident-type-sync'
+import { logWelcomeMessage } from '@/lib/cron-logger'
 
 interface ResidentToImport {
   name: string
@@ -179,15 +180,47 @@ export async function POST(request: NextRequest) {
     if (sendWelcomeMessages && importedResidents.length > 0) {
       for (const resident of importedResidents) {
         try {
-          await sendWelcomeMessage({
+          const sendResult = await sendWelcomeMessage({
             phone: resident.phone_number,
             name: resident.name,
             apartmentNumber: resident.apartment_number,
           })
-          result.messagesSuccess++
+          
+          // Log the welcome message attempt
+          await logWelcomeMessage({
+            residentId: null, // We don't have the ID from import
+            residentName: resident.name,
+            phoneNumber: resident.phone_number,
+            apartmentNumber: resident.apartment_number,
+            status: sendResult.ok ? 'sent' : 'failed',
+            errorMessage: sendResult.ok ? null : sendResult.error || 'Unknown error',
+            twilioSid: sendResult.ok ? sendResult.sid : null,
+            triggeredBy: 'bulk-import',
+            triggeredByUser: null,
+          })
+          
+          if (sendResult.ok) {
+            result.messagesSuccess++
+          } else {
+            result.messagesFailed++
+          }
         } catch (error) {
           result.messagesFailed++
+          const errorMessage = error instanceof Error ? error.message : 'Unknown error'
           console.error(`Failed to send welcome message to ${resident.phone_number}:`, error)
+          
+          // Log the failed attempt
+          await logWelcomeMessage({
+            residentId: null,
+            residentName: resident.name,
+            phoneNumber: resident.phone_number,
+            apartmentNumber: resident.apartment_number,
+            status: 'failed',
+            errorMessage,
+            twilioSid: null,
+            triggeredBy: 'bulk-import',
+            triggeredByUser: null,
+          })
         }
 
         // Rate limit: 1 second between messages to respect Twilio limits

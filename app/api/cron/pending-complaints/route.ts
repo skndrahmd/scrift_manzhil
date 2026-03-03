@@ -3,6 +3,7 @@ import { supabaseAdmin } from "@/lib/supabase"
 import { sendTemplate, sendMessage, formatSubcategory } from "@/lib/twilio"
 import { getTemplateSid } from "@/lib/twilio/templates"
 import { getReminderRecipients } from "@/lib/admin/notifications"
+import { startCronJob, endCronJob, logCronError } from "@/lib/cron-logger"
 
 const APP_BASE_URL = (process.env.NEXT_PUBLIC_APP_URL || "").replace(/\/$/, "")
 
@@ -12,6 +13,9 @@ export async function POST(request: NextRequest) {
   if (cronKey && provided !== cronKey) {
     return new Response("Unauthorized", { status: 401 })
   }
+
+  // Start logging
+  const cronLog = await startCronJob("pending-complaints")
 
   try {
     console.log("[PENDING COMPLAINTS] Starting reminder check...")
@@ -157,6 +161,19 @@ ${DIVIDER}
 
     console.log(`[PENDING COMPLAINTS] Sent ${sentCount}/${pendingComplaints.length} reminders`)
 
+    // Log completion
+    await endCronJob(cronLog, {
+      status: sentCount === pendingComplaints.length ? "success" : "partial",
+      recordsProcessed: pendingComplaints.length,
+      recordsSucceeded: sentCount,
+      recordsFailed: pendingComplaints.length - sentCount,
+      result: {
+        totalPending: pendingComplaints.length,
+        remindersSent: sentCount,
+        recipients: REMINDER_RECIPIENTS.length,
+      },
+    })
+
     return new Response(
       JSON.stringify({
         success: true,
@@ -170,6 +187,7 @@ ${DIVIDER}
     )
   } catch (error) {
     console.error("[PENDING COMPLAINTS] Error:", error)
+    await logCronError(cronLog, error)
     return new Response(
       JSON.stringify({ error: "Failed to process pending complaints" }),
       {

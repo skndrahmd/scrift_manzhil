@@ -9,11 +9,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Settings, Save, Users, Calendar, MessageSquare, Send, Globe, CreditCard, Building2, ListOrdered } from "lucide-react"
+import { Settings, Save, Users, Calendar, MessageSquare, Send, Globe, CreditCard, Building2, ListOrdered, History } from "lucide-react"
 import Link from "next/link"
 import { useToast } from "@/hooks/use-toast"
 import { StaffManagement } from "./staff-management"
 import { PaymentMethodsManager } from "./payment-methods-manager"
+import { LogsViewer } from "./logs-viewer"
 
 const WEEKDAYS = [
     { label: "Monday", value: 1 },
@@ -111,6 +112,10 @@ export function SettingsForm() {
                         <TabsTrigger value="menu-options" className="flex items-center gap-2">
                             <ListOrdered className="h-4 w-4 shrink-0" />
                             <span className="hidden sm:inline">Menu Options</span>
+                        </TabsTrigger>
+                        <TabsTrigger value="logs" className="flex items-center gap-2">
+                            <History className="h-4 w-4 shrink-0" />
+                            <span className="hidden sm:inline">Logs</span>
                         </TabsTrigger>
                     </TabsList>
 
@@ -226,6 +231,10 @@ export function SettingsForm() {
                                 </Link>
                             </CardContent>
                         </Card>
+                    </TabsContent>
+
+                    <TabsContent value="logs" className="mt-6">
+                        <LogsViewer />
                     </TabsContent>
                 </Tabs>
             ) : (

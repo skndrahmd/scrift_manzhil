@@ -7,6 +7,7 @@ import {
   formatDate,
   formatTime,
 } from "@/lib/twilio"
+import { startCronJob, endCronJob, logCronError } from "@/lib/cron-logger"
 
 const CRON_KEY = process.env.CRON_SECRET
 const APP_BASE_URL = (process.env.NEXT_PUBLIC_APP_URL || "https://your-app-url.com").replace(/\/$/, "")
@@ -22,6 +23,9 @@ function daysSinceCreation(createdAt: string): number {
 export async function POST(request: NextRequest) {
   const provided = request.headers.get("x-cron-key")
   if (CRON_KEY && provided !== CRON_KEY) return new Response("Unauthorized", { status: 401 })
+
+  // Start logging
+  const cronLog = await startCronJob("booking-reminder")
 
   try {
     const { data: bookings } = await supabase
@@ -91,9 +95,21 @@ export async function POST(request: NextRequest) {
         .eq("id", b.id)
     }
 
+    // Log completion
+    await endCronJob(cronLog, {
+      status: "success",
+      recordsProcessed: bookings?.length || 0,
+      recordsSucceeded: bookings?.length || 0,
+      recordsFailed: 0,
+      result: {
+        totalBookings: bookings?.length || 0,
+      },
+    })
+
     return new Response("Booking reminders processed", { status: 200 })
   } catch (e) {
     console.error("booking-reminder error:", e)
+    await logCronError(cronLog, e)
     return new Response("Error", { status: 500 })
   }
 }

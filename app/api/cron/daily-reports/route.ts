@@ -4,6 +4,7 @@ import jsPDF from "jspdf"
 import autoTable from "jspdf-autotable"
 import { sendTemplate, sendMessage } from "@/lib/twilio"
 import { getTemplateSid } from "@/lib/twilio/templates"
+import { startCronJob, endCronJob, logCronError } from "@/lib/cron-logger"
 
 const APP_BASE_URL = (process.env.NEXT_PUBLIC_APP_URL || "").replace(/\/$/, "")
 
@@ -13,6 +14,9 @@ export async function POST(request: NextRequest) {
   if (cronKey && provided !== cronKey) {
     return new Response("Unauthorized", { status: 401 })
   }
+
+  // Start logging
+  const cronLog = await startCronJob("daily-reports")
 
   try {
     console.log("[DAILY REPORTS] Starting daily report generation...")
@@ -209,6 +213,27 @@ Generated at ${generationTime}
 
     console.log(`[DAILY REPORTS] Sent reports to ${sentCount}/${REPORT_RECIPIENTS.length} recipients`)
 
+    // Log successful completion
+    await endCronJob(cronLog, {
+      status: sentCount === REPORT_RECIPIENTS.length ? "success" : "partial",
+      recordsProcessed: REPORT_RECIPIENTS.length,
+      recordsSucceeded: sentCount,
+      recordsFailed: REPORT_RECIPIENTS.length - sentCount,
+      result: {
+        last24Hours: {
+          complaints: recentComplaints?.length || 0,
+          bookings: recentBookings?.length || 0,
+        },
+        openComplaints: openComplaints?.length || 0,
+        pendingCount,
+        inProgressCount,
+        recipients: REPORT_RECIPIENTS.length,
+        sentCount,
+        activityReportId: activityReport?.id,
+        complaintsReportId: complaintsReport?.id,
+      },
+    })
+
     const summary = {
       timestamp: now.toISOString(),
       last24Hours: {
@@ -225,6 +250,7 @@ Generated at ${generationTime}
     })
   } catch (error) {
     console.error("[DAILY REPORTS] Error:", error)
+    await logCronError(cronLog, error)
     return new Response(
       JSON.stringify({ error: "Failed to generate daily reports" }),
       {

@@ -2,6 +2,7 @@ import type { NextRequest } from "next/server"
 import { supabaseAdmin } from "@/lib/supabase"
 import { getPakistanISOString } from "@/lib/date"
 import { sendMaintenancePaymentConfirmed, formatMonthYear } from "@/lib/twilio"
+import { startCronJob, endCronJob, logCronError } from "@/lib/cron-logger"
 
 const CRON_KEY = process.env.CRON_SECRET
 const APP_BASE_URL = (process.env.NEXT_PUBLIC_APP_URL || "https://your-app-url.com").replace(/\/$/, "")
@@ -9,6 +10,10 @@ const APP_BASE_URL = (process.env.NEXT_PUBLIC_APP_URL || "https://your-app-url.c
 export async function POST(request: NextRequest) {
   const provided = request.headers.get("x-cron-key")
   if (CRON_KEY && provided !== CRON_KEY) return new Response("Unauthorized", { status: 401 })
+
+  // Start logging
+  const cronLog = await startCronJob("maintenance-confirmation")
+
   try {
     const { data: rows } = await supabaseAdmin
       .from("maintenance_payments")
@@ -52,9 +57,21 @@ export async function POST(request: NextRequest) {
         .eq("id", row.id)
     }
 
+    // Log completion
+    await endCronJob(cronLog, {
+      status: "success",
+      recordsProcessed: rows?.length || 0,
+      recordsSucceeded: rows?.length || 0,
+      recordsFailed: 0,
+      result: {
+        confirmationsSent: rows?.length || 0,
+      },
+    })
+
     return new Response("Maintenance confirmations sent", { status: 200 })
   } catch (e) {
     console.error("maintenance-confirmation error:", e)
+    await logCronError(cronLog, e)
     return new Response("Error", { status: 500 })
   }
 }

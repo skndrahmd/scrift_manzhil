@@ -8,6 +8,7 @@ import {
   smartResetStaleMaintenanceStatus,
   getCurrentMonthYear,
 } from "@/lib/services/maintenance-notification"
+import { startCronJob, endCronJob, logCronError } from "@/lib/cron-logger"
 
 const CRON_KEY = process.env.CRON_SECRET
 
@@ -29,6 +30,9 @@ async function handleMaintenanceReminder(request: NextRequest): Promise<NextResp
   if (CRON_KEY && provided !== CRON_KEY) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
+
+  // Start logging
+  const cronLog = await startCronJob("maintenance-reminder")
 
   const result: CronResult = {
     success: true,
@@ -108,12 +112,31 @@ async function handleMaintenanceReminder(request: NextRequest): Promise<NextResp
 
     console.log(`[MAINTENANCE CRON] Completed - Success: ${result.success}`)
 
+    // Log completion
+    await endCronJob(cronLog, {
+      status: result.success ? "success" : "partial",
+      recordsProcessed: result.invoicesSent || result.remindersSent || result.unitsReset || 0,
+      recordsSucceeded: result.invoicesSent || result.remindersSent || 0,
+      recordsFailed: result.invoicesFailed || result.remindersFailed || 0,
+      result: {
+        dayOfMonth: result.dayOfMonth,
+        unitsReset: result.unitsReset,
+        staleUnitsReset: result.staleUnitsReset,
+        invoicesSent: result.invoicesSent,
+        invoicesFailed: result.invoicesFailed,
+        remindersSent: result.remindersSent,
+        remindersFailed: result.remindersFailed,
+        errors: result.errors,
+      },
+    })
+
     return NextResponse.json(result, { status: 200 })
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : "Unknown error"
     console.error("[MAINTENANCE CRON] Exception:", error)
     result.errors.push(errorMessage)
     result.success = false
+    await logCronError(cronLog, error)
     return NextResponse.json(result, { status: 500 })
   }
 }

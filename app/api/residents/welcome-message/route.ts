@@ -2,6 +2,7 @@ import type { NextRequest } from "next/server"
 import { NextResponse } from "next/server"
 import { sendWelcomeMessage, isConfigured } from "@/lib/twilio"
 import { verifyAdminAccess } from "@/lib/auth/api-auth"
+import { logWelcomeMessage } from "@/lib/cron-logger"
 
 export async function POST(request: NextRequest) {
   const { authenticated, error: authError } = await verifyAdminAccess("residents")
@@ -11,7 +12,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json()
-    const { name, phone_number, apartment_number } = body
+    const { name, phone_number, apartment_number, resident_id } = body
 
     if (!name || !phone_number || !apartment_number) {
       return new Response(JSON.stringify({ error: "Missing required fields" }), {
@@ -41,6 +42,19 @@ export async function POST(request: NextRequest) {
       phone: formattedPhone,
       name,
       apartmentNumber: apartment_number,
+    })
+
+    // Log the welcome message attempt
+    await logWelcomeMessage({
+      residentId: resident_id || null,
+      residentName: name,
+      phoneNumber: formattedPhone,
+      apartmentNumber: apartment_number,
+      status: result.ok ? 'sent' : 'failed',
+      errorMessage: result.ok ? null : result.error || 'Unknown error',
+      twilioSid: result.ok ? result.sid : null,
+      triggeredBy: 'manual',
+      triggeredByUser: null,
     })
 
     if (!result.ok) {
