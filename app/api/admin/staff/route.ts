@@ -81,6 +81,8 @@ export async function POST(request: NextRequest) {
       receive_complaint_notifications,
       receive_reminder_notifications,
       receive_daily_reports,
+      receive_complaint_status_updates,
+      receive_payment_notifications,
       permissions,
     } = body
 
@@ -133,6 +135,8 @@ export async function POST(request: NextRequest) {
         receive_complaint_notifications: receive_complaint_notifications || false,
         receive_reminder_notifications: receive_reminder_notifications || false,
         receive_daily_reports: receive_daily_reports || false,
+        receive_complaint_status_updates: receive_complaint_status_updates || false,
+        receive_payment_notifications: receive_payment_notifications || false,
       })
       .select()
       .single()

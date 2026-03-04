@@ -86,6 +86,9 @@ export async function PUT(
       is_active,
       receive_complaint_notifications,
       receive_reminder_notifications,
+      receive_daily_reports,
+      receive_complaint_status_updates,
+      receive_payment_notifications,
       permissions,
     } = body
 
@@ -119,6 +122,15 @@ export async function PUT(
     }
     if (receive_reminder_notifications !== undefined) {
       updateData.receive_reminder_notifications = receive_reminder_notifications
+    }
+    if (receive_daily_reports !== undefined) {
+      updateData.receive_daily_reports = receive_daily_reports
+    }
+    if (receive_complaint_status_updates !== undefined) {
+      updateData.receive_complaint_status_updates = receive_complaint_status_updates
+    }
+    if (receive_payment_notifications !== undefined) {
+      updateData.receive_payment_notifications = receive_payment_notifications
     }
 
     const { data: user, error: updateError } = await supabaseAdmin

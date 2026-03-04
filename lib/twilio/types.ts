@@ -36,6 +36,7 @@ export type TemplateType =
   | "payment_approved"
   | "payment_rejected"
   | "admin_complaint_status_update"
+  | "payment_received_admin"
 
 // Base notification params (common to all)
 export interface BaseNotificationParams {

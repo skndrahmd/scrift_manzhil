@@ -55,6 +55,9 @@ export const TEMPLATE_SIDS: Record<TemplateType, string | undefined> = {
   // Payment verification templates
   payment_approved: process.env.TWILIO_PAYMENT_APPROVED_TEMPLATE_SID,
   payment_rejected: process.env.TWILIO_PAYMENT_REJECTED_TEMPLATE_SID,
+
+  // Admin payment notification template
+  payment_received_admin: process.env.TWILIO_PAYMENT_RECEIVED_ADMIN_TEMPLATE_SID,
 }
 
 /**

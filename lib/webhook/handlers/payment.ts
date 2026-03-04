@@ -11,7 +11,9 @@ import { setState, clearState } from "../state"
 import { formatCurrency } from "../utils"
 import { getMessage, getLabels } from "../messages"
 import { MSG } from "../message-keys"
-import { getComplaintRecipients } from "../config"
+import { getPaymentNotificationRecipients } from "@/lib/admin/notifications"
+import { sendWithFallback } from "@/lib/twilio/send"
+import { getTemplateSid } from "@/lib/twilio/templates"
 
 /**
  * Initialize payment receipt flow
@@ -486,11 +488,26 @@ async function notifyAdminsOfReceipt(
   amount: number
 ): Promise<void> {
   try {
-    const recipients = await getComplaintRecipients()
+    const recipients = await getPaymentNotificationRecipients()
     if (recipients.length === 0) return
 
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || ""
-    const message = `💳 *New Payment Receipt*
+    const adminUrl = `${baseUrl}/admin`
+
+    // Fetch admin names for personalized messages
+    const { data: admins } = await supabaseAdmin
+      .from("admin_users")
+      .select("phone_number, name")
+      .in("phone_number", recipients)
+      .eq("is_active", true)
+
+    const templateSid = await getTemplateSid("payment_received_admin")
+
+    for (const admin of admins || []) {
+      if (!admin.phone_number) continue
+
+      try {
+        const fallback = `💳 *New Payment Receipt*
 
 👤 ${profile.name} (${profile.apartment_number})
 📝 ${description}
@@ -498,13 +515,23 @@ async function notifyAdminsOfReceipt(
 
 A resident has submitted a payment receipt for verification.
 
-🔗 Admin: ${baseUrl}/admin`
+🔗 Admin: ${adminUrl}`
 
-    for (const recipient of recipients) {
-      try {
-        await sendWhatsAppMessage(recipient, message)
+        await sendWithFallback(
+          admin.phone_number,
+          templateSid,
+          {
+            "1": admin.name || "Admin",
+            "2": profile.name || "Resident",
+            "3": profile.apartment_number || "N/A",
+            "4": description,
+            "5": formatCurrency(amount),
+            "6": adminUrl,
+          },
+          fallback
+        )
       } catch (err) {
-        console.error(`[Payment] Failed to notify ${recipient}:`, err)
+        console.error(`[Payment] Failed to notify ${admin.phone_number}:`, err)
       }
     }
   } catch (error) {

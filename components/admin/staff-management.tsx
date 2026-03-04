@@ -75,6 +75,7 @@ export function StaffManagement() {
         receive_reminder_notifications: false,
         receive_daily_reports: false,
         receive_complaint_status_updates: false,
+        receive_payment_notifications: false,
         permissions: {} as Record<string, boolean>,
     })
 
@@ -134,6 +135,7 @@ export function StaffManagement() {
             receive_reminder_notifications: false,
             receive_daily_reports: false,
             receive_complaint_status_updates: false,
+            receive_payment_notifications: false,
             permissions: {},
         })
         setEditingStaff(null)
@@ -154,6 +156,7 @@ export function StaffManagement() {
             receive_reminder_notifications: staffMember.receive_reminder_notifications,
             receive_daily_reports: staffMember.receive_daily_reports,
             receive_complaint_status_updates: staffMember.receive_complaint_status_updates,
+            receive_payment_notifications: staffMember.receive_payment_notifications,
             permissions: permObj,
         })
         setDialogOpen(true)
@@ -182,6 +185,7 @@ export function StaffManagement() {
                         receive_reminder_notifications: formData.receive_reminder_notifications,
                         receive_daily_reports: formData.receive_daily_reports,
                         receive_complaint_status_updates: formData.receive_complaint_status_updates,
+                        receive_payment_notifications: formData.receive_payment_notifications,
                         updated_at: new Date().toISOString(),
                     })
                     .eq("id", editingStaff.id)
@@ -230,6 +234,7 @@ export function StaffManagement() {
                         receive_reminder_notifications: formData.receive_reminder_notifications,
                         receive_daily_reports: formData.receive_daily_reports,
                         receive_complaint_status_updates: formData.receive_complaint_status_updates,
+                        receive_payment_notifications: formData.receive_payment_notifications,
                         permissions: formData.role === "staff" ? formData.permissions : {},
                     }),
                 })
@@ -515,6 +520,21 @@ export function StaffManagement() {
                                             disabled={!formData.phone_number}
                                         />
                                     </div>
+                                    <div className="flex items-center justify-between">
+                                        <div className="space-y-0.5">
+                                            <Label>Payment Receipts</Label>
+                                            <p className="text-xs text-muted-foreground">
+                                                Get notified when residents submit payment receipts
+                                            </p>
+                                        </div>
+                                        <Switch
+                                            checked={formData.receive_payment_notifications}
+                                            onCheckedChange={(checked) =>
+                                                setFormData(f => ({ ...f, receive_payment_notifications: checked }))
+                                            }
+                                            disabled={!formData.phone_number}
+                                        />
+                                    </div>
                                 </CardContent>
                             </Card>
                         </div>
@@ -619,7 +639,12 @@ export function StaffManagement() {
                                                                 <FileText className="h-3 w-3 mr-1" /> Reports
                                                             </Badge>
                                                         )}
-                                                        {!member.receive_complaint_notifications && !member.receive_reminder_notifications && !member.receive_complaint_status_updates && !member.receive_daily_reports && (
+                                                        {member.receive_payment_notifications && (
+                                                            <Badge variant="outline" className="text-xs">
+                                                                <Bell className="h-3 w-3 mr-1" /> Payments
+                                                            </Badge>
+                                                        )}
+                                                        {!member.receive_complaint_notifications && !member.receive_reminder_notifications && !member.receive_complaint_status_updates && !member.receive_daily_reports && !member.receive_payment_notifications && (
                                                             <span className="text-gray-400 text-sm">None</span>
                                                         )}
                                                     </div>
@@ -741,7 +766,12 @@ export function StaffManagement() {
                                                         <FileText className="h-3 w-3" /> Reports
                                                     </Badge>
                                                 )}
-                                                {!member.receive_complaint_notifications && !member.receive_reminder_notifications && !member.receive_complaint_status_updates && !member.receive_daily_reports && (
+                                                {member.receive_payment_notifications && (
+                                                    <Badge variant="outline" className="text-xs gap-1">
+                                                        <Bell className="h-3 w-3" /> Payments
+                                                    </Badge>
+                                                )}
+                                                {!member.receive_complaint_notifications && !member.receive_reminder_notifications && !member.receive_complaint_status_updates && !member.receive_daily_reports && !member.receive_payment_notifications && (
                                                     <span className="text-xs text-gray-400">No notifications</span>
                                                 )}
                                             </div>
