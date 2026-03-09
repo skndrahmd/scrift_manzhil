@@ -2,6 +2,8 @@ import { NextResponse } from "next/server"
 import { verifyAdminAccess } from "@/lib/auth"
 import { supabaseAdmin } from "@/lib/supabase"
 
+export const dynamic = 'force-dynamic'
+
 // GET - Fetch all amenities
 export async function GET() {
   const { authenticated, error } = await verifyAdminAccess("settings")

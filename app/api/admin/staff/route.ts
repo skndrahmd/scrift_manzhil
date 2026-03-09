@@ -5,6 +5,8 @@ import { verifyAdminAccess, isSuperAdmin } from "@/lib/auth/api-auth"
 import { PAGE_KEYS } from "@/lib/supabase"
 import { sendStaffInvitation } from "@/lib/twilio/notifications"
 
+export const dynamic = 'force-dynamic'
+
 // GET - List all staff members
 export async function GET() {
   try {

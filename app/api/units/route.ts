@@ -4,6 +4,8 @@ import { supabaseAdmin } from "@/lib/supabase"
 import { getPakistanISOString } from "@/lib/date"
 import { verifyAdminAccess } from "@/lib/auth/api-auth"
 
+export const dynamic = 'force-dynamic'
+
 export async function POST(request: NextRequest) {
     const { authenticated, error: authError } = await verifyAdminAccess("units")
     if (!authenticated) {

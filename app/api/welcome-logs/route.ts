@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server"
 import { verifyAdminAccess } from "@/lib/auth/api-auth"
 import { supabaseAdmin } from "@/lib/supabase"
 
+export const dynamic = 'force-dynamic'
+
 /**
  * GET /api/welcome-logs
  * Fetch welcome message logs with filtering and pagination

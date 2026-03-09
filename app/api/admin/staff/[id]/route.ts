@@ -4,6 +4,8 @@ import { verifyAdminAccess, isSuperAdmin } from "@/lib/auth/api-auth"
 import { PAGE_KEYS } from "@/lib/supabase"
 import { ADMIN_CACHE_COOKIE } from "@/lib/auth/cache"
 
+export const dynamic = 'force-dynamic'
+
 // GET - Get single staff member
 export async function GET(
   request: NextRequest,

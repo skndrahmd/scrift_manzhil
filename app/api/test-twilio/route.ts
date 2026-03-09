@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server"
 import { verifyAdminAccess } from "@/lib/auth/api-auth"
 
+export const dynamic = 'force-dynamic'
+
 export async function GET() {
   const { authenticated, error: authError } = await verifyAdminAccess("settings")
   if (!authenticated) {
