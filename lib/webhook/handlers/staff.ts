@@ -221,8 +221,8 @@ async function createStaffMember(
         cnic: staff.cnic,
         phone_number: staff.phone,
         role: staff.role,
-        created_at: getPakistanISOString(),
-        updated_at: getPakistanISOString(),
+        created_at: await getPakistanISOString(),
+        updated_at: await getPakistanISOString(),
       },
     ])
 
@@ -465,7 +465,7 @@ async function handleEditStaffFlow(
     // Update in database
     const { error } = await supabase
       .from("staff")
-      .update({ [editField]: newValue, updated_at: getPakistanISOString() })
+      .update({ [editField]: newValue, updated_at: await getPakistanISOString() })
       .eq("id", selectedStaff.id)
 
     if (error) {

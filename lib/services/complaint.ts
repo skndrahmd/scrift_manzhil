@@ -88,7 +88,7 @@ export async function updateComplaintStatus(complaintId: string, status: string)
   // Optimistic locking: only update if record hasn't changed since we read it
   const { data: updateResult, error: updateError } = await supabaseAdmin
     .from("complaints")
-    .update({ status, updated_at: getPakistanISOString() })
+    .update({ status, updated_at: await getPakistanISOString() })
     .eq("id", complaintId)
     .eq("updated_at", originalUpdatedAt)
     .select()
@@ -108,8 +108,8 @@ export async function updateComplaintStatus(complaintId: string, status: string)
   if (profile?.phone_number) {
     const createdAt = new Date(complaint.created_at || Date.now())
     const resolvedAt = new Date()
-    const createdTime = formatDateTime(createdAt)
-    const resolvedTime = formatDateTime(resolvedAt)
+    const createdTime = await formatDateTime(createdAt)
+    const resolvedTime = await formatDateTime(resolvedAt)
 
     const notificationParams = {
       phone: profile.phone_number,
@@ -142,7 +142,7 @@ export async function updateComplaintStatus(complaintId: string, status: string)
   try {
     const adminRecipients = await getComplaintStatusUpdateRecipients()
     if (adminRecipients.length > 0) {
-      const updateTime = formatDateTime(new Date())
+      const updateTime = await formatDateTime(new Date())
       const adminNotificationParams = {
         complaintId: complaint.complaint_id,
         residentName: profile?.name || "Resident",

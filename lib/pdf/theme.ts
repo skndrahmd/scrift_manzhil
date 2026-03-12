@@ -66,14 +66,8 @@ export function hexToRgb(hex: string): [number, number, number] {
     return result ? [parseInt(result[1], 16), parseInt(result[2], 16), parseInt(result[3], 16)] : [0, 0, 0]
 }
 
-/**
- * Formats a numeric amount as Pakistani Rupees (e.g. "Rs 12,000").
- * @param amount - Numeric amount to format
- * @returns Formatted currency string with "Rs" prefix
- */
-export function formatCurrency(amount: number): string {
-    return `Rs ${amount.toLocaleString("en-PK")}`
-}
+// Re-export canonical formatCurrency from @/lib/currency
+export { formatCurrency, formatCurrencyWith } from "@/lib/currency"
 
 /**
  * Formats a date value as "DD Mon YYYY" (en-GB). Returns "---" for falsy input.

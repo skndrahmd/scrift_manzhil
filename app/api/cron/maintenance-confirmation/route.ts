@@ -51,8 +51,8 @@ export async function POST(request: NextRequest) {
         .from("maintenance_payments")
         .update({
           confirmation_sent: true,
-          confirmation_sent_at: getPakistanISOString(),
-          updated_at: getPakistanISOString(),
+          confirmation_sent_at: await getPakistanISOString(),
+          updated_at: await getPakistanISOString(),
         })
         .eq("id", row.id)
     }

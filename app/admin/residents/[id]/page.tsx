@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
+import { useAdmin } from "../../layout"
 import { supabase, type Profile, type Booking, type Complaint } from "@/lib/supabase"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -55,6 +56,8 @@ function getStatusBadgeVariant(status: string) {
 export default function ResidentProfilePage({ params }: { params: { id: string } }) {
   const router = useRouter()
   const { toast } = useToast()
+  const { instanceSettings } = useAdmin()
+  const currencySymbol = instanceSettings?.currencySymbol ?? "Rs."
   const [loading, setLoading] = useState(true)
   const [profile, setProfile] = useState<Profile | null>(null)
   const [bookings, setBookings] = useState<Booking[]>([])
@@ -266,7 +269,7 @@ export default function ResidentProfilePage({ params }: { params: { id: string }
                           apartment: b.profiles?.apartment_number || profile?.apartment_number || "",
                           date: formatDateForDisplay(b.booking_date),
                           time: `${formatTime(b.start_time)} - ${formatTime(b.end_time)}`,
-                          amount: `Rs. ${Number(b.booking_charges).toLocaleString()}`,
+                          amount: `${currencySymbol} ${Number(b.booking_charges).toLocaleString()}`,
                           payment: b.payment_status,
                           status: b.status,
                           created: formatDateTime(b.created_at),
@@ -309,7 +312,7 @@ export default function ResidentProfilePage({ params }: { params: { id: string }
                         <TableCell>
                           {formatTime(row.start_time)} - {formatTime(row.end_time)}
                         </TableCell>
-                        <TableCell>Rs. {Number(row.booking_charges).toLocaleString()}</TableCell>
+                        <TableCell>{currencySymbol} {Number(row.booking_charges).toLocaleString()}</TableCell>
                         <TableCell>
                           <Badge variant={getStatusBadgeVariant(row.payment_status)}>{row.payment_status}</Badge>
                         </TableCell>
@@ -346,7 +349,7 @@ export default function ResidentProfilePage({ params }: { params: { id: string }
                         <p className="text-sm text-gray-500">
                           {formatDateForDisplay(row.booking_date)} &bull; {formatTime(row.start_time)} - {formatTime(row.end_time)}
                         </p>
-                        <p className="text-sm">Rs. {Number(row.booking_charges).toLocaleString()}</p>
+                        <p className="text-sm">{currencySymbol} {Number(row.booking_charges).toLocaleString()}</p>
                         <div className="flex items-center gap-2">
                           <Badge variant={getStatusBadgeVariant(row.payment_status)} className="text-xs">{row.payment_status}</Badge>
                           <span className="text-xs text-gray-400">{row.profiles?.apartment_number || profile?.apartment_number || ""}</span>

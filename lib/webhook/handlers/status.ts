@@ -5,6 +5,7 @@
 
 import { supabase } from "@/lib/supabase"
 import { getPakistanISOString } from "@/lib/date"
+import { getConfiguredTimezone } from "@/lib/instance-settings"
 import type { Profile, UserState } from "../types"
 import { getState, setState, clearState } from "../state"
 import { formatDate, formatSubcategory, isYesResponse, isNoResponse } from "../utils"
@@ -81,12 +82,13 @@ export async function handleStatusFlow(
             ? "✅ Completed — Issue resolved"
             : "❌ Cancelled"
 
+    const timezone = await getConfiguredTimezone()
     const registeredAt = new Date(complaint.created_at)
     const formattedDate = registeredAt.toLocaleDateString("en-US", {
       month: "short",
       day: "numeric",
       year: "numeric",
-      timeZone: "Asia/Karachi",
+      timeZone: timezone,
     })
 
     let response = await getMessage(MSG.STATUS_DETAIL, {
@@ -195,7 +197,7 @@ export async function handleCancelFlow(
         .from("complaints")
         .update({
           status: "cancelled",
-          updated_at: getPakistanISOString(),
+          updated_at: await getPakistanISOString(),
         })
         .eq("id", selectedComplaint.id)
 

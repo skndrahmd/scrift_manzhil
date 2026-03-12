@@ -2,7 +2,7 @@
 -- Manzhil by Scrift - Complete Database Setup
 -- ============================================
 -- This is the SINGLE master SQL file containing ALL database setup:
---   - Schema (30 tables with RLS, indexes, triggers)
+--   - Schema (31 tables with RLS, indexes, triggers)
 --   - Seed data (bot messages, whatsapp templates, label messages, amenities, menu options)
 --
 -- Run this ONCE in your Supabase SQL Editor for a fresh installation.
@@ -1956,7 +1956,8 @@ WHERE schemaname = 'public'
     'enabled_languages', 'bot_message_translations',
     'bot_sessions',
     'amenities', 'prayer_times', 'prayer_times_settings',
-    'menu_options', 'menu_option_translations'
+    'menu_options', 'menu_option_translations',
+    'instance_settings'
   )
 ORDER BY tablename;
 
@@ -1975,8 +1976,32 @@ SELECT 'prayer_times', COUNT(*) FROM prayer_times
 UNION ALL
 SELECT 'menu_options', COUNT(*) FROM menu_options;
 
+-- ============================================================================
+-- 31. Instance Settings (timezone, currency configuration)
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS instance_settings (
+  id          uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  key         text NOT NULL UNIQUE,
+  value       text NOT NULL,
+  description text,
+  updated_at  timestamptz DEFAULT now(),
+  updated_by  uuid REFERENCES admin_users(id) ON DELETE SET NULL
+);
+
+ALTER TABLE instance_settings ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Service role full access" ON instance_settings
+  FOR ALL USING (true) WITH CHECK (true);
+
+INSERT INTO instance_settings (key, value, description) VALUES
+  ('timezone',        'Asia/Karachi',  'IANA timezone identifier'),
+  ('currency_code',   'PKR',           'ISO 4217 currency code'),
+  ('currency_symbol', 'Rs.',           'Currency symbol for display')
+ON CONFLICT (key) DO NOTHING;
+
 -- Final status
 SELECT
   'Manzhil by Scrift - Database setup complete!' as status,
-  '30 tables created with RLS, triggers, and seed data' as summary,
+  '31 tables created with RLS, triggers, and seed data' as summary,
   NOW() as completed_at;

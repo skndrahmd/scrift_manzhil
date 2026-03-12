@@ -47,16 +47,18 @@ export async function sendAccountBlocked(
 ): Promise<TwilioResult> {
   const { phone, name, reason, overdueMonths, totalDue } = params
 
+  const formattedDue = totalDue ? await formatCurrency(totalDue) : ""
+
   const templateSid = await getTemplateSid("account_blocked_maintenance")
   const templateVariables = {
     "1": name || "Resident",
     "2": reason,
     "3": overdueMonths || "",
-    "4": totalDue ? formatCurrency(totalDue) : "",
+    "4": formattedDue,
   }
 
   const dueDetails = totalDue
-    ? `\n📅 Overdue: ${overdueMonths}\n💰 Amount: Rs. ${formatCurrency(totalDue)}`
+    ? `\n📅 Overdue: ${overdueMonths}\n💰 Amount: ${formattedDue}`
     : ""
 
   const fallbackMessage = `⚠️ *Account Restricted*

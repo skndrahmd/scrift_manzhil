@@ -1,7 +1,9 @@
 /**
  * Formatting Utilities for Twilio Notifications
- * Centralized date, time, and currency formatting for Pakistan timezone
+ * Centralized date, time, and currency formatting with dynamic timezone
  */
+
+import { getConfiguredTimezone } from "@/lib/instance-settings"
 
 /**
  * Format a date string for display (DD/MM/YYYY)
@@ -54,34 +56,31 @@ export function formatMonthYear(year: number, month: number): string {
   })
 }
 
-/**
- * Format currency amount with thousands separator
- * @param amount - Numeric amount
- */
-export function formatCurrency(amount: number): string {
-  return amount.toLocaleString()
-}
+// Re-export canonical formatCurrency from @/lib/currency
+export { formatCurrency, formatCurrencyWith } from "@/lib/currency"
 
 /**
- * Format a Date object for Pakistan timezone display
+ * Format a Date object for configured timezone display
  * @param date - Date object
  */
-export function formatDateTime(date: Date): string {
+export async function formatDateTime(date: Date): Promise<string> {
+  const timezone = await getConfiguredTimezone()
   return date.toLocaleString("en-US", {
     month: "short",
     day: "numeric",
     hour: "numeric",
     minute: "2-digit",
     hour12: true,
-    timeZone: "Asia/Karachi",
+    timeZone: timezone,
   })
 }
 
 /**
- * Get current date in YYYY-MM-DD format
+ * Get current date in YYYY-MM-DD format (in configured timezone)
  */
-export function getTodayString(): string {
-  const d = new Date()
+export async function getTodayString(): Promise<string> {
+  const { getPakistanTime } = await import("@/lib/date")
+  const d = await getPakistanTime()
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`
 }
 

@@ -4,6 +4,7 @@ import { sendTemplate, sendMessage, formatSubcategory } from "@/lib/twilio"
 import { getTemplateSid } from "@/lib/twilio/templates"
 import { getReminderRecipients } from "@/lib/admin/notifications"
 import { startCronJob, endCronJob, logCronError } from "@/lib/cron-logger"
+import { getConfiguredTimezone } from "@/lib/instance-settings"
 
 const APP_BASE_URL = (process.env.NEXT_PUBLIC_APP_URL || "").replace(/\/$/, "")
 
@@ -19,6 +20,8 @@ export async function POST(request: NextRequest) {
 
   try {
     console.log("[PENDING COMPLAINTS] Starting reminder check...")
+
+    const timezone = await getConfiguredTimezone()
 
     // Get dynamic reminder recipients
     const REMINDER_RECIPIENTS = await getReminderRecipients()
@@ -81,7 +84,7 @@ export async function POST(request: NextRequest) {
           month: 'long',
           day: 'numeric',
           year: 'numeric',
-          timeZone: 'Asia/Karachi'
+          timeZone: timezone
         })
 
         // Sanitize description for template (remove newlines, limit length)

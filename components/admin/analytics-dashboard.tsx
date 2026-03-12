@@ -54,7 +54,8 @@ const CHART_COLORS = {
 type Period = 'week' | 'month' | 'quarter' | 'year'
 
 export function AnalyticsDashboard() {
-    const { complaints, bookings, profiles, feedback, units } = useAdmin()
+    const { complaints, bookings, profiles, feedback, units, instanceSettings } = useAdmin()
+    const currencySymbol = instanceSettings?.currencySymbol ?? "Rs."
     const [period, setPeriod] = useState<Period>('month')
 
     // ========== KPI Calculations ==========
@@ -314,7 +315,7 @@ export function AnalyticsDashboard() {
     }, [profiles, bookings, complaints])
 
     // ========== Helper Functions ==========
-    const formatCurrency = (value: number) => `Rs. ${value.toLocaleString()}`
+    const formatCurrency = (value: number) => `${currencySymbol} ${value.toLocaleString()}`
 
     const getStatusColor = (status: string) => {
         switch (status) {

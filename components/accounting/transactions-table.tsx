@@ -29,6 +29,7 @@ import {
     FileText
 } from "lucide-react"
 import type { Transaction } from "@/lib/supabase"
+import { useAdmin } from "@/app/admin/layout"
 
 interface TransactionsTableProps {
     transactions: Transaction[]
@@ -54,6 +55,8 @@ export function TransactionsTable({
     onPageChange,
     onFilterChange
 }: TransactionsTableProps) {
+    const { instanceSettings } = useAdmin()
+    const currencySymbol = instanceSettings?.currencySymbol ?? "Rs."
     const [filters, setFilters] = useState<TransactionFilters>({
         type: "all",
         startDate: "",
@@ -69,12 +72,7 @@ export function TransactionsTable({
 
     const formatCurrency = (amount: number) => {
         const absAmount = Math.abs(amount)
-        return new Intl.NumberFormat('en-PK', {
-            style: 'currency',
-            currency: 'PKR',
-            minimumFractionDigits: 0,
-            maximumFractionDigits: 0
-        }).format(absAmount)
+        return `${currencySymbol} ${absAmount.toLocaleString()}`
     }
 
     const formatDate = (dateString: string) => {

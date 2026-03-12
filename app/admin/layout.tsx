@@ -42,6 +42,7 @@ interface AdminContextType {
     visitors: VisitorPass[]
     parcels: Parcel[]
     settings: BookingSettings | null
+    instanceSettings: { timezone: string; currencyCode: string; currencySymbol: string } | null
 
     // Loading states
     loading: boolean
@@ -71,6 +72,7 @@ interface AdminContextType {
     fetchVisitors: () => Promise<void>
     fetchParcels: () => Promise<void>
     fetchSettings: () => Promise<void>
+    fetchInstanceSettings: () => Promise<void>
 
     // Viewed timestamps
     setLastViewedBookings: (timestamp: number) => void
@@ -101,6 +103,7 @@ function AdminLayoutContent({
     const [visitors, setVisitors] = useState<VisitorPass[]>([])
     const [parcels, setParcels] = useState<Parcel[]>([])
     const [settings, setSettings] = useState<BookingSettings | null>(null)
+    const [instanceSettings, setInstanceSettings] = useState<{ timezone: string; currencyCode: string; currencySymbol: string } | null>(null)
     const [loading, setLoading] = useState(true)
     const [refreshing, setRefreshing] = useState(false)
     const [pendingVerificationsCount, setPendingVerificationsCount] = useState(0)
@@ -208,6 +211,22 @@ function AdminLayoutContent({
         if (data) setParcels(data)
     }
 
+    const fetchInstanceSettings = async () => {
+        try {
+            const res = await fetch("/api/instance-settings")
+            if (res.ok) {
+                const data = await res.json()
+                setInstanceSettings({
+                    timezone: data.timezone ?? "Asia/Karachi",
+                    currencyCode: data.currency_code ?? "PKR",
+                    currencySymbol: data.currency_symbol ?? "Rs.",
+                })
+            }
+        } catch (err) {
+            console.error("Error fetching instance settings:", err)
+        }
+    }
+
     const fetchPendingVerifications = async () => {
         try {
             const { count } = await supabase
@@ -222,7 +241,7 @@ function AdminLayoutContent({
 
     const refreshData = async () => {
         setRefreshing(true)
-        await Promise.all([fetchBookings(), fetchComplaints(), fetchProfiles(), fetchUnits(), fetchFeedback(), fetchVisitors(), fetchParcels(), fetchSettings(), fetchPendingVerifications()])
+        await Promise.all([fetchBookings(), fetchComplaints(), fetchProfiles(), fetchUnits(), fetchFeedback(), fetchVisitors(), fetchParcels(), fetchSettings(), fetchPendingVerifications(), fetchInstanceSettings()])
         setRefreshing(false)
         toast({
             title: "Data Refreshed",
@@ -233,7 +252,7 @@ function AdminLayoutContent({
     useEffect(() => {
         const fetchAllData = async () => {
             setLoading(true)
-            await Promise.all([fetchBookings(), fetchComplaints(), fetchProfiles(), fetchUnits(), fetchFeedback(), fetchVisitors(), fetchParcels(), fetchSettings(), fetchPendingVerifications()])
+            await Promise.all([fetchBookings(), fetchComplaints(), fetchProfiles(), fetchUnits(), fetchFeedback(), fetchVisitors(), fetchParcels(), fetchSettings(), fetchPendingVerifications(), fetchInstanceSettings()])
             setLoading(false)
         }
         fetchAllData()
@@ -309,6 +328,7 @@ function AdminLayoutContent({
         visitors,
         parcels,
         settings,
+        instanceSettings,
         loading,
         refreshing,
         newBookingsCount,
@@ -330,6 +350,7 @@ function AdminLayoutContent({
         fetchVisitors,
         fetchParcels,
         fetchSettings,
+        fetchInstanceSettings,
         setLastViewedBookings,
         setLastViewedComplaints,
         setLastViewedFeedback,

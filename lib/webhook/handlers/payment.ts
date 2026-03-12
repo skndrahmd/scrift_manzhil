@@ -6,9 +6,10 @@
 
 import { supabaseAdmin } from "@/lib/supabase"
 import { sendWhatsAppMessage } from "@/lib/twilio"
+import { getInstanceSettings, getConfiguredTimezone } from "@/lib/instance-settings"
+import { formatCurrency, formatCurrencyWith } from "@/lib/currency"
 import type { Profile, UserState, MediaInfo } from "../types"
 import { setState, clearState } from "../state"
-import { formatCurrency } from "../utils"
 import { getMessage, getLabels } from "../messages"
 import { MSG } from "../message-keys"
 import { getPaymentNotificationRecipients } from "@/lib/admin/notifications"
@@ -155,9 +156,10 @@ async function handleMaintenancePending(
   }
 
   // Multiple pending payments — show list
+  const { currencySymbol } = await getInstanceSettings()
   const list = payments.map((p, i) => {
     const monthName = new Date(p.year, p.month - 1).toLocaleString("en-US", { month: "long" })
-    return `${i + 1}. ${monthName} ${p.year} — ${formatCurrency(p.amount)}`
+    return `${i + 1}. ${monthName} ${p.year} — ${formatCurrencyWith(p.amount, currencySymbol)}`
   }).join("\n")
 
   // Store payment list in state for selection
@@ -197,11 +199,12 @@ async function handleBookingPending(
   // If only one pending booking, auto-select it
   if (bookings.length === 1) {
     const b = bookings[0]
+    const timezone = await getConfiguredTimezone()
     const dateStr = new Date(b.booking_date).toLocaleDateString("en-US", {
       month: "short",
       day: "numeric",
       year: "numeric",
-      timeZone: "Asia/Karachi",
+      timeZone: timezone,
     })
     const description = `Hall Booking - ${dateStr}`
 
@@ -219,14 +222,16 @@ async function handleBookingPending(
   }
 
   // Multiple pending bookings — show list
+  const timezone = await getConfiguredTimezone()
+  const { currencySymbol } = await getInstanceSettings()
   const list = bookings.map((b, i) => {
     const dateStr = new Date(b.booking_date).toLocaleDateString("en-US", {
       month: "short",
       day: "numeric",
       year: "numeric",
-      timeZone: "Asia/Karachi",
+      timeZone: timezone,
     })
-    return `${i + 1}. ${dateStr} — ${formatCurrency(b.booking_charges)}`
+    return `${i + 1}. ${dateStr} — ${formatCurrencyWith(b.booking_charges, currencySymbol)}`
   }).join("\n")
 
   userState.payment = {
@@ -254,15 +259,17 @@ async function handlePaymentSelection(
   const choiceNum = parseInt(choice, 10)
 
   if (isNaN(choiceNum) || choiceNum < 1 || choiceNum > items.length) {
+    const timezone = await getConfiguredTimezone()
+    const { currencySymbol } = await getInstanceSettings()
     const list = items.map((item: any, i: number) => {
       if (userState.payment?.payment_type === "maintenance") {
         const monthName = new Date(item.year, item.month - 1).toLocaleString("en-US", { month: "long" })
-        return `${i + 1}. ${monthName} ${item.year} — ${formatCurrency(item.amount)}`
+        return `${i + 1}. ${monthName} ${item.year} — ${formatCurrencyWith(item.amount, currencySymbol)}`
       } else {
         const dateStr = new Date(item.booking_date).toLocaleDateString("en-US", {
-          month: "short", day: "numeric", year: "numeric", timeZone: "Asia/Karachi",
+          month: "short", day: "numeric", year: "numeric", timeZone: timezone,
         })
-        return `${i + 1}. ${dateStr} — ${formatCurrency(item.booking_charges)}`
+        return `${i + 1}. ${dateStr} — ${formatCurrencyWith(item.booking_charges, currencySymbol)}`
       }
     }).join("\n")
     return await getMessage(MSG.PAYMENT_SELECT, { list }, language)
@@ -277,8 +284,9 @@ async function handlePaymentSelection(
     description = `Maintenance - ${monthName} ${selected.year}`
     amount = selected.amount
   } else {
+    const tz = await getConfiguredTimezone()
     const dateStr = new Date(selected.booking_date).toLocaleDateString("en-US", {
-      month: "short", day: "numeric", year: "numeric", timeZone: "Asia/Karachi",
+      month: "short", day: "numeric", year: "numeric", timeZone: tz,
     })
     description = `Hall Booking - ${dateStr}`
     amount = selected.booking_charges
@@ -352,7 +360,7 @@ async function showPaymentMethods(
   }).join("\n\n")
 
   return await getMessage(MSG.PAYMENT_METHODS_LIST, {
-    amount: formatCurrency(amount),
+    amount: await formatCurrency(amount),
     description,
     methods: methodsText,
   }, language)
@@ -471,7 +479,7 @@ async function handleReceiptUpload(
 
     return await getMessage(MSG.PAYMENT_RECEIPT_RECEIVED, {
       description: payment.description || "",
-      amount: formatCurrency(payment.amount),
+      amount: await formatCurrency(payment.amount),
     }, language)
   } catch (error) {
     console.error("[Payment] Receipt upload error:", error)
@@ -502,6 +510,8 @@ async function notifyAdminsOfReceipt(
       .eq("is_active", true)
 
     const templateSid = await getTemplateSid("payment_received_admin")
+    const { currencySymbol } = await getInstanceSettings()
+    const formattedAmount = formatCurrencyWith(amount, currencySymbol)
 
     for (const admin of admins || []) {
       if (!admin.phone_number) continue
@@ -511,7 +521,7 @@ async function notifyAdminsOfReceipt(
 
 👤 ${profile.name} (${profile.apartment_number})
 📝 ${description}
-💰 ${formatCurrency(amount)}
+💰 ${formattedAmount}
 
 A resident has submitted a payment receipt for verification.
 
@@ -525,7 +535,7 @@ A resident has submitted a payment receipt for verification.
             "2": profile.name || "Resident",
             "3": profile.apartment_number || "N/A",
             "4": description,
-            "5": formatCurrency(amount),
+            "5": formattedAmount,
             "6": adminUrl,
           },
           fallback

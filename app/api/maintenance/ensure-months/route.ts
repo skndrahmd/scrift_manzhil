@@ -1,6 +1,7 @@
 import type { NextRequest } from "next/server"
 import { NextResponse } from "next/server"
 import { supabaseAdmin } from "@/lib/supabase"
+import { getPakistanTime } from "@/lib/date"
 import { verifyAdminAccess } from "@/lib/auth/api-auth"
 
 export async function POST(request: NextRequest) {
@@ -35,7 +36,7 @@ export async function POST(request: NextRequest) {
 
     const primaryProfileId = primaryResident?.id || null
 
-    const now = new Date()
+    const now = await getPakistanTime()
 
     // Generate all year-month combinations we need to check
     const monthsToCheck: Array<{ year: number; month: number }> = []

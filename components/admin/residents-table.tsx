@@ -43,7 +43,8 @@ import { validateResident, normalizePhoneNumber, validateCNIC, checkPhoneExists 
 import { Combobox, type ComboboxOption } from "@/components/ui/combobox"
 
 export function ResidentsTable() {
-    const { profiles, units, fetchProfiles, fetchUnits } = useAdmin()
+    const { profiles, units, fetchProfiles, fetchUnits, instanceSettings } = useAdmin()
+    const currencySymbol = instanceSettings?.currencySymbol ?? "Rs."
     const { toast } = useToast()
 
     // Local state
@@ -83,7 +84,7 @@ export function ResidentsTable() {
             .map(u => ({
                 value: u.id,
                 label: u.apartment_number,
-                description: u.unit_type ? `${u.unit_type}${u.maintenance_charges ? ` • Rs. ${u.maintenance_charges.toLocaleString()}` : ''}` : undefined,
+                description: u.unit_type ? `${u.unit_type}${u.maintenance_charges ? ` • ${currencySymbol} ${u.maintenance_charges.toLocaleString()}` : ''}` : undefined,
             }))
     }, [units])
 
@@ -588,7 +589,7 @@ export function ResidentsTable() {
                                                 {profile.resident_type === 'owner' ? 'Owner' : 'Tenant'}
                                             </Badge>
                                         </TableCell>
-                                        <TableCell className="text-gray-600">{(() => { const charges = getUnitCharges(profile); return charges != null ? `Rs. ${charges.toLocaleString()}` : '—' })()}</TableCell>
+                                        <TableCell className="text-gray-600">{(() => { const charges = getUnitCharges(profile); return charges != null ? `${currencySymbol} ${charges.toLocaleString()}` : '—' })()}</TableCell>
                                         <TableCell>
                                             {isPrimary(profile) ? (
                                                 <Badge
@@ -694,7 +695,7 @@ export function ResidentsTable() {
                                         {(() => { const charges = getUnitCharges(profile); return charges != null ? (
                                             <div>
                                                 <span className="text-gray-500 block">Maintenance</span>
-                                                <span className="font-medium text-gray-700">Rs. {charges.toLocaleString()}</span>
+                                                <span className="font-medium text-gray-700">{currencySymbol} {charges.toLocaleString()}</span>
                                             </div>
                                         ) : null })()}
                                     </div>

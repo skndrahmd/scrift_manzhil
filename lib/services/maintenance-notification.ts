@@ -64,7 +64,7 @@ export async function logNotification(entry: NotificationLogEntry): Promise<void
       month_year: entry.month_year || null,
       triggered_by: entry.triggered_by,
       triggered_by_user: entry.triggered_by_user || null,
-      sent_at: getPakistanISOString(),
+      sent_at: await getPakistanISOString(),
     })
   } catch (logError) {
     console.error("[MAINTENANCE NOTIFICATION] Failed to log notification:", logError)
@@ -236,7 +236,7 @@ export async function resetAllUnitsMaintenanceStatus(): Promise<{
       .update({
         maintenance_paid: false,
         last_payment_date: null,
-        updated_at: getPakistanISOString(),
+        updated_at: await getPakistanISOString(),
       })
       .neq("id", "00000000-0000-0000-0000-000000000000") // Update all
       .select("id")
@@ -270,7 +270,7 @@ export async function smartResetStaleMaintenanceStatus(): Promise<{
   error?: string
 }> {
   try {
-    const { year: currentYear, month: currentMonth } = getCurrentMonthYear()
+    const { year: currentYear, month: currentMonth } = await getCurrentMonthYear()
 
     // Find units where maintenance_paid = true but current month invoice is unpaid
     const { data: staleUnits, error: fetchError } = await supabaseAdmin
@@ -304,7 +304,7 @@ export async function smartResetStaleMaintenanceStatus(): Promise<{
       .update({
         maintenance_paid: false,
         last_payment_date: null,
-        updated_at: getPakistanISOString(),
+        updated_at: await getPakistanISOString(),
       })
       .in("id", staleUnitIds)
 
@@ -370,8 +370,8 @@ export async function ensureMaintenanceRecords(
 /**
  * Get current month/year in Pakistan timezone
  */
-export function getCurrentMonthYear(): { year: number; month: number } {
-  const now = new Date(getPakistanISOString())
+export async function getCurrentMonthYear(): Promise<{ year: number; month: number }> {
+  const now = new Date(await getPakistanISOString())
   return {
     year: now.getFullYear(),
     month: now.getMonth() + 1,
@@ -401,7 +401,7 @@ export async function sendMonthlyInvoices(
   }
 ): Promise<BulkSendResult> {
   const { unitIds, triggeredBy, triggeredByUser } = options
-  const { year: currentYear, month: currentMonth } = getCurrentMonthYear()
+  const { year: currentYear, month: currentMonth } = await getCurrentMonthYear()
   const monthYearLabel = formatMonthYear(currentYear, currentMonth)
   const dueDate = formatDueDate(currentYear, currentMonth)
 
@@ -545,7 +545,7 @@ export async function sendUnpaidReminders(
   }
 ): Promise<BulkSendResult> {
   const { unitIds, triggeredBy, triggeredByUser } = options
-  const { year: currentYear, month: currentMonth } = getCurrentMonthYear()
+  const { year: currentYear, month: currentMonth } = await getCurrentMonthYear()
 
   const result: BulkSendResult = {
     total: 0,
@@ -639,7 +639,7 @@ export async function sendUnpaidReminders(
         // Update reminder timestamp
         await supabaseAdmin
           .from("maintenance_payments")
-          .update({ reminder_last_sent_at: getPakistanISOString() })
+          .update({ reminder_last_sent_at: await getPakistanISOString() })
           .in(
             "id",
             unpaid.map((p) => p.id)

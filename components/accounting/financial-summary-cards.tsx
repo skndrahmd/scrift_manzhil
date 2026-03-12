@@ -13,6 +13,7 @@ import {
     BarChart3
 } from "lucide-react"
 import type { FinancialSummary } from "@/lib/supabase"
+import { useAdmin } from "@/app/admin/layout"
 
 interface FinancialSummaryCardsProps {
     summary: FinancialSummary | null
@@ -20,14 +21,9 @@ interface FinancialSummaryCardsProps {
 }
 
 export function FinancialSummaryCards({ summary, loading }: FinancialSummaryCardsProps) {
-    const formatCurrency = (amount: number) => {
-        return new Intl.NumberFormat('en-PK', {
-            style: 'currency',
-            currency: 'PKR',
-            minimumFractionDigits: 0,
-            maximumFractionDigits: 0
-        }).format(amount)
-    }
+    const { instanceSettings } = useAdmin()
+    const currencySymbol = instanceSettings?.currencySymbol ?? "Rs."
+    const formatCurrency = (amount: number) => `${currencySymbol} ${amount.toLocaleString()}`
 
     if (loading) {
         return (
@@ -115,14 +111,9 @@ export function FinancialSummaryCards({ summary, loading }: FinancialSummaryCard
 
 // Revenue breakdown cards showing booking vs maintenance income
 export function RevenueBreakdownCards({ summary, loading }: FinancialSummaryCardsProps) {
-    const formatCurrency = (amount: number) => {
-        return new Intl.NumberFormat('en-PK', {
-            style: 'currency',
-            currency: 'PKR',
-            minimumFractionDigits: 0,
-            maximumFractionDigits: 0
-        }).format(amount)
-    }
+    const { instanceSettings } = useAdmin()
+    const currencySymbol = instanceSettings?.currencySymbol ?? "Rs."
+    const formatCurrency = (amount: number) => `${currencySymbol} ${amount.toLocaleString()}`
 
     if (loading) {
         return (

@@ -50,12 +50,26 @@ export default function BookingInvoicePage() {
   const [pdfUrl, setPdfUrl] = useState<string | null>(null)
   const [fileName, setFileName] = useState<string>("")
   const [generating, setGenerating] = useState(false)
+  const [currencySymbol, setCurrencySymbol] = useState("Rs.")
+  const [timezone, setTimezone] = useState("Asia/Karachi")
 
   // Get snapshot parameters
   const snapshotPayment = searchParams.get("payment")
   const snapshotBooking = searchParams.get("booking")
   const snapshot = searchParams.get("snapshot") // New unified snapshot parameter
   const isSnapshot = snapshotPayment || snapshotBooking || snapshot
+
+  useEffect(() => {
+    // Fetch instance settings for currency/timezone
+    supabase.from("instance_settings").select("key, value").then(({ data }) => {
+      if (data) {
+        for (const row of data) {
+          if (row.key === "currency_symbol") setCurrencySymbol(row.value)
+          if (row.key === "timezone") setTimezone(row.value)
+        }
+      }
+    })
+  }, [])
 
   useEffect(() => {
     if (bookingId) {
@@ -278,7 +292,7 @@ export default function BookingInvoicePage() {
                 hour: "numeric",
                 minute: "2-digit",
                 hour12: true,
-                timeZone: "Asia/Karachi"
+                timeZone: timezone
               })}
             </div>
           </CardContent>
@@ -389,7 +403,7 @@ export default function BookingInvoicePage() {
               <div className="flex items-center justify-between p-6 bg-gray-50 rounded-xl border-2 border-gray-200">
                 <span className="text-lg font-medium text-gray-700">Hall Booking Charge</span>
                 <span className="text-3xl font-bold text-green-600">
-                  Rs. {booking.booking_charges.toLocaleString()}
+                  {currencySymbol} {booking.booking_charges.toLocaleString()}
                 </span>
               </div>
 
@@ -397,7 +411,7 @@ export default function BookingInvoicePage() {
                 <div className="flex items-center justify-between">
                   <span className="text-xl font-semibold text-gray-900">Total Amount</span>
                   <span className="text-4xl font-bold text-green-600">
-                    Rs. {booking.booking_charges.toLocaleString()}
+                    {currencySymbol} {booking.booking_charges.toLocaleString()}
                   </span>
                 </div>
               </div>

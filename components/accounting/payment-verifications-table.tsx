@@ -41,6 +41,7 @@ import {
     Eye,
 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
+import { useAdmin } from "@/app/admin/layout"
 
 interface Verification {
     id: string
@@ -77,6 +78,8 @@ interface Props {
 }
 
 export function PaymentVerificationsTable({ onPendingCountChange }: Props) {
+    const { instanceSettings } = useAdmin()
+    const currencySymbol = instanceSettings?.currencySymbol ?? "Rs."
     const [verifications, setVerifications] = useState<Verification[]>([])
     const [loading, setLoading] = useState(true)
     const [statusFilter, setStatusFilter] = useState("all")
@@ -254,7 +257,7 @@ export function PaymentVerificationsTable({ onPendingCountChange }: Props) {
                         </button>
                     )}
                     <div className="flex-1">
-                        <p className="text-sm font-medium">PKR {Number(v.amount).toLocaleString()}</p>
+                        <p className="text-sm font-medium">{currencySymbol} {Number(v.amount).toLocaleString()}</p>
                         <p className="text-xs text-muted-foreground">{formatDate(v.created_at)}</p>
                     </div>
                 </div>
@@ -377,7 +380,7 @@ export function PaymentVerificationsTable({ onPendingCountChange }: Props) {
                                         </TableCell>
                                         <TableCell>{typeBadge(v.payment_type)}</TableCell>
                                         <TableCell className="text-right font-medium">
-                                            PKR {Number(v.amount).toLocaleString()}
+                                            {currencySymbol} {Number(v.amount).toLocaleString()}
                                         </TableCell>
                                         <TableCell>
                                             {v.receipt_image_url ? (
@@ -519,7 +522,7 @@ export function PaymentVerificationsTable({ onPendingCountChange }: Props) {
                                 </div>
                                 <div>
                                     <p className="text-muted-foreground">Amount</p>
-                                    <p className="font-medium">PKR {Number(viewingVerification.amount).toLocaleString()}</p>
+                                    <p className="font-medium">{currencySymbol} {Number(viewingVerification.amount).toLocaleString()}</p>
                                 </div>
                                 <div>
                                     <p className="text-muted-foreground">Submitted</p>
@@ -619,7 +622,7 @@ export function PaymentVerificationsTable({ onPendingCountChange }: Props) {
                         <div className="space-y-4">
                             <div className="text-sm space-y-1">
                                 <p><strong>Resident:</strong> {rejectingVerification.profiles?.name}</p>
-                                <p><strong>Amount:</strong> PKR {Number(rejectingVerification.amount).toLocaleString()}</p>
+                                <p><strong>Amount:</strong> {currencySymbol} {Number(rejectingVerification.amount).toLocaleString()}</p>
                                 <p><strong>Type:</strong> {rejectingVerification.payment_type === "maintenance" ? "Maintenance" : "Booking"}</p>
                             </div>
                             <div>

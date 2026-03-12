@@ -21,7 +21,7 @@ export async function sendMaintenanceInvoice(
   params: MaintenanceInvoiceParams
 ): Promise<TwilioResult> {
   const { phone, name, monthYear, amount, dueDate, invoiceUrl } = params
-  const formattedAmount = formatCurrency(amount)
+  const formattedAmount = await formatCurrency(amount)
 
   const templateSid = await getTemplateSid("maintenance_invoice")
   const templateVariables = {
@@ -33,7 +33,7 @@ export async function sendMaintenanceInvoice(
 
   const fallbackMessage = `📄 *Maintenance Invoice - ${monthYear}*
 
-💰 Amount: Rs. ${formattedAmount}
+💰 Amount: ${formattedAmount}
 📅 Due: ${dueDate}
 
 Hi ${name || "Resident"}, your invoice is ready. Please pay at your convenience.
@@ -53,7 +53,7 @@ export async function sendMaintenanceReminder(
   params: MaintenanceReminderParams
 ): Promise<TwilioResult> {
   const { phone, name, monthsList, totalAmount, invoiceUrl } = params
-  const formattedAmount = formatCurrency(totalAmount)
+  const formattedAmount = await formatCurrency(totalAmount)
 
   const templateSid = await getTemplateSid("maintenance_payment_reminder")
   const templateVariables = {
@@ -65,7 +65,7 @@ export async function sendMaintenanceReminder(
   const fallbackMessage = `⚠️ *Payment Reminder*
 
 📅 Due: ${monthsList}
-💰 Total: Rs. ${formattedAmount}
+💰 Total: ${formattedAmount}
 
 Hi ${name || "Resident"}, your payment is overdue. Please pay soon to avoid service interruptions.
 
@@ -84,7 +84,7 @@ export async function sendMaintenancePaymentConfirmed(
   params: MaintenancePaymentConfirmedParams
 ): Promise<TwilioResult> {
   const { phone, name, monthYear, amount, receiptUrl } = params
-  const formattedAmount = formatCurrency(amount)
+  const formattedAmount = await formatCurrency(amount)
 
   const templateSid = await getTemplateSid("maintenance_payment_confirmed")
   const templateVariables = {
@@ -97,7 +97,7 @@ export async function sendMaintenancePaymentConfirmed(
   const fallbackMessage = `✅ *Payment Confirmed*
 
 📅 Month: ${monthYear}
-💰 Amount: Rs. ${formattedAmount}
+💰 Amount: ${formattedAmount}
 
 Hi ${name || "Resident"}, your payment has been received. Thank you!
 

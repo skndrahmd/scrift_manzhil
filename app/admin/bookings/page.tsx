@@ -11,7 +11,8 @@ import {
 } from "lucide-react"
 
 export default function BookingsPage() {
-    const { bookings, loading } = useAdmin()
+    const { bookings, loading, instanceSettings } = useAdmin()
+    const currencySymbol = instanceSettings?.currencySymbol ?? "Rs."
 
     // Calculate stats
     const totalBookings = bookings.length
@@ -114,7 +115,7 @@ export default function BookingsPage() {
                         <div className="flex justify-between items-start mb-4">
                             <p className="text-sm font-medium text-white/90">Revenue This Month</p>
                         </div>
-                        <p className="text-4xl font-medium text-white mb-2">Rs {revenueThisMonth.toLocaleString()}</p>
+                        <p className="text-4xl font-medium text-white mb-2">{currencySymbol} {revenueThisMonth.toLocaleString()}</p>
                         <p className="text-xs text-white/80">
                             From paid bookings
                         </p>

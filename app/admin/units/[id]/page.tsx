@@ -83,7 +83,9 @@ export default function UnitDetailPage({ params }: { params: { id: string } }) {
         loading: contextLoading,
         fetchProfiles,
         fetchUnits,
+        instanceSettings,
     } = useAdmin()
+    const currencySymbol = instanceSettings?.currencySymbol ?? "Rs."
 
     // Find the unit from context
     const unit = useMemo(() => units.find((u) => u.id === unitId) || null, [units, unitId])
@@ -654,7 +656,7 @@ export default function UnitDetailPage({ params }: { params: { id: string } }) {
                         <div className="flex items-center gap-3">
                             <div>
                                 <span className="text-sm text-gray-500">Monthly Maintenance</span>
-                                <p className="text-xl font-medium text-manzhil-dark">Rs. {unit.maintenance_charges?.toLocaleString() ?? "0"}</p>
+                                <p className="text-xl font-medium text-manzhil-dark">{currencySymbol} {unit.maintenance_charges?.toLocaleString() ?? "0"}</p>
                             </div>
                             <Button
                                 variant="ghost"
@@ -682,7 +684,7 @@ export default function UnitDetailPage({ params }: { params: { id: string } }) {
                     </DialogHeader>
                     <div className="space-y-4 py-4">
                         <div className="space-y-2">
-                            <Label>Monthly Charges (Rs.)</Label>
+                            <Label>Monthly Charges ({currencySymbol})</Label>
                             <Input type="number" value={editCharges} onChange={(e) => setEditCharges(parseInt(e.target.value) || 0)} />
                         </div>
                         <Button className="w-full bg-manzhil-teal hover:bg-manzhil-dark" onClick={handleUpdateCharges} disabled={savingCharges}>
@@ -1085,7 +1087,7 @@ export default function UnitDetailPage({ params }: { params: { id: string } }) {
                                         {payments.map((row) => (
                                             <TableRow key={row.id} className="hover:bg-manzhil-teal/5">
                                                 <TableCell className="font-medium">{formatMonth(row.year, row.month)}</TableCell>
-                                                <TableCell>Rs. {Number(row.amount).toLocaleString()}</TableCell>
+                                                <TableCell>{currencySymbol} {Number(row.amount).toLocaleString()}</TableCell>
                                                 <TableCell>
                                                     <Badge variant={row.status === "paid" ? "default" : "secondary"} className={row.status === "paid" ? "bg-manzhil-teal/20 text-manzhil-dark" : ""}>
                                                         {row.status}
@@ -1179,7 +1181,7 @@ export default function UnitDetailPage({ params }: { params: { id: string } }) {
                                                 <div className="flex items-start justify-between">
                                                     <div>
                                                         <h3 className="font-semibold text-base text-gray-900">{formatMonth(row.year, row.month)}</h3>
-                                                        <p className="text-sm text-gray-500">Rs. {Number(row.amount).toLocaleString()}</p>
+                                                        <p className="text-sm text-gray-500">{currencySymbol} {Number(row.amount).toLocaleString()}</p>
                                                     </div>
                                                     <Badge variant={row.status === "paid" ? "default" : "secondary"}>{row.status}</Badge>
                                                 </div>
@@ -1417,7 +1419,7 @@ export default function UnitDetailPage({ params }: { params: { id: string } }) {
                                             <TableRow key={b.id} className="hover:bg-manzhil-teal/5">
                                                 <TableCell>{formatDateForDisplay(b.booking_date)}</TableCell>
                                                 <TableCell>{formatTime(b.start_time)} - {formatTime(b.end_time)}</TableCell>
-                                                <TableCell>Rs. {Number(b.booking_charges).toLocaleString()}</TableCell>
+                                                <TableCell>{currencySymbol} {Number(b.booking_charges).toLocaleString()}</TableCell>
                                                 <TableCell><Badge variant={b.payment_status === "paid" ? "default" : "secondary"}>{b.payment_status}</Badge></TableCell>
                                                 <TableCell><Badge variant={b.status === "confirmed" ? "default" : b.status === "cancelled" ? "destructive" : "secondary"}>{b.status}</Badge></TableCell>
                                                 <TableCell className="text-right">

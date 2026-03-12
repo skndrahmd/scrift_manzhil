@@ -124,7 +124,7 @@ async function handleNewBookingDate(
   }
 
   // Check if date is in the past
-  const today = getPakistanTime()
+  const today = await getPakistanTime()
   const todayString =
     today.getFullYear() +
     "-" +
@@ -165,7 +165,7 @@ async function handleNewBookingDate(
 
   return await getMessage(MSG.HALL_POLICIES, {
     date: formatDate(parsedDate),
-    charges: formatCurrency(bookingCharges),
+    charges: await formatCurrency(bookingCharges),
     policies_link: policiesLink,
   }, language)
 }
@@ -217,7 +217,7 @@ async function handleBookingPolicies(
 
     return await getMessage(MSG.HALL_BOOKING_CONFIRMED, {
       date: formatDate(userState.date!),
-      charges: formatCurrency(bookingCharges),
+      charges: await formatCurrency(bookingCharges),
       invoice_url: invoiceUrl,
     }, language)
   }
@@ -276,7 +276,7 @@ async function handleCancelSelect(
 
   let response = await getMessage(MSG.HALL_CANCEL_CONFIRM, {
     date: formatDate(selectedBooking.booking_date),
-    charges: formatCurrency(selectedBooking.booking_charges),
+    charges: await formatCurrency(selectedBooking.booking_charges),
     payment_status: selectedBooking.payment_status === "paid" ? "✅ Paid" : "⏳ Pending",
   }, language)
 
@@ -311,7 +311,7 @@ async function handleCancelConfirm(
 
     const { error } = await supabase
       .from("bookings")
-      .update({ status: "cancelled", updated_at: getPakistanISOString() })
+      .update({ status: "cancelled", updated_at: await getPakistanISOString() })
       .eq("id", selectedBooking.id)
 
     if (error) {
@@ -409,7 +409,7 @@ async function handleEditDate(
   }
 
   // Check if date is in the past
-  const todayPk = getPakistanTime()
+  const todayPk = await getPakistanTime()
   const today =
     todayPk.getFullYear() +
     "-" +
@@ -436,7 +436,7 @@ async function handleEditDate(
   // Update booking
   const { error } = await supabase
     .from("bookings")
-    .update({ booking_date: parsedDate, updated_at: getPakistanISOString() })
+    .update({ booking_date: parsedDate, updated_at: await getPakistanISOString() })
     .eq("id", selectedBooking.id)
 
   if (error) {

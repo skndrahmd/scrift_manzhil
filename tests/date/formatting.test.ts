@@ -33,27 +33,26 @@ describe('formatDate', () => {
 })
 
 describe('formatDateTime', () => {
-  it('formats ISO datetime string', () => {
-    const result = formatDateTime('2025-03-15T10:30:00Z')
-    // Should contain the date in en-GB locale
+  it('formats ISO datetime string', async () => {
+    const result = await formatDateTime('2025-03-15T10:30:00Z')
     expect(result).toContain('2025')
     expect(result).toContain('15')
   })
 
-  it('returns a string', () => {
-    const result = formatDateTime('2025-01-01T00:00:00Z')
+  it('returns a string', async () => {
+    const result = await formatDateTime('2025-01-01T00:00:00Z')
     expect(typeof result).toBe('string')
   })
 })
 
 describe('getPakistanTime', () => {
-  it('returns a Date object', () => {
-    const result = getPakistanTime()
+  it('returns a Date object', async () => {
+    const result = await getPakistanTime()
     expect(result).toBeInstanceOf(Date)
   })
 
-  it('returns a valid date', () => {
-    const result = getPakistanTime()
+  it('returns a valid date', async () => {
+    const result = await getPakistanTime()
     expect(isNaN(result.getTime())).toBe(false)
   })
 })

@@ -1,7 +1,10 @@
 /**
  * @module formatting
- * Date formatting utilities for Pakistan Standard Time (UTC+5).
+ * Date formatting utilities with dynamic timezone support.
+ * Timezone is read from instance_settings (cached 60s).
  */
+
+import { getConfiguredTimezone } from "@/lib/instance-settings"
 
 /**
  * Formats a date string (YYYY-MM-DD) into DD/MM/YYYY display format.
@@ -18,38 +21,53 @@ export function formatDate(dateString: string): string {
 }
 
 /**
- * Formats a date-time string into DD/MM/YYYY HH:MM in Pakistan timezone.
+ * Formats a date-time string into DD/MM/YYYY HH:MM in the configured timezone.
  * @param dateString - ISO date-time string or parseable date string
- * @returns Formatted date-time string in en-GB locale with PKT timezone
+ * @returns Formatted date-time string in en-GB locale
  */
-export function formatDateTime(dateString: string): string {
+export async function formatDateTime(dateString: string): Promise<string> {
+  const timezone = await getConfiguredTimezone()
+  return formatDateTimeSync(dateString, timezone)
+}
+
+/**
+ * Sync variant of formatDateTime for callers that already resolved timezone.
+ */
+export function formatDateTimeSync(dateString: string, timezone: string): string {
   return new Date(dateString).toLocaleString("en-GB", {
     day: "2-digit",
     month: "2-digit",
     year: "numeric",
     hour: "2-digit",
     minute: "2-digit",
-    timeZone: "Asia/Karachi", // Pakistan Standard Time (UTC+5)
+    timeZone: timezone,
   })
 }
 
 /**
- * Returns the current date/time adjusted to Pakistan Standard Time (UTC+5).
- * @returns Date object representing the current time in PKT
+ * Returns the current date/time adjusted to the configured timezone.
+ * @returns Date object representing the current time in the configured timezone
  */
-export function getPakistanTime(): Date {
-  const now = new Date()
-  // Convert to Pakistan time (UTC+5)
-  const pakistanTime = new Date(now.toLocaleString("en-US", { timeZone: "Asia/Karachi" }))
-  return pakistanTime
+export async function getPakistanTime(): Promise<Date> {
+  const timezone = await getConfiguredTimezone()
+  return getPakistanTimeSync(timezone)
 }
 
 /**
- * Returns the current Pakistan time as an ISO 8601 string.
- * @returns ISO string of the current PKT time
+ * Sync variant: returns current time in the given timezone.
  */
-export function getPakistanISOString(): string {
-  return getPakistanTime().toISOString()
+export function getPakistanTimeSync(timezone: string): Date {
+  const now = new Date()
+  return new Date(now.toLocaleString("en-US", { timeZone: timezone }))
+}
+
+/**
+ * Returns the current configured-timezone time as an ISO 8601 string.
+ * @returns ISO string of the current time in the configured timezone
+ */
+export async function getPakistanISOString(): Promise<string> {
+  const time = await getPakistanTime()
+  return time.toISOString()
 }
 
 /**

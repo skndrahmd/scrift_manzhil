@@ -42,6 +42,7 @@ import {
 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import type { Expense, ExpenseCategory } from "@/lib/supabase"
+import { useAdmin } from "@/app/admin/layout"
 
 interface ExpensesManagerProps {
     expenses: Expense[]
@@ -62,6 +63,8 @@ export function ExpensesManager({
     onPageChange,
     onRefresh
 }: ExpensesManagerProps) {
+    const { instanceSettings } = useAdmin()
+    const currencySymbol = instanceSettings?.currencySymbol ?? "Rs."
     const [isAddOpen, setIsAddOpen] = useState(false)
     const [isEditOpen, setIsEditOpen] = useState(false)
     const [editingExpense, setEditingExpense] = useState<Expense | null>(null)
@@ -195,12 +198,7 @@ export function ExpensesManager({
     }
 
     const formatCurrency = (amount: number) => {
-        return new Intl.NumberFormat('en-PK', {
-            style: 'currency',
-            currency: 'PKR',
-            minimumFractionDigits: 0,
-            maximumFractionDigits: 0
-        }).format(amount)
+        return `${currencySymbol} ${amount.toLocaleString()}`
     }
 
     const formatDate = (dateString: string) => {
@@ -287,7 +285,7 @@ export function ExpensesManager({
                                         </Select>
                                     </div>
                                     <div className="space-y-2">
-                                        <Label htmlFor="add-amount">Amount (PKR) *</Label>
+                                        <Label htmlFor="add-amount">Amount ({currencySymbol}) *</Label>
                                         <Input
                                             id="add-amount"
                                             type="number"
@@ -650,7 +648,7 @@ export function ExpensesManager({
                                 </Select>
                             </div>
                             <div className="space-y-2">
-                                <Label htmlFor="edit-amount">Amount (PKR) *</Label>
+                                <Label htmlFor="edit-amount">Amount ({currencySymbol}) *</Label>
                                 <Input
                                     id="edit-amount"
                                     type="number"

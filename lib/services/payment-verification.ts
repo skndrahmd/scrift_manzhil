@@ -86,7 +86,7 @@ export async function updatePaymentVerificationStatus(
   const updates: Record<string, unknown> = {
     status,
     reviewed_by: adminUserId,
-    reviewed_at: getPakistanISOString(),
+    reviewed_at: await getPakistanISOString(),
   }
 
   if (status === "rejected") {

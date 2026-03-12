@@ -56,7 +56,7 @@ export async function updateBookingPaymentStatus(bookingId: string, paymentStatu
     .from("bookings")
     .update({
       payment_status: paymentStatus,
-      updated_at: getPakistanISOString(),
+      updated_at: await getPakistanISOString(),
     })
     .eq("id", bookingId)
     .eq("updated_at", originalUpdatedAt)
@@ -200,7 +200,7 @@ export async function sendBookingReminders(bookingIds: string[]) {
         results.sent++
         await supabaseAdmin
           .from("bookings")
-          .update({ reminder_last_sent_at: getPakistanISOString(), updated_at: getPakistanISOString() })
+          .update({ reminder_last_sent_at: await getPakistanISOString(), updated_at: await getPakistanISOString() })
           .eq("id", booking.id)
       } else {
         results.failed++

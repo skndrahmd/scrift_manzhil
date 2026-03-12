@@ -34,7 +34,8 @@ import { formatDate as formatDateForDisplay } from "@/lib/date"
 import { exportToPdf, filterByPeriod, periodLabel, type Period } from "@/lib/pdf"
 
 export function BookingsTable() {
-    const { bookings, fetchBookings, newBookingsCount, setLastViewedBookings } = useAdmin()
+    const { bookings, fetchBookings, newBookingsCount, setLastViewedBookings, instanceSettings } = useAdmin()
+    const currencySymbol = instanceSettings?.currencySymbol ?? "Rs."
     const { toast } = useToast()
 
     // Local state
@@ -324,7 +325,7 @@ export function BookingsTable() {
                                     rows: bookingsDisplay.map((b) => ({
                                         customer: b.profiles?.name || "N/A",
                                         date: formatDateForDisplay(b.booking_date),
-                                        amount: `Rs. ${b.booking_charges.toLocaleString()}`,
+                                        amount: `${currencySymbol} ${b.booking_charges.toLocaleString()}`,
                                         status: b.status,
                                     })),
                                     fileName: `bookings-${bookingsPeriod}.pdf`,
@@ -374,7 +375,7 @@ export function BookingsTable() {
                                         <TableCell className="text-gray-600">
                                             {formatTime(booking.start_time)} - {formatTime(booking.end_time)}
                                         </TableCell>
-                                        <TableCell className="text-gray-600">Rs. {booking.booking_charges.toLocaleString()}</TableCell>
+                                        <TableCell className="text-gray-600">{currencySymbol} {booking.booking_charges.toLocaleString()}</TableCell>
                                         <TableCell>
                                             <Badge
                                                 variant={getStatusBadgeVariant(booking.payment_status)}
@@ -498,7 +499,7 @@ export function BookingsTable() {
                                         </div>
                                         <div>
                                             <span className="text-gray-500 block text-xs">Amount</span>
-                                            <span className="font-medium text-gray-700">Rs. {booking.booking_charges.toLocaleString()}</span>
+                                            <span className="font-medium text-gray-700">{currencySymbol} {booking.booking_charges.toLocaleString()}</span>
                                         </div>
                                     </div>
 

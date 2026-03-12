@@ -4,6 +4,7 @@
  */
 
 import { supabase } from "@/lib/supabase"
+import { getConfiguredTimezone } from "@/lib/instance-settings"
 import { sendWhatsAppMessage, sendWhatsAppTemplate } from "@/lib/twilio"
 import type { Profile, UserState } from "../types"
 import { getState, setState, clearState } from "../state"
@@ -187,7 +188,8 @@ async function createComplaint(
     const categoryText = complaint.category === "apartment" ? "Apartment" : "Building"
     const subcategoryText = formatSubcategory(complaint.subcategory!)
 
-    // Format registration timestamp in Pakistan time
+    // Format registration timestamp in configured timezone
+    const timezone = await getConfiguredTimezone()
     const registeredAt = new Date(complaintData.created_at)
     const formattedDateTime = registeredAt.toLocaleString("en-US", {
       month: "short",
@@ -196,7 +198,7 @@ async function createComplaint(
       hour: "numeric",
       minute: "2-digit",
       hour12: true,
-      timeZone: "Asia/Karachi",
+      timeZone: timezone,
     })
 
     // Send notification to staff about new complaint
@@ -258,17 +260,18 @@ async function sendNewComplaintNotification(
 
     // Format date and time
     const registeredAt = new Date(complaint.created_at)
+    const timezone = await getConfiguredTimezone()
     const formattedDate = registeredAt.toLocaleDateString("en-US", {
       month: "long",
       day: "numeric",
       year: "numeric",
-      timeZone: "Asia/Karachi",
+      timeZone: timezone,
     })
     const formattedTime = registeredAt.toLocaleString("en-US", {
       hour: "numeric",
       minute: "2-digit",
       hour12: true,
-      timeZone: "Asia/Karachi",
+      timeZone: timezone,
     })
 
     // Sanitize description for template

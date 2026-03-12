@@ -1,8 +1,8 @@
 import { supabaseAdmin } from "@/lib/supabase"
-import { getPakistanISOString } from "@/lib/date"
+import { getPakistanTime, getPakistanISOString } from "@/lib/date"
 
-export function todayISODate(): string {
-  const now = new Date(getPakistanISOString())
+export async function todayISODate(): Promise<string> {
+  const now = await getPakistanTime()
   const y = now.getFullYear()
   const m = String(now.getMonth() + 1).padStart(2, "0")
   const d = String(now.getDate()).padStart(2, "0")
@@ -25,20 +25,22 @@ export function yyyymmCompare(a: { year: number; month: number }, b: { year: num
 }
 
 export async function markOverduePastMonths() {
-  const now = new Date()
+  const now = await getPakistanTime()
   const currentYear = now.getFullYear()
   const currentMonth = now.getMonth() + 1
+
+  const isoNow = await getPakistanISOString()
 
   // Set overdue for all months strictly before current month that are still unpaid
   await supabaseAdmin
     .from("maintenance_payments")
-    .update({ status: "overdue", updated_at: getPakistanISOString() })
+    .update({ status: "overdue", updated_at: isoNow })
     .lt("year", currentYear)
     .neq("status", "paid")
 
   await supabaseAdmin
     .from("maintenance_payments")
-    .update({ status: "overdue", updated_at: getPakistanISOString() })
+    .update({ status: "overdue", updated_at: isoNow })
     .eq("year", currentYear)
     .lt("month", currentMonth)
     .neq("status", "paid")

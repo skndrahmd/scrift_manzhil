@@ -131,14 +131,14 @@ async function handleDateInputAndSave(
     const parsedDate = new Date(parsedDateStr)
 
     // Check if date is in the past
-    const today = getPakistanTime()
+    const today = await getPakistanTime()
     today.setHours(0, 0, 0, 0)
     if (parsedDate < today) {
         return await getMessage(MSG.VISITOR_DATE_PAST, undefined, language)
     }
 
     // Check if date is too far in the future (30 days)
-    const maxDate = getPakistanTime()
+    const maxDate = await getPakistanTime()
     maxDate.setDate(maxDate.getDate() + 30)
     if (parsedDate > maxDate) {
         return await getMessage(MSG.VISITOR_DATE_TOO_FAR, undefined, language)

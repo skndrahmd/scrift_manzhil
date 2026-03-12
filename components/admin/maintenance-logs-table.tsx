@@ -42,6 +42,7 @@ import {
   Check,
 } from "lucide-react"
 import { formatDateTime } from "@/lib/date"
+import { useAdmin } from "@/app/admin/layout"
 
 
 
@@ -70,6 +71,8 @@ interface MaintenanceLogsTableProps {
 }
 
 export function MaintenanceLogsTable({ unitId, limit = 50 }: MaintenanceLogsTableProps) {
+  const { instanceSettings } = useAdmin()
+  const currencySymbol = instanceSettings?.currencySymbol ?? "Rs."
   const [logs, setLogs] = useState<NotificationLog[]>([])
   const [loading, setLoading] = useState(true)
   const [typeFilter, setTypeFilter] = useState<string>("all")
@@ -238,7 +241,7 @@ export function MaintenanceLogsTable({ unitId, limit = 50 }: MaintenanceLogsTabl
                     <TableCell>
                       {log.amount ? (
                         <span className="text-sm">
-                          Rs. {Number(log.amount).toLocaleString()}
+                          {currencySymbol} {Number(log.amount).toLocaleString()}
                         </span>
                       ) : (
                         <span className="text-gray-400">—</span>

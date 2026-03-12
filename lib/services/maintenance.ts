@@ -60,13 +60,13 @@ export async function updateMaintenancePaymentStatus(paymentId: string, isPaid: 
 
   const updates: Record<string, unknown> = {
     status: isPaid ? "paid" : "unpaid",
-    updated_at: getPakistanISOString(),
+    updated_at: await getPakistanISOString(),
   }
 
   if (isPaid) {
-    updates.paid_date = getPakistanISOString().split("T")[0]
+    updates.paid_date = (await getPakistanISOString()).split("T")[0]
     updates.confirmation_sent = true
-    updates.confirmation_sent_at = getPakistanISOString()
+    updates.confirmation_sent_at = await getPakistanISOString()
   } else {
     updates.paid_date = null
     updates.confirmation_sent = false
@@ -114,8 +114,8 @@ export async function updateMaintenancePaymentStatus(paymentId: string, isPaid: 
       .from("units")
       .update({
         maintenance_paid: isPaid,
-        last_payment_date: isPaid ? getPakistanISOString().split("T")[0] : null,
-        updated_at: getPakistanISOString(),
+        last_payment_date: isPaid ? (await getPakistanISOString()).split("T")[0] : null,
+        updated_at: await getPakistanISOString(),
       })
       .eq("id", unitId)
 

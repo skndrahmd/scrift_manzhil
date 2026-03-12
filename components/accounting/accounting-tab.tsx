@@ -27,8 +27,11 @@ import {
     generateAnnualSummaryCsv,
 } from "@/lib/pdf/csv-export"
 import type { FinancialSummary, Transaction, Expense, ExpenseCategory } from "@/lib/supabase"
+import { useAdmin } from "@/app/admin/layout"
 
 export function AccountingTab() {
+    const { instanceSettings } = useAdmin()
+    const currencyCode = instanceSettings?.currencyCode ?? "PKR"
     const [activeSubTab, setActiveSubTab] = useState("dashboard")
     const [loading, setLoading] = useState(true)
     const [refreshing, setRefreshing] = useState(false)

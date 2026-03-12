@@ -15,6 +15,7 @@ import {
 } from "recharts"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import type { FinancialSummary } from "@/lib/supabase"
+import { useAdmin } from "@/app/admin/layout"
 
 interface RevenueChartProps {
     summary: FinancialSummary | null
@@ -24,6 +25,9 @@ interface RevenueChartProps {
 const COLORS = ['#075E54', '#128C7E', '#25D366', '#f59e0b']
 
 export function MonthlyRevenueChart({ summary, loading }: RevenueChartProps) {
+    const { instanceSettings } = useAdmin()
+    const currencySymbol = instanceSettings?.currencySymbol ?? "Rs."
+
     if (loading) {
         return (
             <Card className="border-0 shadow-lg shadow-manzhil-teal/5">
@@ -57,7 +61,7 @@ export function MonthlyRevenueChart({ summary, loading }: RevenueChartProps) {
                     <p className="font-medium mb-2">{label}</p>
                     {payload.map((entry: any, index: number) => (
                         <p key={index} className="text-sm" style={{ color: entry.color }}>
-                            {entry.name}: PKR {entry.value.toLocaleString()}
+                            {entry.name}: {currencySymbol} {entry.value.toLocaleString()}
                         </p>
                     ))}
                 </div>
@@ -109,6 +113,9 @@ export function MonthlyRevenueChart({ summary, loading }: RevenueChartProps) {
 }
 
 export function RevenueBreakdownPieChart({ summary, loading }: RevenueChartProps) {
+    const { instanceSettings } = useAdmin()
+    const currencySymbol = instanceSettings?.currencySymbol ?? "Rs."
+
     if (loading) {
         return (
             <Card className="border-0 shadow-lg shadow-manzhil-teal/5">
@@ -129,9 +136,7 @@ export function RevenueBreakdownPieChart({ summary, loading }: RevenueChartProps
         { name: 'Maintenance Revenue', value: summary?.maintenanceRevenue || 0, color: '#128C7E' }
     ].filter(d => d.value > 0)
 
-    const formatCurrency = (value: number) => {
-        return `PKR ${value.toLocaleString()}`
-    }
+    const formatCurrency = (value: number) => `${currencySymbol} ${value.toLocaleString()}`
 
     const CustomTooltip = ({ active, payload }: any) => {
         if (active && payload && payload.length) {

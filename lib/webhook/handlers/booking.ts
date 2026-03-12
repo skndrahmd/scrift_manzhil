@@ -65,7 +65,7 @@ async function handleDateInput(
     }
 
     // Check if the date is in the past
-    const today = getPakistanTime()
+    const today = await getPakistanTime()
     const todayString =
       today.getFullYear() +
       "-" +
@@ -108,7 +108,7 @@ async function handleDateInput(
 
     return await getMessage(MSG.BOOKING_POLICIES, {
       date: formatDate(parsedDate),
-      charges: formatCurrency(bookingCharges),
+      charges: await formatCurrency(bookingCharges),
       policies_link: policiesLink,
     }, language)
   } catch (error) {
@@ -179,7 +179,7 @@ async function handlePoliciesAcceptance(
 
       return await getMessage(MSG.BOOKING_CONFIRMED, {
         date: formatDate(userState.date!),
-        charges: formatCurrency(bookingCharges),
+        charges: await formatCurrency(bookingCharges),
         invoice_url: invoiceUrl,
       }, language)
     }

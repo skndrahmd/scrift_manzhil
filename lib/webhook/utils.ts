@@ -3,6 +3,7 @@
  * Helper functions, validators, and formatters for the webhook system
  */
 
+import { getConfiguredTimezone } from "@/lib/instance-settings"
 import type { ValidationResult, BookingSettings, TimeSlot } from "./types"
 
 // ============================================================================
@@ -177,7 +178,8 @@ export function formatDate(dateString: string): string {
 /**
  * Format date and time for display
  */
-export function formatDateTime(dateString: string): string {
+export async function formatDateTime(dateString: string): Promise<string> {
+  const timezone = await getConfiguredTimezone()
   const date = new Date(dateString)
   return date.toLocaleDateString("en-GB", {
     day: "2-digit",
@@ -186,15 +188,12 @@ export function formatDateTime(dateString: string): string {
     hour: "2-digit",
     minute: "2-digit",
     hour12: true,
+    timeZone: timezone,
   })
 }
 
-/**
- * Format currency amount
- */
-export function formatCurrency(amount: number): string {
-  return `Rs. ${amount.toLocaleString()}`
-}
+// Re-export canonical formatCurrency from @/lib/currency
+export { formatCurrency, formatCurrencyWith } from "@/lib/currency"
 
 /**
  * Format subcategory key to display text

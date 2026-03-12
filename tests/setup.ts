@@ -105,6 +105,28 @@ vi.mock('@/lib/admin/notifications', () => ({
   getAllNotificationRecipients: vi.fn().mockResolvedValue([]),
 }))
 
+// Mock instance settings (dynamic timezone/currency)
+vi.mock('@/lib/instance-settings', () => ({
+  getInstanceSettings: vi.fn().mockResolvedValue({
+    timezone: 'Asia/Karachi',
+    currencyCode: 'PKR',
+    currencySymbol: 'Rs.',
+  }),
+  getConfiguredTimezone: vi.fn().mockResolvedValue('Asia/Karachi'),
+  clearInstanceSettingsCache: vi.fn(),
+  INSTANCE_DEFAULTS: {
+    timezone: 'Asia/Karachi',
+    currencyCode: 'PKR',
+    currencySymbol: 'Rs.',
+  },
+}))
+
+// Mock canonical currency module
+vi.mock('@/lib/currency', () => ({
+  formatCurrency: vi.fn().mockImplementation(async (amount: number) => `Rs. ${new Intl.NumberFormat('en').format(amount)}`),
+  formatCurrencyWith: vi.fn().mockImplementation((amount: number, symbol: string) => `${symbol} ${new Intl.NumberFormat('en').format(amount)}`),
+}))
+
 // Mock bot messages module
 vi.mock('@/lib/webhook/messages', () => ({
   getMessage: vi.fn(async (key: string, vars?: Record<string, string>, language?: string) => {

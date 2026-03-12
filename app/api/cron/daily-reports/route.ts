@@ -2,9 +2,12 @@ import type { NextRequest } from "next/server"
 import { supabaseAdmin } from "@/lib/supabase"
 import jsPDF from "jspdf"
 import autoTable from "jspdf-autotable"
+import { getPakistanTime } from "@/lib/date"
 import { sendTemplate, sendMessage } from "@/lib/twilio"
 import { getTemplateSid } from "@/lib/twilio/templates"
 import { startCronJob, endCronJob, logCronError } from "@/lib/cron-logger"
+import { getConfiguredTimezone, getInstanceSettings } from "@/lib/instance-settings"
+import { formatCurrencyWith } from "@/lib/currency"
 
 const APP_BASE_URL = (process.env.NEXT_PUBLIC_APP_URL || "").replace(/\/$/, "")
 
@@ -40,7 +43,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Calculate 24-hour time range
-    const now = new Date()
+    const now = await getPakistanTime()
     const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000)
 
     // Fetch last 24 hours data
@@ -63,11 +66,13 @@ export async function POST(request: NextRequest) {
       .in("status", ["pending", "in-progress"])
       .order("created_at", { ascending: false })
 
+    const { currencySymbol } = await getInstanceSettings()
+
     // Generate 24-hour activity report
-    const activityPdf = await generate24HourReport(recentComplaints || [], recentBookings || [])
+    const activityPdf = await generate24HourReport(recentComplaints || [], recentBookings || [], now, currencySymbol)
 
     // Generate open complaints report
-    const openComplaintsPdf = await generateOpenComplaintsReport(openComplaints || [])
+    const openComplaintsPdf = await generateOpenComplaintsReport(openComplaints || [], now)
 
     console.log("[DAILY REPORTS] Reports generated successfully")
     console.log(`- 24-hour report: ${recentComplaints?.length || 0} complaints, ${recentBookings?.length || 0} bookings`)
@@ -127,18 +132,20 @@ export async function POST(request: NextRequest) {
     }
 
     // Send summary via WhatsApp template to all recipients
+    const timezone = await getConfiguredTimezone()
+
     const reportDate = now.toLocaleDateString('en-US', {
       month: 'long',
       day: 'numeric',
       year: 'numeric',
-      timeZone: 'Asia/Karachi'
+      timeZone: timezone
     })
 
     const generationTime = now.toLocaleString('en-US', {
       hour: 'numeric',
       minute: '2-digit',
       hour12: true,
-      timeZone: 'Asia/Karachi'
+      timeZone: timezone
     })
 
     // Create report links
@@ -261,9 +268,8 @@ Generated at ${generationTime}
   }
 }
 
-async function generate24HourReport(complaints: any[], bookings: any[]): Promise<Buffer> {
+async function generate24HourReport(complaints: any[], bookings: any[], now: Date, currencySymbol: string): Promise<Buffer> {
   const doc = new jsPDF()
-  const now = new Date()
 
   // Header
   doc.setFillColor(34, 197, 94) // Green
@@ -373,7 +379,7 @@ async function generate24HourReport(complaints: any[], bookings: any[]): Promise
         b.profiles?.apartment_number || "N/A",
         new Date(b.booking_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
         `${b.start_time} - ${b.end_time}`,
-        `Rs. ${b.booking_charges}`,
+        formatCurrencyWith(b.booking_charges, currencySymbol),
         b.payment_status,
         b.status
       ]),
@@ -409,9 +415,8 @@ async function generate24HourReport(complaints: any[], bookings: any[]): Promise
   return Buffer.from(doc.output("arraybuffer"))
 }
 
-async function generateOpenComplaintsReport(complaints: any[]): Promise<Buffer> {
+async function generateOpenComplaintsReport(complaints: any[], now: Date): Promise<Buffer> {
   const doc = new jsPDF()
-  const now = new Date()
 
   // Header
   doc.setFillColor(239, 68, 68) // Red

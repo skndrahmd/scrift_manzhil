@@ -158,7 +158,7 @@ export async function logWelcomeMessage(entry: WelcomeLogEntry): Promise<void> {
       twilio_sid: entry.twilioSid || null,
       triggered_by: entry.triggeredBy,
       triggered_by_user: entry.triggeredByUser || null,
-      sent_at: getPakistanISOString(),
+      sent_at: await getPakistanISOString(),
     })
   } catch (error) {
     console.error("[WELCOME LOG] Failed to log welcome message:", error)
@@ -174,6 +174,7 @@ export async function logWelcomeMessages(
   if (entries.length === 0) return
 
   try {
+    const sentAt = await getPakistanISOString()
     const rows = entries.map((entry) => ({
       resident_id: entry.residentId || null,
       resident_name: entry.residentName || null,
@@ -184,7 +185,7 @@ export async function logWelcomeMessages(
       twilio_sid: entry.twilioSid || null,
       triggered_by: entry.triggeredBy,
       triggered_by_user: entry.triggeredByUser || null,
-      sent_at: getPakistanISOString(),
+      sent_at: sentAt,
     }))
 
     await supabaseAdmin.from("welcome_message_logs").insert(rows)

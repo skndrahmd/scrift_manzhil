@@ -12,6 +12,13 @@ export default function DailyReportPage({ params }: { params: { id: string } }) 
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [pdfUrl, setPdfUrl] = useState<string | null>(null)
+  const [timezone, setTimezone] = useState("Asia/Karachi")
+
+  useEffect(() => {
+    supabase.from("instance_settings").select("key, value").eq("key", "timezone").single().then(({ data }) => {
+      if (data) setTimezone(data.value)
+    })
+  }, [])
 
   useEffect(() => {
     void loadReport()
@@ -112,7 +119,7 @@ export default function DailyReportPage({ params }: { params: { id: string } }) 
     month: 'long',
     day: 'numeric',
     year: 'numeric',
-    timeZone: 'Asia/Karachi'
+    timeZone: timezone
   })
 
   const reportTypeLabel = report.report_type === "24_hour" 

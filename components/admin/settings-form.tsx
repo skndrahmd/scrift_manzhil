@@ -9,12 +9,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Settings, Save, Users, Calendar, MessageSquare, Send, Globe, CreditCard, Building2, ListOrdered, History } from "lucide-react"
+import { Settings, Save, Users, Calendar, MessageSquare, Send, Globe, CreditCard, Building2, ListOrdered, History, MapPin } from "lucide-react"
 import Link from "next/link"
 import { useToast } from "@/hooks/use-toast"
 import { StaffManagement } from "./staff-management"
 import { PaymentMethodsManager } from "./payment-methods-manager"
 import { LogsViewer } from "./logs-viewer"
+import { InstanceSettingsManager } from "./instance-settings-manager"
 
 const WEEKDAYS = [
     { label: "Monday", value: 1 },
@@ -27,7 +28,7 @@ const WEEKDAYS = [
 ]
 
 export function SettingsForm() {
-    const { settings, fetchSettings, userRole } = useAdmin()
+    const { settings, fetchSettings, userRole, instanceSettings } = useAdmin()
     const { toast } = useToast()
 
     const [workingDays, setWorkingDays] = useState<number[]>(settings?.working_days || [1, 2, 3, 4, 5])
@@ -113,6 +114,10 @@ export function SettingsForm() {
                             <ListOrdered className="h-4 w-4 shrink-0" />
                             <span className="hidden sm:inline">Menu Options</span>
                         </TabsTrigger>
+                        <TabsTrigger value="regional" className="flex items-center gap-2">
+                            <MapPin className="h-4 w-4 shrink-0" />
+                            <span className="hidden sm:inline">Regional</span>
+                        </TabsTrigger>
                         <TabsTrigger value="logs" className="flex items-center gap-2">
                             <History className="h-4 w-4 shrink-0" />
                             <span className="hidden sm:inline">Logs</span>
@@ -127,6 +132,7 @@ export function SettingsForm() {
                             setBookingCharges={setBookingCharges}
                             saveSettings={saveSettings}
                             saving={saving}
+                            currencySymbol={instanceSettings?.currencySymbol ?? "Rs."}
                         />
                     </TabsContent>
 
@@ -233,6 +239,10 @@ export function SettingsForm() {
                         </Card>
                     </TabsContent>
 
+                    <TabsContent value="regional" className="mt-6">
+                        <InstanceSettingsManager />
+                    </TabsContent>
+
                     <TabsContent value="logs" className="mt-6">
                         <LogsViewer />
                     </TabsContent>
@@ -246,6 +256,7 @@ export function SettingsForm() {
                     setBookingCharges={setBookingCharges}
                     saveSettings={saveSettings}
                     saving={saving}
+                    currencySymbol={instanceSettings?.currencySymbol ?? "Rs."}
                 />
             )}
         </div>
@@ -260,6 +271,7 @@ function BookingSettingsContent({
     setBookingCharges,
     saveSettings,
     saving,
+    currencySymbol,
 }: {
     workingDays: number[]
     toggleDay: (day: number) => void
@@ -267,6 +279,7 @@ function BookingSettingsContent({
     setBookingCharges: (value: number) => void
     saveSettings: () => void
     saving: boolean
+    currencySymbol: string
 }) {
     return (
         <div className="space-y-6 max-w-2xl">
@@ -300,7 +313,7 @@ function BookingSettingsContent({
                 <CardContent className="space-y-4">
                     <p className="text-sm text-gray-500">Set the charge per booking slot</p>
                     <div className="flex items-center gap-4">
-                        <Label htmlFor="charges" className="whitespace-nowrap">Amount (Rs.)</Label>
+                        <Label htmlFor="charges" className="whitespace-nowrap">Amount ({currencySymbol})</Label>
                         <Input
                             id="charges"
                             type="number"

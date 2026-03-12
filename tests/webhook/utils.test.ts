@@ -341,16 +341,16 @@ describe('formatDate', () => {
 })
 
 describe('formatCurrency', () => {
-  it('formats whole numbers', () => {
-    expect(formatCurrency(5000)).toBe('Rs. 5,000')
+  it('formats whole numbers', async () => {
+    expect(await formatCurrency(5000)).toBe('Rs. 5,000')
   })
 
-  it('formats zero', () => {
-    expect(formatCurrency(0)).toBe('Rs. 0')
+  it('formats zero', async () => {
+    expect(await formatCurrency(0)).toBe('Rs. 0')
   })
 
-  it('formats large numbers', () => {
-    expect(formatCurrency(1000000)).toBe('Rs. 1,000,000')
+  it('formats large numbers', async () => {
+    expect(await formatCurrency(1000000)).toBe('Rs. 1,000,000')
   })
 })
 

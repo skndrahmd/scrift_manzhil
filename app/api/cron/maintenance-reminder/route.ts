@@ -38,11 +38,11 @@ async function handleMaintenanceReminder(request: NextRequest): Promise<NextResp
     success: true,
     dayOfMonth: 0,
     errors: [],
-    processedAt: getPakistanISOString(),
+    processedAt: await getPakistanISOString(),
   }
 
   try {
-    const today = getPakistanTime()
+    const today = await getPakistanTime()
     const dayOfMonth = today.getDate()
     result.dayOfMonth = dayOfMonth
 

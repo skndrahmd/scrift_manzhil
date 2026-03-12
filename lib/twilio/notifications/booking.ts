@@ -22,7 +22,7 @@ export async function sendBookingConfirmation(
 ): Promise<TwilioResult> {
   const { phone, name, bookingDate, startTime, endTime, amount, bookingId, invoiceUrl } = params
 
-  const formattedAmount = formatCurrency(amount)
+  const formattedAmount = await formatCurrency(amount)
   const formattedDate = formatDate(bookingDate)
   const formattedStartTime = formatTime(startTime)
   const formattedEndTime = formatTime(endTime)
@@ -41,7 +41,7 @@ export async function sendBookingConfirmation(
   const fallbackMessage = `✅ *Payment Confirmed*
 
 📅 ${formattedDate} | ⏰ ${formattedStartTime} – ${formattedEndTime}
-💰 Rs. ${formattedAmount} | 🎫 ID: ${bookingId}
+💰 ${formattedAmount} | 🎫 ID: ${bookingId}
 
 Hi ${name || "Resident"}, your payment is received!
 

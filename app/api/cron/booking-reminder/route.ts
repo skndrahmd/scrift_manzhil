@@ -58,7 +58,7 @@ export async function POST(request: NextRequest) {
       if (daysSince >= 3) {
         await supabase
           .from("bookings")
-          .update({ status: "cancelled", updated_at: getPakistanISOString() })
+          .update({ status: "cancelled", updated_at: await getPakistanISOString() })
           .eq("id", b.id)
 
         if (b.profiles?.phone_number) {
@@ -75,7 +75,7 @@ export async function POST(request: NextRequest) {
       }
 
       // Day 1 or Day 2: Send reminder
-      const today = getPakistanISOString().slice(0, 10)
+      const today = (await getPakistanISOString()).slice(0, 10)
       const sentToday = b.reminder_last_sent_at && b.reminder_last_sent_at.slice(0, 10) === today
       // if (sentToday) continue
 
@@ -91,7 +91,7 @@ export async function POST(request: NextRequest) {
 
       await supabase
         .from("bookings")
-        .update({ reminder_last_sent_at: getPakistanISOString(), updated_at: getPakistanISOString() })
+        .update({ reminder_last_sent_at: await getPakistanISOString(), updated_at: await getPakistanISOString() })
         .eq("id", b.id)
     }
 

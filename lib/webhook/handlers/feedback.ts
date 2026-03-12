@@ -42,8 +42,8 @@ export async function handleFeedbackFlow(
           profile_id: profile.id,
           message: message,
           status: "new",
-          created_at: getPakistanISOString(),
-          updated_at: getPakistanISOString(),
+          created_at: await getPakistanISOString(),
+          updated_at: await getPakistanISOString(),
         },
       ])
 
