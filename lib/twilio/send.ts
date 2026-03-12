@@ -5,6 +5,7 @@
  */
 
 import { getClient, getFromNumber, formatPhoneNumber } from "./client"
+import { hasActiveSession } from "./session-tracker"
 import type { TwilioResult } from "./types"
 
 /**
@@ -97,7 +98,17 @@ export async function sendWithFallback(
   templateVariables: Record<string, string>,
   fallbackMessage: string
 ): Promise<TwilioResult> {
-  // Try template first if configured
+  // If resident has an active session window (UIC), use freeform message
+  // which is covered by the existing conversation — cheaper than opening a new BIC
+  if (fallbackMessage) {
+    const activeSession = await hasActiveSession(to)
+    if (activeSession) {
+      console.log("[Twilio] Active session detected, using freeform instead of template")
+      return sendMessage(to, fallbackMessage)
+    }
+  }
+
+  // Try template first if configured (opens BIC)
   if (templateSid) {
     const result = await sendTemplate(to, templateSid, templateVariables)
     if (result.ok) return result

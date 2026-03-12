@@ -1,7 +1,6 @@
 import type { NextRequest } from "next/server"
 import { supabaseAdmin } from "@/lib/supabase"
-import { sendTemplate, sendMessage, formatSubcategory } from "@/lib/twilio"
-import { getTemplateSid } from "@/lib/twilio/templates"
+import { sendMessage, formatSubcategory } from "@/lib/twilio"
 import { getReminderRecipients } from "@/lib/admin/notifications"
 import { startCronJob, endCronJob, logCronError } from "@/lib/cron-logger"
 import { getConfiguredTimezone } from "@/lib/instance-settings"
@@ -32,11 +31,13 @@ export async function POST(request: NextRequest) {
     twentyFourHoursAgo.setHours(twentyFourHoursAgo.getHours() - 24)
 
     // Fetch complaints that are pending for more than 24 hours
+    // Also filter out complaints updated in last 24h (already triggered inline admin notification)
     const { data: pendingComplaints, error } = await supabaseAdmin
       .from("complaints")
       .select("*, profiles(name, apartment_number)")
       .eq("status", "pending")
       .lt("created_at", twentyFourHoursAgo.toISOString())
+      .lt("updated_at", twentyFourHoursAgo.toISOString())
       .order("created_at", { ascending: true })
 
     if (error) {
@@ -52,6 +53,13 @@ export async function POST(request: NextRequest) {
 
     if (!pendingComplaints || pendingComplaints.length === 0) {
       console.log("[PENDING COMPLAINTS] No pending complaints found")
+      await endCronJob(cronLog, {
+        status: "skipped" as any,
+        recordsProcessed: 0,
+        recordsSucceeded: 0,
+        recordsFailed: 0,
+        result: { totalPending: 0, recipients: REMINDER_RECIPIENTS.length },
+      })
       return new Response(
         JSON.stringify({ success: true, message: "No pending complaints", count: 0 }),
         {
@@ -63,116 +71,59 @@ export async function POST(request: NextRequest) {
 
     console.log(`[PENDING COMPLAINTS] Found ${pendingComplaints.length} pending complaints`)
 
-    // Resolve template SID once before the loop
-    const pendingComplaintSid = await getTemplateSid("pending_complaint")
+    // Build a single digest message with all pending complaints
+    const now = new Date()
+    const DIVIDER = "───────────────────"
 
-    // Send reminder for each pending complaint
-    let sentCount = 0
-    for (const complaint of pendingComplaints) {
-      try {
-        // Calculate hours pending
-        const createdAt = new Date(complaint.created_at)
-        const now = new Date()
-        const hoursPending = Math.floor((now.getTime() - createdAt.getTime()) / (1000 * 60 * 60))
+    const complaintLines = pendingComplaints.map((complaint) => {
+      const createdAt = new Date(complaint.created_at)
+      const hoursPending = Math.floor((now.getTime() - createdAt.getTime()) / (1000 * 60 * 60))
+      const categoryText = complaint.category === "apartment" ? "Apt" : "Bldg"
+      const subcategoryText = formatSubcategory(complaint.subcategory)
 
-        // Format category and subcategory
-        const categoryText = complaint.category === "apartment" ? "Apartment Complaint" : "Building Complaint"
-        const subcategoryText = formatSubcategory(complaint.subcategory)
+      return `• *${complaint.complaint_id}* — ${complaint.profiles?.name || "Unknown"} (${complaint.profiles?.apartment_number || "N/A"}) | ${categoryText}: ${subcategoryText} | ⏱️ ${hoursPending}h`
+    })
 
-        // Format registration date
-        const formattedDate = createdAt.toLocaleDateString('en-US', {
-          month: 'long',
-          day: 'numeric',
-          year: 'numeric',
-          timeZone: timezone
-        })
-
-        // Sanitize description for template (remove newlines, limit length)
-        const sanitizedDescription = (complaint.description || "No description provided")
-          .replace(/\n/g, " ")
-          .replace(/\s+/g, " ")
-          .trim()
-          .substring(0, 500)
-
-        // Template variables
-        const templateVariables = {
-          "1": complaint.complaint_id || "N/A",
-          "2": complaint.profiles?.name || "Unknown",
-          "3": complaint.profiles?.apartment_number || "N/A",
-          "4": categoryText,
-          "5": subcategoryText,
-          "6": sanitizedDescription,
-          "7": formattedDate,
-          "8": String(hoursPending),
-          "9": `${APP_BASE_URL}/admin`
-        }
-
-        // Fallback message
-        const DIVIDER = "───────────────────"
-        const fallbackMessage = `⚠️ *Pending Complaint Alert*
+    const digestMessage = `⚠️ *Pending Complaints Digest*
 
 ${DIVIDER}
-📋 *Complaint Details*
+📋 *${pendingComplaints.length} complaint${pendingComplaints.length > 1 ? "s" : ""} pending > 24h*
 ${DIVIDER}
 
-• ID: ${complaint.complaint_id}
-• Resident: ${complaint.profiles?.name || "Unknown"}
-• Apartment: ${complaint.profiles?.apartment_number || "N/A"}
-• Category: ${categoryText}
-• Type: ${subcategoryText}
-
-${DIVIDER}
-⏱️ *Status*
-${DIVIDER}
-
-• Registered: ${formattedDate}
-• Pending for: *${hoursPending} hours*
-
-📝 ${sanitizedDescription}
+${complaintLines.join("\n\n")}
 
 ${DIVIDER}
 
-Please review and address this complaint.
+Please review and address these complaints.
 
-🔗 Admin Panel: ${APP_BASE_URL}/admin
+🔗 Admin Panel: ${APP_BASE_URL}/admin/complaints
 
 ${DIVIDER}
 — Manzhil by Scrift`
 
-        // Send reminder to all recipients
-        for (const recipient of REMINDER_RECIPIENTS) {
-          try {
-            if (pendingComplaintSid) {
-              const result = await sendTemplate(recipient, pendingComplaintSid, templateVariables)
-              if (result.ok) {
-                console.log(`[PENDING COMPLAINTS] Reminder sent to ${recipient} for ${complaint.complaint_id} (${hoursPending}h pending)`)
-                continue
-              }
-            }
-            // Fallback to plain text
-            await sendMessage(recipient, fallbackMessage)
-            console.log(`[PENDING COMPLAINTS] Sent fallback message to ${recipient} for ${complaint.complaint_id}`)
-          } catch (error) {
-            console.error(`[PENDING COMPLAINTS] Failed to send to ${recipient}:`, error)
-          }
-        }
+    // Send one digest message per admin recipient
+    let sentCount = 0
+    for (const recipient of REMINDER_RECIPIENTS) {
+      try {
+        await sendMessage(recipient, digestMessage)
         sentCount++
+        console.log(`[PENDING COMPLAINTS] Digest sent to ${recipient} (${pendingComplaints.length} complaints)`)
       } catch (error) {
-        console.error(`[PENDING COMPLAINTS] Failed to send reminder for ${complaint.complaint_id}:`, error)
+        console.error(`[PENDING COMPLAINTS] Failed to send digest to ${recipient}:`, error)
       }
     }
 
-    console.log(`[PENDING COMPLAINTS] Sent ${sentCount}/${pendingComplaints.length} reminders`)
+    console.log(`[PENDING COMPLAINTS] Sent digest to ${sentCount}/${REMINDER_RECIPIENTS.length} recipients`)
 
     // Log completion
     await endCronJob(cronLog, {
-      status: sentCount === pendingComplaints.length ? "success" : "partial",
+      status: sentCount === REMINDER_RECIPIENTS.length ? "success" : "partial",
       recordsProcessed: pendingComplaints.length,
       recordsSucceeded: sentCount,
-      recordsFailed: pendingComplaints.length - sentCount,
+      recordsFailed: REMINDER_RECIPIENTS.length - sentCount,
       result: {
         totalPending: pendingComplaints.length,
-        remindersSent: sentCount,
+        digestsSent: sentCount,
         recipients: REMINDER_RECIPIENTS.length,
       },
     })
@@ -181,7 +132,8 @@ ${DIVIDER}
       JSON.stringify({
         success: true,
         totalPending: pendingComplaints.length,
-        remindersSent: sentCount
+        digestsSent: sentCount,
+        recipients: REMINDER_RECIPIENTS.length,
       }),
       {
         status: 200,

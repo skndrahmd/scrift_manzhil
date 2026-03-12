@@ -580,10 +580,10 @@ export async function sendUnpaidReminders(
 
     result.total = units.length
 
-    // Fetch unpaid payments for these units
+    // Fetch unpaid payments for these units (include reminder_last_sent_at for throttling)
     const { data: unpaidPayments } = await supabaseAdmin
       .from("maintenance_payments")
-      .select("id, unit_id, year, month, amount, status")
+      .select("id, unit_id, year, month, amount, status, reminder_last_sent_at")
       .in("unit_id", units.map((u) => u.id))
       .neq("status", "paid")
       .order("year", { ascending: true })
@@ -595,6 +595,19 @@ export async function sendUnpaidReminders(
       arr.push(p)
       paymentsByUnit.set(p.unit_id, arr)
     })
+
+    // Progressive throttling: determine minimum interval based on day of month
+    const now = new Date(await getPakistanISOString())
+    const dayOfMonth = now.getDate()
+    let reminderIntervalDays: number
+    if (dayOfMonth >= 16) {
+      reminderIntervalDays = 1 // Overdue urgency: daily
+    } else if (dayOfMonth >= 8) {
+      reminderIntervalDays = 4 // Mid-month: every 4 days
+    } else {
+      reminderIntervalDays = 3 // Early month (days 3-7): every 3 days
+    }
+    const reminderIntervalMs = reminderIntervalDays * 24 * 60 * 60 * 1000
 
     for (const unit of units) {
       const residents = (unit.profiles as any[]) || []
@@ -614,6 +627,19 @@ export async function sendUnpaidReminders(
       if (unpaid.length === 0) {
         // No unpaid payments for this unit
         continue
+      }
+
+      // Progressive throttling: skip if last reminder was sent too recently
+      const lastSentAt = unpaid
+        .map((p) => p.reminder_last_sent_at)
+        .filter(Boolean)
+        .sort()
+        .pop() // most recent reminder timestamp across all unpaid payments
+      if (lastSentAt) {
+        const timeSinceLastReminder = now.getTime() - new Date(lastSentAt).getTime()
+        if (timeSinceLastReminder < reminderIntervalMs) {
+          continue // Skip — reminder sent too recently for this unit
+        }
       }
 
       const totalDue = unpaid.reduce((sum, p) => sum + Number(p.amount || 0), 0)

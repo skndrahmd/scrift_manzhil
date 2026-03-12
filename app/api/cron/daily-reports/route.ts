@@ -83,6 +83,32 @@ export async function POST(request: NextRequest) {
     const pendingCount = openComplaints?.filter(c => c.status === 'pending').length || 0
     const inProgressCount = openComplaints?.filter(c => c.status === 'in-progress').length || 0
 
+    // Skip report if there's no complaints activity at all
+    const hasActivity = (recentComplaints?.length || 0) > 0 || pendingCount > 0 || inProgressCount > 0
+    if (!hasActivity) {
+      console.log("[DAILY REPORTS] No complaints activity — skipping report")
+      await endCronJob(cronLog, {
+        status: "skipped" as any,
+        recordsProcessed: 0,
+        recordsSucceeded: 0,
+        recordsFailed: 0,
+        result: {
+          reason: "No complaints activity",
+          last24Hours: {
+            complaints: 0,
+            bookings: recentBookings?.length || 0,
+          },
+          openComplaints: 0,
+          pendingCount: 0,
+          inProgressCount: 0,
+        },
+      })
+      return new Response(
+        JSON.stringify({ success: true, skipped: true, reason: "No complaints activity" }),
+        { status: 200, headers: { "Content-Type": "application/json" } }
+      )
+    }
+
     // Convert PDFs to base64
     const activityPdfBase64 = `data:application/pdf;base64,${activityPdf.toString('base64')}`
     const openComplaintsPdfBase64 = `data:application/pdf;base64,${openComplaintsPdf.toString('base64')}`

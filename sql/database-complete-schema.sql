@@ -2,7 +2,7 @@
 -- Manzhil by Scrift - Complete Database Setup
 -- ============================================
 -- This is the SINGLE master SQL file containing ALL database setup:
---   - Schema (31 tables with RLS, indexes, triggers)
+--   - Schema (32 tables with RLS, indexes, triggers)
 --   - Seed data (bot messages, whatsapp templates, label messages, amenities, menu options)
 --
 -- Run this ONCE in your Supabase SQL Editor for a fresh installation.
@@ -2000,8 +2000,25 @@ INSERT INTO instance_settings (key, value, description) VALUES
   ('currency_symbol', 'Rs.',           'Currency symbol for display')
 ON CONFLICT (key) DO NOTHING;
 
+-- ============================================================================
+-- 32. Session Windows (WhatsApp session tracking for cost optimization)
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS session_windows (
+  phone_number TEXT PRIMARY KEY,
+  last_inbound_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  session_expires_at TIMESTAMPTZ NOT NULL DEFAULT (NOW() + INTERVAL '24 hours')
+);
+
+CREATE INDEX IF NOT EXISTS idx_session_windows_expires ON session_windows(session_expires_at);
+
+ALTER TABLE session_windows ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Service role full access" ON session_windows
+  FOR ALL USING (true) WITH CHECK (true);
+
 -- Final status
 SELECT
   'Manzhil by Scrift - Database setup complete!' as status,
-  '31 tables created with RLS, triggers, and seed data' as summary,
+  '32 tables created with RLS, triggers, and seed data' as summary,
   NOW() as completed_at;

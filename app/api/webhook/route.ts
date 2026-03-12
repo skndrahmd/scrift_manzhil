@@ -15,6 +15,7 @@ import {
 } from "@/lib/webhook"
 import { getMessage } from "@/lib/webhook/messages"
 import { MSG } from "@/lib/webhook/message-keys"
+import { recordInboundMessage } from "@/lib/twilio/session-tracker"
 
 export async function POST(request: NextRequest) {
   try {
@@ -34,6 +35,9 @@ export async function POST(request: NextRequest) {
     console.log("[Webhook] Body:", messageBody)
     console.log("[Webhook] NumMedia:", numMedia)
     console.log("[Webhook] MediaUrl:", mediaUrl)
+
+    // Record inbound message for session window tracking (cost optimization)
+    recordInboundMessage(phoneNumber)
 
     // Check if user is registered and active first
     const profile = await getProfile(phoneNumber)
