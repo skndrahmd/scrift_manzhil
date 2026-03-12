@@ -39,6 +39,24 @@ export async function PATCH(request: Request) {
 
   const body = await request.json()
 
+  // Check if financial data exists — lock currency/timezone if so
+  const lockedKeys = ["timezone", "currency_code", "currency_symbol"]
+  const hasLockedKey = Object.keys(body).some((k) => lockedKeys.includes(k))
+
+  if (hasLockedKey) {
+    const [{ count: paymentsCount }, { count: bookingsCount }] = await Promise.all([
+      supabaseAdmin.from("maintenance_payments").select("id", { count: "exact", head: true }),
+      supabaseAdmin.from("bookings").select("id", { count: "exact", head: true }),
+    ])
+
+    if ((paymentsCount ?? 0) > 0 || (bookingsCount ?? 0) > 0) {
+      return NextResponse.json(
+        { error: "Currency and timezone settings are locked because payment records exist in the system." },
+        { status: 403 }
+      )
+    }
+  }
+
   // Validate only allowed keys
   const updates: { key: string; value: string }[] = []
   for (const [key, value] of Object.entries(body)) {

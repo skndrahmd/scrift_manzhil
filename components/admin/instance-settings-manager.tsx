@@ -1,12 +1,14 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { useAdmin } from "@/app/admin/layout"
+import { supabase } from "@/lib/supabase"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
-import { Save, Search } from "lucide-react"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Save, Search, Lock } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import {
     Command,
@@ -31,6 +33,18 @@ export function InstanceSettingsManager() {
     const [currencySymbol, setCurrencySymbol] = useState(instanceSettings?.currencySymbol ?? "Rs.")
     const [saving, setSaving] = useState(false)
     const [tzOpen, setTzOpen] = useState(false)
+    const [locked, setLocked] = useState(false)
+
+    useEffect(() => {
+        async function checkLock() {
+            const [{ count: paymentsCount }, { count: bookingsCount }] = await Promise.all([
+                supabase.from("maintenance_payments").select("id", { count: "exact", head: true }),
+                supabase.from("bookings").select("id", { count: "exact", head: true }),
+            ])
+            setLocked((paymentsCount ?? 0) > 0 || (bookingsCount ?? 0) > 0)
+        }
+        checkLock()
+    }, [])
 
     const timezones = useMemo(() => {
         try {
@@ -96,6 +110,15 @@ export function InstanceSettingsManager() {
 
     return (
         <div className="space-y-6 max-w-2xl">
+            {locked && (
+                <Alert className="border-amber-200 bg-amber-50">
+                    <Lock className="h-4 w-4 text-amber-600" />
+                    <AlertDescription className="text-amber-800">
+                        Regional settings are locked because payment records exist in the system. These settings can only be configured before any payments are recorded.
+                    </AlertDescription>
+                </Alert>
+            )}
+
             <Card className="border-0 shadow-lg shadow-manzhil-teal/5">
                 <CardHeader>
                     <CardTitle className="text-lg">Timezone</CardTitle>
@@ -104,12 +127,13 @@ export function InstanceSettingsManager() {
                     <p className="text-sm text-gray-500">
                         Set the IANA timezone for this instance. All dates and times across the system will use this timezone.
                     </p>
-                    <Popover open={tzOpen} onOpenChange={setTzOpen}>
+                    <Popover open={tzOpen} onOpenChange={locked ? undefined : setTzOpen}>
                         <PopoverTrigger asChild>
                             <Button
                                 variant="outline"
                                 role="combobox"
                                 aria-expanded={tzOpen}
+                                disabled={locked}
                                 className="w-full justify-between font-normal"
                             >
                                 {timezone}
@@ -162,6 +186,7 @@ export function InstanceSettingsManager() {
                                 onChange={(e) => setCurrencyCode(e.target.value.toUpperCase().slice(0, 3))}
                                 placeholder="PKR"
                                 maxLength={3}
+                                disabled={locked}
                                 className="uppercase"
                             />
                         </div>
@@ -173,6 +198,7 @@ export function InstanceSettingsManager() {
                                 onChange={(e) => setCurrencySymbol(e.target.value.slice(0, 5))}
                                 placeholder="Rs."
                                 maxLength={5}
+                                disabled={locked}
                             />
                         </div>
                     </div>
@@ -182,7 +208,7 @@ export function InstanceSettingsManager() {
                 </CardContent>
             </Card>
 
-            <Button onClick={handleSave} disabled={saving} className="bg-gradient-to-r from-manzhil-dark to-manzhil-teal hover:shadow-lg hover:shadow-manzhil-teal/30 transition-all">
+            <Button onClick={handleSave} disabled={saving || locked} className="bg-gradient-to-r from-manzhil-dark to-manzhil-teal hover:shadow-lg hover:shadow-manzhil-teal/30 transition-all">
                 {saving ? (
                     <>
                         <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent mr-2" />
