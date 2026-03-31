@@ -7,18 +7,20 @@ import {
     drawPageFooter,
     drawSectionTitle,
     drawStatCard,
-    formatCurrency,
+    formatCurrencyWith,
     formatDate,
     hexToRgb,
     loadPdfLibs,
     PDF_COLORS,
 } from "./theme"
+import { getInstanceSettings } from "@/lib/instance-settings"
 
 const BRAND_NAME = "Manzhil by Scrift"
 
 // Income Statement Report
 export async function generateIncomeStatementPdf(summary: FinancialSummary, year: number) {
-    const { jsPDF, autoTable } = await loadPdfLibs()
+    const [{ jsPDF, autoTable }, { currencySymbol }] = await Promise.all([loadPdfLibs(), getInstanceSettings()])
+    const fmt = (n: number) => formatCurrencyWith(n, currencySymbol)
     const doc = new jsPDF()
 
     const nextY = await drawModernHeader(doc, "Income Statement", `FY-${year}`, `Generated ${formatDate(new Date())}`)
@@ -28,11 +30,11 @@ export async function generateIncomeStatementPdf(summary: FinancialSummary, year
     const cardGap = 10
     const startX = 14
 
-    drawStatCard(doc, "Total Revenue", formatCurrency(summary.totalRevenue), startX, nextY + 10, cardWidth, "#10B981")
-    drawStatCard(doc, "Total Expenses", formatCurrency(summary.totalExpenses), startX + cardWidth + cardGap, nextY + 10, cardWidth, "#F59E0B")
+    drawStatCard(doc, "Total Revenue", fmt(summary.totalRevenue), startX, nextY + 10, cardWidth, "#10B981")
+    drawStatCard(doc, "Total Expenses", fmt(summary.totalExpenses), startX + cardWidth + cardGap, nextY + 10, cardWidth, "#F59E0B")
 
     const netColor = summary.netIncome >= 0 ? "#10B981" : "#EF4444"
-    drawStatCard(doc, "Net Income", formatCurrency(summary.netIncome), startX + (cardWidth + cardGap) * 2, nextY + 10, cardWidth, netColor)
+    drawStatCard(doc, "Net Income", fmt(summary.netIncome), startX + (cardWidth + cardGap) * 2, nextY + 10, cardWidth, netColor)
 
     const tableStartY = nextY + 45
     drawSectionTitle(doc, "Monthly Breakdown", tableStartY)
@@ -40,11 +42,11 @@ export async function generateIncomeStatementPdf(summary: FinancialSummary, year
     // Monthly breakdown table
     const tableData = summary.monthlyData.map((m) => [
         m.month,
-        formatCurrency(m.bookingIncome),
-        formatCurrency(m.maintenanceIncome),
-        formatCurrency(m.bookingIncome + m.maintenanceIncome),
-        formatCurrency(m.expenses),
-        formatCurrency(m.bookingIncome + m.maintenanceIncome - m.expenses),
+        fmt(m.bookingIncome),
+        fmt(m.maintenanceIncome),
+        fmt(m.bookingIncome + m.maintenanceIncome),
+        fmt(m.expenses),
+        fmt(m.bookingIncome + m.maintenanceIncome - m.expenses),
     ])
 
     autoTable(doc, {
@@ -67,11 +69,11 @@ export async function generateIncomeStatementPdf(summary: FinancialSummary, year
         footStyles: { fillColor: "#F3F4F6", textColor: hexToRgb(PDF_COLORS.text.primary), fontStyle: "bold" },
         foot: [[
             "TOTAL",
-            formatCurrency(summary.bookingRevenue),
-            formatCurrency(summary.maintenanceRevenue),
-            formatCurrency(summary.totalRevenue),
-            formatCurrency(summary.totalExpenses),
-            formatCurrency(summary.netIncome),
+            fmt(summary.bookingRevenue),
+            fmt(summary.maintenanceRevenue),
+            fmt(summary.totalRevenue),
+            fmt(summary.totalExpenses),
+            fmt(summary.netIncome),
         ]],
     })
 
@@ -81,14 +83,15 @@ export async function generateIncomeStatementPdf(summary: FinancialSummary, year
 
 // Collection Report
 export async function generateCollectionReportPdf(summary: FinancialSummary, year: number) {
-    const { jsPDF, autoTable } = await loadPdfLibs()
+    const [{ jsPDF, autoTable }, { currencySymbol }] = await Promise.all([loadPdfLibs(), getInstanceSettings()])
+    const fmt = (n: number) => formatCurrencyWith(n, currencySymbol)
     const doc = new jsPDF()
 
     const nextY = await drawModernHeader(doc, "Collection Report", `FY-${year}`, `Generated ${formatDate(new Date())}`)
 
     // Highlights
     drawStatCard(doc, "Collection Rate", `${summary.collectionRate.toFixed(1)}%`, 14, nextY + 10, 80, "#3B82F6")
-    drawStatCard(doc, "Outstanding Dues", formatCurrency(summary.outstandingDues), 105, nextY + 10, 80, "#F59E0B")
+    drawStatCard(doc, "Outstanding Dues", fmt(summary.outstandingDues), 105, nextY + 10, 80, "#F59E0B")
 
     const tableStartY = nextY + 45
     drawSectionTitle(doc, "Monthly Collection Performance", tableStartY)
@@ -98,7 +101,7 @@ export async function generateCollectionReportPdf(summary: FinancialSummary, yea
         const totalIncome = m.bookingIncome + m.maintenanceIncome
         return [
             m.month,
-            formatCurrency(totalIncome),
+            fmt(totalIncome),
             totalIncome > 0 ? "100%" : "0%",
         ]
     })
@@ -122,7 +125,8 @@ export async function generateExpenseReportPdf(
     categories: ExpenseCategory[],
     year: number
 ) {
-    const { jsPDF, autoTable } = await loadPdfLibs()
+    const [{ jsPDF, autoTable }, { currencySymbol }] = await Promise.all([loadPdfLibs(), getInstanceSettings()])
+    const fmt = (n: number) => formatCurrencyWith(n, currencySymbol)
     const doc = new jsPDF()
 
     const nextY = await drawModernHeader(doc, "Expense Report", `FY-${year}`, `Generated ${formatDate(new Date())}`)
@@ -145,7 +149,7 @@ export async function generateExpenseReportPdf(
     })
 
     // Total expenses box
-    drawStatCard(doc, "Total Expenses", formatCurrency(totalExpenses), 14, nextY + 10, 180, "#EF4444")
+    drawStatCard(doc, "Total Expenses", fmt(totalExpenses), 14, nextY + 10, 180, "#EF4444")
 
     const breakdownY = nextY + 45
     drawSectionTitle(doc, "Category Breakdown", breakdownY)
@@ -155,7 +159,7 @@ export async function generateExpenseReportPdf(
         .sort((a, b) => b.amount - a.amount)
         .map((cat) => [
             cat.name,
-            formatCurrency(cat.amount),
+            fmt(cat.amount),
             totalExpenses > 0 ? `${((cat.amount / totalExpenses) * 100).toFixed(1)}%` : "0%",
         ])
 
@@ -167,7 +171,7 @@ export async function generateExpenseReportPdf(
         headStyles: { fillColor: [255, 255, 255], textColor: hexToRgb(PDF_COLORS.text.tertiary), fontStyle: "bold", lineWidth: 0 },
         alternateRowStyles: { fillColor: "#F9FAFB" },
         footStyles: { fillColor: "#F3F4F6", textColor: hexToRgb(PDF_COLORS.text.primary), fontStyle: "bold" },
-        foot: [["TOTAL", formatCurrency(totalExpenses), "100%"]],
+        foot: [["TOTAL", fmt(totalExpenses), "100%"]],
     })
 
     // Detailed expense list
@@ -185,7 +189,7 @@ export async function generateExpenseReportPdf(
                     cat?.name || "Other",
                     e.description.substring(0, 40),
                     e.vendor_name || "-",
-                    formatCurrency(e.amount),
+                    fmt(e.amount),
                 ]
             })
 
@@ -206,13 +210,14 @@ export async function generateExpenseReportPdf(
 
 // Outstanding Dues Report
 export async function generateOutstandingDuesPdf(summary: FinancialSummary, year: number) {
-    const { jsPDF, autoTable } = await loadPdfLibs()
+    const [{ jsPDF, autoTable }, { currencySymbol }] = await Promise.all([loadPdfLibs(), getInstanceSettings()])
+    const fmt = (n: number) => formatCurrencyWith(n, currencySymbol)
     const doc = new jsPDF()
 
     const nextY = await drawModernHeader(doc, "Outstanding Dues", `FY-${year}`, `Generated ${formatDate(new Date())}`)
 
     // Summary
-    drawStatCard(doc, "Total Outstanding", formatCurrency(summary.outstandingDues), 14, nextY + 10, 182, "#F59E0B")
+    drawStatCard(doc, "Total Outstanding", fmt(summary.outstandingDues), 14, nextY + 10, 182, "#F59E0B")
 
     // Note about data
     const noteY = nextY + 40
@@ -230,10 +235,10 @@ export async function generateOutstandingDuesPdf(summary: FinancialSummary, year
         startY: noteY + 23,
         head: [["METRIC", "VALUE"]],
         body: [
-            ["Total Revenue Collected", formatCurrency(summary.totalRevenue)],
-            ["Outstanding Dues", formatCurrency(summary.outstandingDues)],
+            ["Total Revenue Collected", fmt(summary.totalRevenue)],
+            ["Outstanding Dues", fmt(summary.outstandingDues)],
             ["Collection Rate", `${summary.collectionRate.toFixed(1)}%`],
-            ["Expected Annual Total", formatCurrency(summary.totalRevenue + summary.outstandingDues)],
+            ["Expected Annual Total", fmt(summary.totalRevenue + summary.outstandingDues)],
         ],
         styles: { fontSize: 10, textColor: hexToRgb(PDF_COLORS.text.primary), cellPadding: 5, lineColor: hexToRgb(PDF_COLORS.border.light), lineWidth: 0.1 },
         headStyles: { fillColor: [255, 255, 255], textColor: hexToRgb(PDF_COLORS.text.tertiary), fontStyle: "bold", lineWidth: 0 },
@@ -249,24 +254,19 @@ export async function generateOutstandingDuesPdf(summary: FinancialSummary, year
 
 // Annual Summary Report
 export async function generateAnnualSummaryPdf(summary: FinancialSummary, year: number) {
-    const { jsPDF, autoTable } = await loadPdfLibs()
+    const [{ jsPDF, autoTable }, { currencySymbol }] = await Promise.all([loadPdfLibs(), getInstanceSettings()])
+    const fmt = (n: number) => formatCurrencyWith(n, currencySymbol)
     const doc = new jsPDF()
 
     const nextY = await drawModernHeader(doc, "Annual Financial Summary", `FY-${year}`, `Generated ${formatDate(new Date())}`)
 
     // Key metrics boxes
-    const cardWidth = 44
-    const gap = 4
     const startX = 14
 
-    // Custom tiny cards row? No, let's use stat cards but maybe smaller font or 2x2.
-    // Actually, let's stick to drawStatCard but modify it to wrap? 
-    // Let's do 2 rows of 2 cards.
+    drawStatCard(doc, "Total Revenue", fmt(summary.totalRevenue), startX, nextY + 10, 88, "#10B981")
+    drawStatCard(doc, "Total Expenses", fmt(summary.totalExpenses), startX + 92, nextY + 10, 88, "#F59E0B")
 
-    drawStatCard(doc, "Total Revenue", formatCurrency(summary.totalRevenue), startX, nextY + 10, 88, "#10B981")
-    drawStatCard(doc, "Total Expenses", formatCurrency(summary.totalExpenses), startX + 92, nextY + 10, 88, "#F59E0B")
-
-    drawStatCard(doc, "Net Income", formatCurrency(summary.netIncome), startX, nextY + 40, 88, summary.netIncome >= 0 ? "#10B981" : "#EF4444")
+    drawStatCard(doc, "Net Income", fmt(summary.netIncome), startX, nextY + 40, 88, summary.netIncome >= 0 ? "#10B981" : "#EF4444")
     drawStatCard(doc, "Collection Rate", `${summary.collectionRate.toFixed(1)}%`, startX + 92, nextY + 40, 88, "#3B82F6")
 
     // Revenue breakdown
@@ -277,13 +277,13 @@ export async function generateAnnualSummaryPdf(summary: FinancialSummary, year: 
         startY: revenueY + 8,
         head: [["SOURCE", "AMOUNT", "% OF TOTAL"]],
         body: [
-            ["Booking Revenue", formatCurrency(summary.bookingRevenue), summary.totalRevenue > 0 ? `${((summary.bookingRevenue / summary.totalRevenue) * 100).toFixed(1)}%` : "0%"],
-            ["Maintenance Revenue", formatCurrency(summary.maintenanceRevenue), summary.totalRevenue > 0 ? `${((summary.maintenanceRevenue / summary.totalRevenue) * 100).toFixed(1)}%` : "0%"],
+            ["Booking Revenue", fmt(summary.bookingRevenue), summary.totalRevenue > 0 ? `${((summary.bookingRevenue / summary.totalRevenue) * 100).toFixed(1)}%` : "0%"],
+            ["Maintenance Revenue", fmt(summary.maintenanceRevenue), summary.totalRevenue > 0 ? `${((summary.maintenanceRevenue / summary.totalRevenue) * 100).toFixed(1)}%` : "0%"],
         ],
         styles: { fontSize: 9, textColor: hexToRgb(PDF_COLORS.text.secondary), lineColor: hexToRgb(PDF_COLORS.border.light), lineWidth: 0.1 },
         headStyles: { fillColor: [255, 255, 255], textColor: hexToRgb(PDF_COLORS.text.tertiary), fontStyle: "bold", lineWidth: 0 },
         footStyles: { fillColor: "#F3F4F6", textColor: hexToRgb(PDF_COLORS.text.primary), fontStyle: "bold" },
-        foot: [["TOTAL REVENUE", formatCurrency(summary.totalRevenue), "100%"]],
+        foot: [["TOTAL REVENUE", fmt(summary.totalRevenue), "100%"]],
         alternateRowStyles: { fillColor: "#F9FAFB" },
     })
 
@@ -296,9 +296,9 @@ export async function generateAnnualSummaryPdf(summary: FinancialSummary, year: 
         head: [["MONTH", "TOTAL INCOME", "EXPENSES", "NET RESULT"]],
         body: summary.monthlyData.map((m) => [
             m.month,
-            formatCurrency(m.bookingIncome + m.maintenanceIncome),
-            formatCurrency(m.expenses),
-            formatCurrency(m.bookingIncome + m.maintenanceIncome - m.expenses),
+            fmt(m.bookingIncome + m.maintenanceIncome),
+            fmt(m.expenses),
+            fmt(m.bookingIncome + m.maintenanceIncome - m.expenses),
         ]),
         styles: { fontSize: 9, textColor: hexToRgb(PDF_COLORS.text.secondary), lineColor: hexToRgb(PDF_COLORS.border.light), lineWidth: 0.1 },
         headStyles: { fillColor: [255, 255, 255], textColor: hexToRgb(PDF_COLORS.text.tertiary), fontStyle: "bold", lineWidth: 0 },

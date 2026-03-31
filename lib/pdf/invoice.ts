@@ -12,11 +12,13 @@ import {
   drawSectionTitle,
   drawStatCard,
   formatCurrency,
+  formatCurrencyWith,
   formatDate,
   hexToRgb,
   loadPdfLibs,
   PDF_COLORS,
 } from "./theme"
+import { getInstanceSettings } from "@/lib/instance-settings"
 
 export { formatCurrency }
 
@@ -53,12 +55,13 @@ function drawOutstandingSummary(
   doc: import("jspdf").jsPDF,
   topY: number,
   summary: OutstandingSummary | undefined,
+  currencySymbol: string,
 ): number {
   if (!summary || summary.outstandingCount === 0) {
     return topY
   }
 
-  const text = `Outstanding: ${formatCurrency(summary.totalOutstanding)} (${summary.outstandingCount} pending)`
+  const text = `Outstanding: ${formatCurrencyWith(summary.totalOutstanding, currencySymbol)} (${summary.outstandingCount} pending)`
   const height = 14
 
   doc.setFillColor("#FEF3C7") // Amber 50
@@ -169,7 +172,8 @@ export async function generateMaintenanceInvoicePdf(
   payment: MaintenancePayment & { profiles?: Partial<Profile> | null },
   summary?: OutstandingSummary,
 ) {
-  const { jsPDF, autoTable } = await loadPdfLibs()
+  const [{ jsPDF, autoTable }, { currencySymbol }] = await Promise.all([loadPdfLibs(), getInstanceSettings()])
+  const fmt = (n: number) => formatCurrencyWith(n, currencySymbol)
   const doc = new jsPDF()
 
   // 1. Header
@@ -202,8 +206,8 @@ export async function generateMaintenanceInvoicePdf(
   // 3. Stat Highlight (Total Amount)
   const isPaid = payment.status === "paid"
   const amountStr = isPaid
-    ? formatCurrency(payment.amount ?? profile.maintenance_charges ?? 0)
-    : formatCurrency(summary?.totalOutstanding ?? 0)
+    ? fmt(payment.amount ?? profile.maintenance_charges ?? 0)
+    : fmt(summary?.totalOutstanding ?? 0)
 
   drawStatCard(doc, "Amount Due", amountStr, 14, gridBottomY + 15, 60, isPaid ? PDF_COLORS.secondary : "#F59E0B")
 
@@ -233,7 +237,7 @@ export async function generateMaintenanceInvoicePdf(
   )
 
   const tableBottom = (doc as any).lastAutoTable?.finalY ?? 150
-  const afterSummary = isPaid ? tableBottom : drawOutstandingSummary(doc, tableBottom, summary)
+  const afterSummary = isPaid ? tableBottom : drawOutstandingSummary(doc, tableBottom, summary, currencySymbol)
 
   // 5. Notes Section
   const notesY = afterSummary + 10
@@ -267,7 +271,8 @@ export async function generateMaintenanceInvoicePdf(
  * @returns Object containing the PDF blob and suggested file name
  */
 export async function generateBookingInvoicePdf(booking: any) {
-  const { jsPDF, autoTable } = await loadPdfLibs()
+  const [{ jsPDF, autoTable }, { currencySymbol }] = await Promise.all([loadPdfLibs(), getInstanceSettings()])
+  const fmt = (n: number) => formatCurrencyWith(n, currencySymbol)
   const doc = new jsPDF()
 
   // 1. Header
@@ -291,7 +296,7 @@ export async function generateBookingInvoicePdf(booking: any) {
   const gridBottomY = drawGridTwoColumn(doc, nextY + 10, leftData, rightData)
 
   // 3. Stat Highlight (Total Amount)
-  const amountStr = formatCurrency(booking.booking_charges ?? 0)
+  const amountStr = fmt(booking.booking_charges ?? 0)
   drawStatCard(doc, "Total Charges", amountStr, 14, gridBottomY + 15, 60)
 
   // 4. Details Table
