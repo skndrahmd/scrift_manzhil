@@ -155,7 +155,6 @@ export {
 } from "./request-logging"
 
 export {
-  initSentry,
   isSentryEnabled,
   captureError,
   captureMessage,
@@ -163,7 +162,8 @@ export {
   setSentryTag,
   setSentryExtra,
   addBreadcrumb,
-  withErrorTracking,
+  startSpan,
+  withServerActionInstrumentation,
 } from "./sentry"
 
 export { getLogLevel }

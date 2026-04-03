@@ -9,10 +9,19 @@ import {
   generateRequestId,
   withRequestContext,
   getRequestDuration,
-  createModuleLogger,
-} from "./index"
+} from "./request-id"
 
-const log = createModuleLogger("http")
+// Lazy-load the logger to avoid circular dependency with index.ts
+// The logger is created on first use rather than at module load time
+let _log: ReturnType<typeof import("./index").createModuleLogger> | null = null
+
+function getLog() {
+  if (!_log) {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    _log = require("./index").createModuleLogger("http")
+  }
+  return _log
+}
 
 export interface RequestLogOptions {
   /** Module name for logging context (defaults to "api") */
@@ -62,7 +71,7 @@ export function withRequestLogging<T extends NextRequest>(
     }
 
     // Log incoming request
-    log.info(`→ ${method} ${path}`, {
+    getLog().info(`→ ${method} ${path}`, {
       requestId,
       module,
       method,
@@ -80,7 +89,7 @@ export function withRequestLogging<T extends NextRequest>(
       const duration = Date.now() - startTime
 
       // Log successful response
-      log.info(`← ${method} ${path} ${response.status}`, {
+      getLog().info(`← ${method} ${path} ${response.status}`, {
         requestId,
         module,
         method,
@@ -97,7 +106,7 @@ export function withRequestLogging<T extends NextRequest>(
       const duration = Date.now() - startTime
 
       // Log error response
-      log.error(`✗ ${method} ${path} ERROR`, {
+      getLog().error(`✗ ${method} ${path} ERROR`, {
         requestId,
         module,
         method,
@@ -130,7 +139,7 @@ export function withRequestLogging<T extends NextRequest>(
  * ```
  */
 export function createApiLogger(module: string) {
-  const moduleLog = createModuleLogger(module)
+  const moduleLog = getLog().withContext({ module })
 
   return {
     log: moduleLog,
@@ -173,7 +182,7 @@ export function logMiddlewareRequest(
     return
   }
 
-  log.debug(`${method} ${path} → ${response.status}`, {
+  getLog().debug(`${method} ${path} → ${response.status}`, {
     requestId,
     module: "middleware",
     method,
