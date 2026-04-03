@@ -6,6 +6,9 @@
 
 import { supabaseAdmin } from "@/lib/supabase"
 import { getPakistanISOString } from "@/lib/date"
+import { createModuleLogger } from "@/lib/logger"
+
+const log = createModuleLogger("cron")
 
 // ============================================
 // Types
@@ -61,9 +64,9 @@ export async function startCronJob(jobName: string): Promise<CronLogStart> {
       started_at: startedAt.toISOString(),
     })
 
-    console.log(`[CRON LOG] Started: ${jobName} (${logId})`)
+    log.info("Cron job started", { jobName, logId })
   } catch (error) {
-    console.error(`[CRON LOG] Failed to create log entry:`, error)
+    log.error("Failed to create log entry", { jobName, logId, error })
   }
 
   return {
@@ -78,11 +81,11 @@ export async function startCronJob(jobName: string): Promise<CronLogStart> {
  * Updates the log entry with final status and results.
  */
 export async function endCronJob(
-  log: CronLogStart,
+  cronLog: CronLogStart,
   result: CronLogResult
 ): Promise<void> {
   const completedAt = new Date()
-  const durationMs = completedAt.getTime() - log.startedAt.getTime()
+  const durationMs = completedAt.getTime() - cronLog.startedAt.getTime()
 
   try {
     const { error } = await supabaseAdmin
@@ -97,17 +100,22 @@ export async function endCronJob(
         result: result.result || null,
         error_message: result.errorMessage || null,
       })
-      .eq("id", log.id)
+      .eq("id", cronLog.id)
 
     if (error) {
-      console.error(`[CRON LOG] Failed to update log entry:`, error)
+      log.error("Failed to update log entry", { jobName: cronLog.jobName, logId: cronLog.id, error })
     } else {
-      console.log(
-        `[CRON LOG] Completed: ${log.jobName} (${log.id}) - ${result.status} - ${durationMs}ms - ${result.recordsSucceeded}/${result.recordsProcessed} succeeded`
-      )
+      log.info("Cron job completed", {
+        jobName: cronLog.jobName,
+        logId: cronLog.id,
+        status: result.status,
+        durationMs,
+        succeeded: result.recordsSucceeded,
+        processed: result.recordsProcessed,
+      })
     }
   } catch (error) {
-    console.error(`[CRON LOG] Failed to update log entry:`, error)
+    log.error("Failed to update log entry", { jobName: cronLog.jobName, logId: cronLog.id, error })
   }
 }
 
@@ -115,12 +123,12 @@ export async function endCronJob(
  * Log a cron job error (for unhandled exceptions).
  */
 export async function logCronError(
-  log: CronLogStart,
+  cronLog: CronLogStart,
   error: unknown
 ): Promise<void> {
   const errorMessage = error instanceof Error ? error.message : "Unknown error"
   const completedAt = new Date()
-  const durationMs = completedAt.getTime() - log.startedAt.getTime()
+  const durationMs = completedAt.getTime() - cronLog.startedAt.getTime()
 
   try {
     await supabaseAdmin
@@ -131,11 +139,11 @@ export async function logCronError(
         duration_ms: durationMs,
         error_message: errorMessage,
       })
-      .eq("id", log.id)
+      .eq("id", cronLog.id)
 
-    console.error(`[CRON LOG] Failed: ${log.jobName} (${log.id}) - ${errorMessage}`)
+    log.error("Cron job failed", { jobName: cronLog.jobName, logId: cronLog.id, errorMessage, durationMs })
   } catch (logError) {
-    console.error(`[CRON LOG] Failed to update error log:`, logError)
+    log.error("Failed to update error log", { jobName: cronLog.jobName, logId: cronLog.id, error: logError })
   }
 }
 
@@ -161,7 +169,7 @@ export async function logWelcomeMessage(entry: WelcomeLogEntry): Promise<void> {
       sent_at: await getPakistanISOString(),
     })
   } catch (error) {
-    console.error("[WELCOME LOG] Failed to log welcome message:", error)
+    log.error("Failed to log welcome message", { phoneNumber: entry.phoneNumber, error })
   }
 }
 
@@ -190,7 +198,7 @@ export async function logWelcomeMessages(
 
     await supabaseAdmin.from("welcome_message_logs").insert(rows)
   } catch (error) {
-    console.error("[WELCOME LOG] Failed to log welcome messages:", error)
+    log.error("Failed to log welcome messages", { count: entries.length, error })
   }
 }
 
@@ -219,13 +227,13 @@ export async function getCronLogs(
     const { data, error } = await query
 
     if (error) {
-      console.error("[CRON LOG] Failed to fetch logs:", error)
+      log.error("Failed to fetch cron logs", { jobName, error })
       return []
     }
 
     return data || []
   } catch (error) {
-    console.error("[CRON LOG] Failed to fetch logs:", error)
+    log.error("Failed to fetch cron logs", { jobName, error })
     return []
   }
 }
@@ -251,13 +259,13 @@ export async function getWelcomeLogs(
     const { data, error } = await query
 
     if (error) {
-      console.error("[WELCOME LOG] Failed to fetch logs:", error)
+      log.error("Failed to fetch welcome logs", { status, error })
       return []
     }
 
     return data || []
   } catch (error) {
-    console.error("[WELCOME LOG] Failed to fetch logs:", error)
+    log.error("Failed to fetch welcome logs", { status, error })
     return []
   }
 }

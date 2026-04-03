@@ -7,6 +7,9 @@ import { supabaseAdmin } from "@/lib/supabase"
 import { getPakistanISOString } from "@/lib/date"
 import { sendBookingConfirmation, sendBookingReminder as sendBookingReminderNotification, formatDate, formatTime } from "@/lib/twilio"
 import { ServiceError } from "./complaint"
+import { createModuleLogger } from "@/lib/logger"
+
+const log = createModuleLogger("booking")
 
 const APP_BASE_URL = (process.env.NEXT_PUBLIC_APP_URL || "").replace(/\/$/, "")
 
@@ -83,9 +86,9 @@ export async function updateBookingPaymentStatus(bookingId: string, paymentStatu
         .delete()
         .eq("reference_id", bookingId)
         .eq("transaction_type", "booking_income")
-      console.log("Cleaned up transaction records for booking:", bookingId)
+      log.debug("Cleaned up transaction records", { bookingId })
     } catch (cleanupError) {
-      console.error("Error cleaning up transaction records:", cleanupError)
+      log.error("Error cleaning up transaction records", { bookingId, error: cleanupError })
     }
   }
 
@@ -104,9 +107,9 @@ export async function updateBookingPaymentStatus(bookingId: string, paymentStatu
         bookingId: booking.id,
         invoiceUrl,
       })
-      console.log("WhatsApp notification sent successfully")
+      log.info("WhatsApp notification sent", { bookingId })
     } catch (whatsappError) {
-      console.error("Error sending WhatsApp notification:", whatsappError)
+      log.error("Error sending WhatsApp notification", { bookingId, error: whatsappError })
     }
 
     // Create transaction record for accounting (with duplicate guard)
@@ -129,12 +132,12 @@ export async function updateBookingPaymentStatus(bookingId: string, paymentStatu
           payment_method: "cash",
           notes: `Booking from ${formatTime(booking.start_time)} to ${formatTime(booking.end_time)}`
         })
-        console.log("Transaction record created for booking:", booking.id)
+        log.debug("Transaction record created", { bookingId })
       } else {
-        console.log("Transaction record already exists for booking:", booking.id)
+        log.debug("Transaction record already exists", { bookingId })
       }
     } catch (transactionError) {
-      console.error("Error creating transaction record:", transactionError)
+      log.error("Error creating transaction record", { bookingId, error: transactionError })
     }
   }
 
@@ -212,6 +215,6 @@ export async function sendBookingReminders(bookingIds: string[]) {
     }
   }
 
-  console.log(`[BOOKING SEND-REMINDER] Complete - Sent: ${results.sent}, Failed: ${results.failed}`)
+  log.info("Booking reminders complete", { sent: results.sent, failed: results.failed })
   return results
 }

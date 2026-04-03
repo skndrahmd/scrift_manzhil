@@ -14,6 +14,9 @@ import {
   sendAdminComplaintStatusUpdate,
   formatDateTime,
 } from "@/lib/twilio"
+import { createModuleLogger } from "@/lib/logger"
+
+const log = createModuleLogger("complaint")
 
 const ALLOWED_STATUSES = ["pending", "in-progress", "completed", "cancelled"] as const
 type ComplaintStatus = (typeof ALLOWED_STATUSES)[number]
@@ -79,7 +82,7 @@ export async function updateComplaintStatus(complaintId: string, status: string)
     .single()
 
   if (profileError) {
-    console.error("[COMPLAINT UPDATE] Profile fetch error:", profileError)
+    log.error("Profile fetch error", { complaintId, error: profileError })
   }
 
   // Store old status before update
@@ -130,12 +133,12 @@ export async function updateComplaintStatus(complaintId: string, status: string)
       } else {
         await sendComplaintPending(notificationParams)
       }
-      console.log("[COMPLAINT UPDATE] WhatsApp notification sent successfully")
+      log.info("WhatsApp notification sent", { complaintId, status })
     } catch (notifyError) {
-      console.error("[COMPLAINT UPDATE] Failed to send complaint status notification:", notifyError)
+      log.error("Failed to send complaint status notification", { complaintId, status, error: notifyError })
     }
   } else {
-    console.warn("[COMPLAINT UPDATE] No phone number found for profile, skipping notification")
+    log.warn("No phone number found for profile, skipping notification", { complaintId, profileId: complaint.profile_id })
   }
 
   // Notify admins who opted in for complaint status updates
@@ -162,15 +165,15 @@ export async function updateComplaintStatus(complaintId: string, status: string)
             ...adminNotificationParams,
           })
         } catch (err) {
-          console.error(`[COMPLAINT UPDATE] Failed to notify admin ${phone}:`, err)
+          log.error("Failed to notify admin", { complaintId, phone, error: err })
         }
       })
 
       await Promise.all(notificationPromises)
-      console.log(`[COMPLAINT UPDATE] Notified ${adminRecipients.length} admins about status change`)
+      log.info("Notified admins about status change", { complaintId, adminCount: adminRecipients.length })
     }
   } catch (adminNotifyError) {
-    console.error("[COMPLAINT UPDATE] Failed to send admin notifications:", adminNotifyError)
+    log.error("Failed to send admin notifications", { complaintId, error: adminNotifyError })
   }
 
   return { success: true }

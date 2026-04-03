@@ -6,6 +6,9 @@
 
 import twilio from "twilio"
 import type { Twilio } from "twilio"
+import { createModuleLogger } from "@/lib/logger"
+
+const log = createModuleLogger("twilio")
 
 // Environment variables
 const TWILIO_ACCOUNT_SID = process.env.TWILIO_ACCOUNT_SID
@@ -23,7 +26,7 @@ export function getClient(): Twilio | null {
   if (clientInstance) return clientInstance
 
   if (!TWILIO_ACCOUNT_SID || !TWILIO_AUTH_TOKEN) {
-    console.warn("[Twilio] Missing credentials - TWILIO_ACCOUNT_SID or TWILIO_AUTH_TOKEN not set")
+    log.warn("Missing credentials - TWILIO_ACCOUNT_SID or TWILIO_AUTH_TOKEN not set")
     return null
   }
 
@@ -31,7 +34,7 @@ export function getClient(): Twilio | null {
     clientInstance = twilio(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
     return clientInstance
   } catch (error) {
-    console.error("[Twilio] Failed to initialize client:", error)
+    log.error("Failed to initialize client", { error })
     return null
   }
 }
@@ -42,7 +45,7 @@ export function getClient(): Twilio | null {
  */
 export function getFromNumber(): string | null {
   if (!TWILIO_WHATSAPP_NUMBER) {
-    console.warn("[Twilio] TWILIO_WHATSAPP_NUMBER not configured")
+    log.warn("TWILIO_WHATSAPP_NUMBER not configured")
     return null
   }
 

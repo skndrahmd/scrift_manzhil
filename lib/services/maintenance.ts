@@ -7,6 +7,9 @@ import { supabaseAdmin } from "@/lib/supabase"
 import { getPakistanISOString } from "@/lib/date"
 import { sendMaintenancePaymentConfirmed, formatMonthYear } from "@/lib/twilio"
 import { ServiceError } from "./complaint"
+import { createModuleLogger } from "@/lib/logger"
+
+const log = createModuleLogger("maintenance")
 
 const APP_BASE_URL = (process.env.NEXT_PUBLIC_APP_URL || "").replace(/\/$/, "")
 
@@ -101,9 +104,9 @@ export async function updateMaintenancePaymentStatus(paymentId: string, isPaid: 
         .delete()
         .eq("reference_id", paymentId)
         .eq("transaction_type", "maintenance_income")
-      console.log("Cleaned up transaction records for maintenance payment:", paymentId)
+      log.debug("Cleaned up transaction records", { paymentId })
     } catch (cleanupError) {
-      console.error("Error cleaning up transaction records:", cleanupError)
+      log.error("Error cleaning up transaction records", { paymentId, error: cleanupError })
     }
   }
 
@@ -120,7 +123,7 @@ export async function updateMaintenancePaymentStatus(paymentId: string, isPaid: 
       .eq("id", unitId)
 
     if (unitUpdateError) {
-      console.error("Failed to update unit maintenance status:", unitUpdateError)
+      log.error("Failed to update unit maintenance status", { unitId, error: unitUpdateError })
     }
   }
 
@@ -137,7 +140,7 @@ export async function updateMaintenancePaymentStatus(paymentId: string, isPaid: 
         receiptUrl: invoiceLink,
       })
     } catch (notifyError) {
-      console.error("Failed to send maintenance payment notification:", notifyError)
+      log.error("Failed to send maintenance payment notification", { paymentId, error: notifyError })
     }
 
     // Create transaction record for accounting (with duplicate guard)
@@ -161,12 +164,12 @@ export async function updateMaintenancePaymentStatus(paymentId: string, isPaid: 
           payment_method: "cash",
           notes: `Apartment: ${confirmationRecipient?.apartment_number || 'N/A'}`
         })
-        console.log("Transaction record created for maintenance payment:", payment.id)
+        log.debug("Transaction record created", { paymentId })
       } else {
-        console.log("Transaction record already exists for maintenance payment:", payment.id)
+        log.debug("Transaction record already exists", { paymentId })
       }
     } catch (transactionError) {
-      console.error("Error creating transaction record:", transactionError)
+      log.error("Error creating transaction record", { paymentId, error: transactionError })
     }
   }
 

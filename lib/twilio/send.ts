@@ -7,6 +7,9 @@
 import { getClient, getFromNumber, formatPhoneNumber } from "./client"
 import { hasActiveSession } from "./session-tracker"
 import type { TwilioResult } from "./types"
+import { createModuleLogger } from "@/lib/logger"
+
+const log = createModuleLogger("twilio")
 
 /**
  * Sends a freeform WhatsApp message (non-template).
@@ -19,7 +22,7 @@ export async function sendMessage(to: string, body: string): Promise<TwilioResul
   const from = getFromNumber()
 
   if (!client || !from) {
-    console.log("[Twilio] No-op: client or from number not configured")
+    log.debug("No-op: client or from number not configured")
     return { ok: true, sid: "noop" }
   }
 
@@ -31,12 +34,11 @@ export async function sendMessage(to: string, body: string): Promise<TwilioResul
       to: formattedTo,
       body,
     })
-    console.log(`[Twilio] Message sent: ${msg.sid}`)
+    log.info("Message sent", { sid: msg.sid, to: formattedTo })
     return { ok: true, sid: msg.sid }
   } catch (err: unknown) {
     const error = err as Error & { code?: string; moreInfo?: string }
-    console.error("[Twilio] Send error:", error.message)
-    if (error.code) console.error("[Twilio] Error code:", error.code)
+    log.error("Send error", { error: error.message, code: error.code })
     return { ok: false, error: error.message || "Unknown error" }
   }
 }
@@ -56,12 +58,12 @@ export async function sendTemplate(
   const from = getFromNumber()
 
   if (!client || !from) {
-    console.log("[Twilio] No-op: client or from number not configured")
+    log.debug("No-op: client or from number not configured")
     return { ok: true, sid: "noop" }
   }
 
   if (!contentSid) {
-    console.error("[Twilio] Missing contentSid for template message")
+    log.error("Missing contentSid for template message")
     return { ok: false, error: "Missing contentSid" }
   }
 
@@ -74,12 +76,11 @@ export async function sendTemplate(
       contentSid,
       contentVariables: JSON.stringify(variables),
     })
-    console.log(`[Twilio] Template sent: ${msg.sid}`)
+    log.info("Template sent", { sid: msg.sid, contentSid, to: formattedTo })
     return { ok: true, sid: msg.sid }
   } catch (err: unknown) {
     const error = err as Error & { code?: string; moreInfo?: string }
-    console.error("[Twilio] Template send error:", error.message)
-    if (error.code) console.error("[Twilio] Error code:", error.code)
+    log.error("Template send error", { error: error.message, code: error.code, contentSid })
     return { ok: false, error: error.message || "Unknown error" }
   }
 }
@@ -103,7 +104,7 @@ export async function sendWithFallback(
   if (fallbackMessage) {
     const activeSession = await hasActiveSession(to)
     if (activeSession) {
-      console.log("[Twilio] Active session detected, using freeform instead of template")
+      log.debug("Active session detected, using freeform instead of template", { to })
       return sendMessage(to, fallbackMessage)
     }
   }
@@ -112,7 +113,7 @@ export async function sendWithFallback(
   if (templateSid) {
     const result = await sendTemplate(to, templateSid, templateVariables)
     if (result.ok) return result
-    console.warn("[Twilio] Template failed, using fallback message")
+    log.warn("Template failed, using fallback message", { templateSid })
   }
 
   // Fallback to freeform message

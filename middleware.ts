@@ -3,12 +3,17 @@
  * Next.js Edge Middleware for authentication and RBAC route protection.
  * Validates Supabase sessions, checks admin permissions with HMAC-signed
  * cookie caching, and redirects unauthorized users.
+ * Includes request ID tracking and logging.
  */
 
 import { type NextRequest, NextResponse } from "next/server"
 import { createServerClient } from "@supabase/ssr"
 import { createClient } from "@supabase/supabase-js"
 import { ADMIN_CACHE_COOKIE } from "@/lib/auth/cache"
+import { generateRequestId, createModuleLogger } from "@/lib/logger"
+
+// Create a lightweight logger for middleware (Edge-compatible)
+const log = createModuleLogger("middleware")
 
 // Page key mapping for route -> permission check
 const ROUTE_TO_PAGE_KEY: Record<string, string> = {
@@ -51,11 +56,17 @@ function getPageKeyFromPath(pathname: string): string | null {
  * Next.js middleware that authenticates requests and enforces RBAC.
  * Checks Supabase auth, resolves admin role/permissions (always from DB),
  * and redirects unauthorized users to login or the first permitted page.
+ * Adds request ID for distributed tracing.
  * @param request - Incoming Next.js request
  * @returns NextResponse (pass-through, redirect, or with updated cache cookie)
  */
 export async function middleware(request: NextRequest) {
+  const startTime = Date.now()
   const { pathname } = request.nextUrl
+  const method = request.method
+
+  // Generate request ID for tracing
+  const requestId = generateRequestId()
 
   // Allow unauthenticated access to public routes
   const publicRoutes = [
@@ -71,15 +82,30 @@ export async function middleware(request: NextRequest) {
   const isPublicRoute = publicRoutes.some(route => pathname.startsWith(route))
 
   if (isPublicRoute) {
-    return NextResponse.next()
+    const response = NextResponse.next()
+    response.headers.set("x-request-id", requestId)
+
+    // Log public route access (skip static assets)
+    if (!pathname.startsWith("/_next") && !pathname.startsWith("/favicon")) {
+      log.debug(`PUBLIC ${method} ${pathname}`, {
+        requestId,
+        method,
+        path: pathname,
+        duration: Date.now() - startTime,
+      })
+    }
+    return response
   }
 
   // Allow access to unauthorized page
   if (pathname === "/admin/unauthorized") {
-    return NextResponse.next()
+    const response = NextResponse.next()
+    response.headers.set("x-request-id", requestId)
+    return response
   }
 
   const response = NextResponse.next()
+  response.headers.set("x-request-id", requestId)
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -106,6 +132,14 @@ export async function middleware(request: NextRequest) {
 
   // Redirect to login if no authenticated user
   if (userError || !user) {
+    log.debug(`AUTH_REDIRECT: ${pathname} → /login`, {
+      requestId,
+      method,
+      path: pathname,
+      reason: userError?.message || "no_user",
+      duration: Date.now() - startTime,
+    })
+
     const loginUrl = new URL("/login", request.url)
     const loginRedirect = NextResponse.redirect(loginUrl)
     // Clear the admin permission cache so re-login gets fresh permissions
@@ -116,14 +150,20 @@ export async function middleware(request: NextRequest) {
       path: "/",
       maxAge: 0,
     })
+    loginRedirect.headers.set("x-request-id", requestId)
     return loginRedirect
   }
 
   // Use service role client to check admin status (bypasses RLS)
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
   if (!serviceRoleKey) {
-    console.error("[MIDDLEWARE] SUPABASE_SERVICE_ROLE_KEY is required for RBAC")
-    return NextResponse.redirect(new URL("/admin/unauthorized", request.url))
+    log.error("SUPABASE_SERVICE_ROLE_KEY is required for RBAC", {
+      requestId,
+      path: pathname,
+    })
+    const redirect = NextResponse.redirect(new URL("/admin/unauthorized", request.url))
+    redirect.headers.set("x-request-id", requestId)
+    return redirect
   }
 
   // Always query DB directly — no cache
@@ -147,8 +187,15 @@ export async function middleware(request: NextRequest) {
 
   // If no admin user found for this auth user, redirect to unauthorized
   if (adminError || !adminUser) {
+    log.warn(`AUTH_UNAUTHORIZED: ${pathname} - no admin user found`, {
+      requestId,
+      path: pathname,
+      userId: user.id,
+    })
     const unauthorizedUrl = new URL("/admin/unauthorized", request.url)
-    return NextResponse.redirect(unauthorizedUrl)
+    const redirect = NextResponse.redirect(unauthorizedUrl)
+    redirect.headers.set("x-request-id", requestId)
+    return redirect
   }
 
   const adminRole = adminUser.role
@@ -171,12 +218,25 @@ export async function middleware(request: NextRequest) {
 
   // If admin is inactive, redirect to unauthorized
   if (!isActive) {
+    log.warn(`AUTH_INACTIVE: ${pathname} - admin inactive`, {
+      requestId,
+      adminId,
+      adminRole,
+    })
     const unauthorizedUrl = new URL("/admin/unauthorized", request.url)
-    return NextResponse.redirect(unauthorizedUrl)
+    const redirect = NextResponse.redirect(unauthorizedUrl)
+    redirect.headers.set("x-request-id", requestId)
+    return redirect
   }
 
   // Super admins bypass all permission checks
   if (adminRole === "super_admin") {
+    log.debug(`AUTH_OK: ${method} ${pathname}`, {
+      requestId,
+      adminId,
+      adminRole: "super_admin",
+      duration: Date.now() - startTime,
+    })
     return response
   }
 
@@ -185,6 +245,11 @@ export async function middleware(request: NextRequest) {
 
   // If no page key found, it might be a sub-route - allow access
   if (!pageKey) {
+    log.debug(`AUTH_OK: ${method} ${pathname} (sub-route)`, {
+      requestId,
+      adminId,
+      duration: Date.now() - startTime,
+    })
     return response
   }
 
@@ -211,15 +276,36 @@ export async function middleware(request: NextRequest) {
 
     const firstPermittedKey = PAGE_ORDER.find(key => permittedKeySet.has(key))
 
+    log.debug(`AUTH_REDIRECT: ${pathname} → /${firstPermittedKey || "unauthorized"}`, {
+      requestId,
+      adminId,
+      requestedPage: pageKey,
+      permittedPages: permissionKeys,
+      duration: Date.now() - startTime,
+    })
+
     if (firstPermittedKey) {
       const redirectUrl = new URL(PAGE_KEY_TO_ROUTE[firstPermittedKey], request.url)
-      return NextResponse.redirect(redirectUrl)
+      const redirect = NextResponse.redirect(redirectUrl)
+      redirect.headers.set("x-request-id", requestId)
+      return redirect
     }
 
     // No permissions at all - show unauthorized
     const unauthorizedUrl = new URL("/admin/unauthorized", request.url)
-    return NextResponse.redirect(unauthorizedUrl)
+    const redirect = NextResponse.redirect(unauthorizedUrl)
+    redirect.headers.set("x-request-id", requestId)
+    return redirect
   }
+
+  // Access granted
+  log.debug(`AUTH_OK: ${method} ${pathname}`, {
+    requestId,
+    adminId,
+    adminRole,
+    pageKey,
+    duration: Date.now() - startTime,
+  })
 
   return response
 }
