@@ -16,6 +16,14 @@ export async function GET() {
     .select("key, value")
 
   if (dbError) {
+    // If table doesn't exist yet, return defaults so the UI isn't broken
+    if (dbError.code === "PGRST205") {
+      return NextResponse.json({
+        timezone: "Asia/Karachi",
+        currency_code: "PKR",
+        currency_symbol: "Rs.",
+      })
+    }
     return NextResponse.json({ error: dbError.message }, { status: 500 })
   }
 

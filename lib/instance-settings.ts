@@ -41,6 +41,8 @@ export async function getInstanceSettings(): Promise<InstanceSettings> {
 
     if (error || !data) {
       console.error("Failed to fetch instance settings:", error)
+      cachedSettings = DEFAULTS
+      cacheTimestamp = now
       return DEFAULTS
     }
 

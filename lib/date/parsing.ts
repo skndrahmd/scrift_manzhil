@@ -34,10 +34,10 @@ export function isDateFormat(message: string): boolean {
  * @param dateString - User-provided date string in any supported format
  * @returns ISO date string (YYYY-MM-DD) or null if parsing fails
  */
-export function parseDate(dateString: string): string | null {
+export async function parseDate(dateString: string): Promise<string | null> {
   try {
     const trimmed = dateString.trim().toLowerCase()
-    const currentDate = getPakistanTime()
+    const currentDate = await getPakistanTime()
     const currentYear = currentDate.getFullYear()
     const currentMonth = currentDate.getMonth()
     const currentDay = currentDate.getDate()

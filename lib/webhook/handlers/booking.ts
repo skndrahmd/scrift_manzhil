@@ -59,7 +59,7 @@ async function handleDateInput(
   language?: string
 ): Promise<string> {
   try {
-    const parsedDate = parseDate(message)
+    const parsedDate = await parseDate(message)
     if (!parsedDate) {
       return await getMessage(MSG.BOOKING_INVALID_DATE_FORMAT, undefined, language)
     }

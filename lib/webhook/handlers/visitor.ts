@@ -122,7 +122,7 @@ async function handleDateInputAndSave(
         return await getMessage(MSG.VISITOR_INVALID_DATE, undefined, language)
     }
 
-    const parsedDateStr = parseDate(message)
+    const parsedDateStr = await parseDate(message)
     if (!parsedDateStr) {
         return await getMessage(MSG.VISITOR_INVALID_DATE_PARSE, undefined, language)
     }

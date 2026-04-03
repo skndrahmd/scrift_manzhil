@@ -212,18 +212,22 @@ function AdminLayoutContent({
     }
 
     const fetchInstanceSettings = async () => {
+        const defaults = { timezone: "Asia/Karachi", currencyCode: "PKR", currencySymbol: "Rs." }
         try {
             const res = await fetch("/api/instance-settings")
             if (res.ok) {
                 const data = await res.json()
                 setInstanceSettings({
-                    timezone: data.timezone ?? "Asia/Karachi",
-                    currencyCode: data.currency_code ?? "PKR",
-                    currencySymbol: data.currency_symbol ?? "Rs.",
+                    timezone: data.timezone ?? defaults.timezone,
+                    currencyCode: data.currency_code ?? defaults.currencyCode,
+                    currencySymbol: data.currency_symbol ?? defaults.currencySymbol,
                 })
+            } else {
+                setInstanceSettings(defaults)
             }
         } catch (err) {
             console.error("Error fetching instance settings:", err)
+            setInstanceSettings(defaults)
         }
     }
 

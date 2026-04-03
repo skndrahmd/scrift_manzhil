@@ -118,7 +118,7 @@ async function handleNewBookingDate(
     return await getMessage(MSG.HALL_INVALID_DATE, undefined, language)
   }
 
-  const parsedDate = parseDate(message)
+  const parsedDate = await parseDate(message)
   if (!parsedDate) {
     return await getMessage(MSG.HALL_INVALID_DATE_PARSE, undefined, language)
   }
@@ -403,7 +403,7 @@ async function handleEditDate(
     return await getMessage(MSG.HALL_EDIT_INVALID_DATE, undefined, language)
   }
 
-  const parsedDate = parseDate(message)
+  const parsedDate = await parseDate(message)
   if (!parsedDate) {
     return await getMessage(MSG.HALL_EDIT_INVALID_DATE_PARSE, undefined, language)
   }
