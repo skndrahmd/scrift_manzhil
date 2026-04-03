@@ -72,12 +72,12 @@ export function InstanceSettingsManager() {
             return
         }
 
-        if (currencyCode.trim().length > 3) {
-            toast({ title: "Error", description: "Currency code must be 3 characters or less", variant: "destructive" })
+        if (!/^[A-Z]{3}$/.test(currencyCode.trim())) {
+            toast({ title: "Error", description: "Currency code must be exactly 3 uppercase letters (e.g., PKR, USD, EUR)", variant: "destructive" })
             return
         }
 
-        if (currencySymbol.trim().length > 5) {
+        if (currencySymbol.trim().length < 1 || currencySymbol.trim().length > 5) {
             toast({ title: "Error", description: "Currency symbol must be 5 characters or less", variant: "destructive" })
             return
         }

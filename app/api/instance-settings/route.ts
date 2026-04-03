@@ -65,7 +65,7 @@ export async function PATCH(request: Request) {
     }
   }
 
-  // Validate only allowed keys
+  // Validate only allowed keys and their values
   const updates: { key: string; value: string }[] = []
   for (const [key, value] of Object.entries(body)) {
     if (!ALLOWED_KEYS.includes(key as typeof ALLOWED_KEYS[number])) {
@@ -74,7 +74,16 @@ export async function PATCH(request: Request) {
     if (typeof value !== "string" || !value.trim()) {
       return NextResponse.json({ error: `Invalid value for ${key}` }, { status: 400 })
     }
-    updates.push({ key, value: value.trim() })
+    const trimmed = value.trim()
+    // Validate currency_code: exactly 3 uppercase letters
+    if (key === "currency_code" && !/^[A-Z]{3}$/.test(trimmed)) {
+      return NextResponse.json({ error: "Currency code must be exactly 3 uppercase letters (e.g., PKR, USD, EUR)" }, { status: 400 })
+    }
+    // Validate currency_symbol: 1-5 characters
+    if (key === "currency_symbol" && (trimmed.length < 1 || trimmed.length > 5)) {
+      return NextResponse.json({ error: "Currency symbol must be 1-5 characters (e.g., Rs., $)" }, { status: 400 })
+    }
+    updates.push({ key, value: trimmed })
   }
 
   if (updates.length === 0) {
