@@ -46,7 +46,7 @@ const navItems = [
         pageKey: "dashboard" as PageKey,
     },
     {
-        title: "Units",
+        title: "Houses",
         href: "/admin/units",
         icon: Building,
         pageKey: "units" as PageKey,
@@ -214,8 +214,8 @@ export function AdminSidebar({
                 </div>
                 {!isCollapsed && (
                     <div className="flex flex-col">
-                        <span className="font-medium text-manzhil-dark">Manzhil</span>
-                        <span className="text-xs text-manzhil-teal/70">by Scrift</span>
+                        <span className="font-medium text-manzhil-dark">Society Management</span>
+                        <span className="text-xs text-manzhil-teal/70">System</span>
                     </div>
                 )}
             </div>
