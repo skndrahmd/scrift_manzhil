@@ -168,8 +168,8 @@ export default function UnitsPage() {
 
             if (response.status === 409) {
                 toast({
-                    title: "Duplicate Unit",
-                    description: "A unit with this apartment number already exists.",
+                    title: "Duplicate House",
+                    description: "A house with this number already exists.",
                     variant: "destructive",
                 })
                 return
@@ -180,8 +180,8 @@ export default function UnitsPage() {
             }
 
             toast({
-                title: "Unit Created",
-                description: `Unit ${newUnit.apartment_number} has been added successfully.`,
+                title: "House Created",
+                description: `House ${newUnit.apartment_number} has been added successfully.`,
             })
 
             setIsAddUnitOpen(false)
@@ -226,7 +226,7 @@ export default function UnitsPage() {
 
     // Send monthly invoices handler
     const handleSendInvoices = async () => {
-        if (!confirm("Send monthly maintenance invoices to ALL units? This will create new invoice records for the current month if they don't exist.")) {
+        if (!confirm("Send monthly maintenance invoices to ALL houses? This will create new invoice records for the current month if they don't exist.")) {
             return
         }
 
@@ -252,7 +252,7 @@ export default function UnitsPage() {
 
     // Reset all maintenance status handler
     const handleResetStatus = async () => {
-        if (!confirm("Reset ALL units' maintenance status to UNPAID? This will set all units to show as having dues pending. Use this if the monthly reset didn't run automatically.")) {
+        if (!confirm("Reset ALL houses' maintenance status to UNPAID? This will set all houses to show as having dues pending. Use this if the monthly reset didn't run automatically.")) {
             return
         }
 
@@ -280,7 +280,7 @@ export default function UnitsPage() {
         e.preventDefault() // Prevent Link navigation
         e.stopPropagation() // Prevent card click
 
-        if (!confirm(`Are you sure you want to delete Unit ${apartmentNumber}? This action cannot be undone.`)) {
+        if (!confirm(`Are you sure you want to delete House ${apartmentNumber}? This action cannot be undone.`)) {
             return
         }
 
@@ -297,8 +297,8 @@ export default function UnitsPage() {
             }
 
             toast({
-                title: "Unit Deleted",
-                description: `Unit ${apartmentNumber} has been deleted successfully.`,
+                title: "House Deleted",
+                description: `House ${apartmentNumber} has been deleted successfully.`,
             })
             await fetchUnits()
         } catch (error: any) {
@@ -317,7 +317,7 @@ export default function UnitsPage() {
             <div className="space-y-6">
                 <div className="flex items-center gap-3">
                     <Building className="h-6 w-6 text-manzhil-teal" />
-                    <h1 className="text-2xl font-medium text-manzhil-dark">Units</h1>
+                    <h1 className="text-2xl font-medium text-manzhil-dark">Houses</h1>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                     {[...Array(4)].map((_, i) => (
@@ -336,7 +336,7 @@ export default function UnitsPage() {
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div className="flex items-center gap-3">
                     <Building className="h-6 w-6 text-manzhil-teal" />
-                    <h1 className="text-2xl font-medium text-manzhil-dark">Units</h1>
+                    <h1 className="text-2xl font-medium text-manzhil-dark">Houses</h1>
                     <Badge variant="outline" className="text-sm">{totalUnits} total</Badge>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
@@ -385,7 +385,7 @@ export default function UnitsPage() {
                         onClick={() => setIsAddUnitOpen(true)}
                     >
                         <Plus className="h-4 w-4 mr-2" />
-                        Add Unit
+                        Add House
                     </Button>
                 </div>
             </div>
@@ -397,7 +397,7 @@ export default function UnitsPage() {
                         <Home className="w-24 h-24 -mr-8 -mt-8 rotate-12" />
                     </div>
                     <CardContent className="p-5 relative z-10">
-                        <p className="text-sm font-medium text-white/90 mb-4">Total Units</p>
+                        <p className="text-sm font-medium text-white/90 mb-4">Total Houses</p>
                         <p className="text-4xl font-medium text-white mb-2">{totalUnits}</p>
                         <p className="text-xs text-white/70 font-medium">
                             {enrichedUnits.reduce((sum, u) => sum + u.activeResidents, 0)} active residents
@@ -423,7 +423,7 @@ export default function UnitsPage() {
                     <CardContent className="p-5 relative z-10">
                         <p className="text-sm font-medium text-white/90 mb-4">Dues Pending</p>
                         <p className="text-4xl font-medium text-white mb-2">{unpaidUnits}</p>
-                        <p className="text-xs text-white/70 font-medium">{totalUnits - paidUnits - unpaidUnits > 0 ? `${totalUnits - paidUnits - unpaidUnits} overdue` : "units unpaid"}</p>
+                        <p className="text-xs text-white/70 font-medium">{totalUnits - paidUnits - unpaidUnits > 0 ? `${totalUnits - paidUnits - unpaidUnits} overdue` : "houses unpaid"}</p>
                     </CardContent>
                 </Card>
 
@@ -434,7 +434,7 @@ export default function UnitsPage() {
                     <CardContent className="p-5 relative z-10">
                         <p className="text-sm font-medium text-white/90 mb-4">Active Complaints</p>
                         <p className="text-4xl font-medium text-white mb-2">{unitsWithComplaints}</p>
-                        <p className="text-xs text-white/70 font-medium">units with open issues</p>
+                        <p className="text-xs text-white/70 font-medium">houses with open issues</p>
                     </CardContent>
                 </Card>
             </div>
@@ -446,7 +446,7 @@ export default function UnitsPage() {
                         <div className="relative flex-1">
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                             <Input
-                                placeholder="Search by unit number or resident name..."
+                                placeholder="Search by house number or resident name..."
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
                                 className="pl-9 border-manzhil-teal/20 focus:border-manzhil-teal"
@@ -457,7 +457,7 @@ export default function UnitsPage() {
                                 <SelectValue placeholder="Filter by status" />
                             </SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="all">All Units</SelectItem>
+                                <SelectItem value="all">All Houses</SelectItem>
                                 <SelectItem value="paid">Maintenance Paid</SelectItem>
                                 <SelectItem value="unpaid">Dues Pending</SelectItem>
                             </SelectContent>
@@ -471,11 +471,11 @@ export default function UnitsPage() {
                 <Card className="border-0 shadow-lg">
                     <CardContent className="flex flex-col items-center justify-center py-16 text-center">
                         <Building className="h-16 w-16 text-gray-300 mb-4" />
-                        <h3 className="text-xl font-semibold text-gray-900 mb-2">No Units Found</h3>
+                        <h3 className="text-xl font-semibold text-gray-900 mb-2">No Houses Found</h3>
                         <p className="text-gray-500 max-w-md">
                             {searchQuery || statusFilter !== "all"
-                                ? "No units match your current filters. Try adjusting your search."
-                                : "No apartments have been registered yet. Add residents to create units."}
+                                ? "No houses match your current filters. Try adjusting your search."
+                                : "No houses have been registered yet. Add residents to create houses."}
                         </p>
                     </CardContent>
                 </Card>
@@ -496,7 +496,7 @@ export default function UnitsPage() {
                                             </div>
                                             <div>
                                                 <h3 className="font-medium text-manzhil-dark text-lg">
-                                                    Unit {unit.apartment_number}
+                                                    House {unit.apartment_number}
                                                 </h3>
                                                 <p className="text-xs text-gray-500">
                                                     {unit.activeResidents} resident{unit.activeResidents !== 1 ? "s" : ""}
@@ -564,7 +564,7 @@ export default function UnitsPage() {
             <Dialog open={isAddUnitOpen} onOpenChange={setIsAddUnitOpen}>
                 <DialogContent className="sm:max-w-[425px]">
                     <DialogHeader>
-                        <DialogTitle>Add New Unit</DialogTitle>
+                        <DialogTitle>Add New House</DialogTitle>
                     </DialogHeader>
                     <div className="space-y-4 pt-2">
                         <div className="space-y-2">
@@ -624,7 +624,7 @@ export default function UnitsPage() {
                                 className="bg-gradient-to-r from-manzhil-dark to-manzhil-teal hover:shadow-lg hover:shadow-manzhil-teal/30 transition-all"
                             >
                                 {isSubmitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                                Add Unit
+                                Add House
                             </Button>
                         </div>
                     </div>
