@@ -3,10 +3,10 @@
  * Handles complaint registration conversation flow
  */
 
-import { supabase } from "@/lib/supabase"
+import { supabase, supabaseAdmin } from "@/lib/supabase"
 import { getConfiguredTimezone } from "@/lib/instance-settings"
 import { sendWhatsAppMessage, sendWhatsAppTemplate } from "@/lib/twilio"
-import type { Profile, UserState } from "../types"
+import type { Profile, UserState, MediaInfo } from "../types"
 import { getState, setState, clearState } from "../state"
 import { getComplaintRecipients, TEMPLATE_SIDS } from "../config"
 import { formatSubcategory } from "../utils"
@@ -35,7 +35,8 @@ export async function handleComplaintFlow(
   message: string,
   profile: Profile,
   phoneNumber: string,
-  userState: UserState
+  userState: UserState,
+  mediaInfo?: MediaInfo
 ): Promise<string> {
   const choice = message.trim()
   const language = userState.language
@@ -49,7 +50,12 @@ export async function handleComplaintFlow(
 
     case "complaint_description":
       userState.complaint!.description = message
-      return await createComplaint(profile, userState, phoneNumber, language)
+      userState.step = "complaint_image"
+      await setState(phoneNumber, userState)
+      return await getMessage(MSG.COMPLAINT_IMAGE_PROMPT, undefined, language)
+
+    case "complaint_image":
+      return await handleImageStep(profile, phoneNumber, userState, language, mediaInfo)
 
     default:
       return await getMessage(MSG.COMPLAINT_FLOW_ERROR, undefined, language)
@@ -130,12 +136,71 @@ async function handleSubcategorySelection(
       return await getMessage(MSG.COMPLAINT_DESCRIPTION_PROMPT, undefined, language)
     }
 
-    // Create complaint directly for apartment predefined categories
-    return await createComplaint(profile, userState, phoneNumber, language)
+    // No description needed — go straight to optional image step
+    userState.step = "complaint_image"
+    await setState(phoneNumber, userState)
+    return await getMessage(MSG.COMPLAINT_IMAGE_PROMPT, undefined, language)
   }
 
   const rangeText = isBuilding ? "1-12" : "1-5"
   return await getMessage(MSG.COMPLAINT_INVALID_SUBCATEGORY, { range: rangeText }, language)
+}
+
+/**
+ * Handle optional image upload step
+ */
+async function handleImageStep(
+  profile: Profile,
+  phoneNumber: string,
+  userState: UserState,
+  language?: string,
+  mediaInfo?: MediaInfo
+): Promise<string> {
+  if (mediaInfo) {
+    // Resident sent an image — download from Twilio and upload to Supabase
+    try {
+      const twilioSid = process.env.TWILIO_ACCOUNT_SID
+      const twilioToken = process.env.TWILIO_AUTH_TOKEN
+
+      const imageResponse = await fetch(mediaInfo.url, {
+        headers: {
+          Authorization: `Basic ${Buffer.from(`${twilioSid}:${twilioToken}`).toString("base64")}`,
+        },
+      })
+
+      if (!imageResponse.ok) {
+        console.error("[Complaint] Failed to download image from Twilio:", imageResponse.status)
+        // Continue without image rather than blocking complaint submission
+        return await createComplaint(profile, userState, phoneNumber, language)
+      }
+
+      const imageBuffer = Buffer.from(await imageResponse.arrayBuffer())
+      const ext = mediaInfo.contentType.split("/")[1] || "jpg"
+      const fileName = `${profile.id}/${Date.now()}.${ext}`
+
+      const { error: uploadError } = await supabaseAdmin.storage
+        .from("complaints")
+        .upload(fileName, imageBuffer, {
+          contentType: mediaInfo.contentType,
+          upsert: false,
+        })
+
+      if (uploadError) {
+        console.error("[Complaint] Image upload error:", uploadError)
+        // Continue without image
+        return await createComplaint(profile, userState, phoneNumber, language)
+      }
+
+      const { data: urlData } = supabaseAdmin.storage.from("complaints").getPublicUrl(fileName)
+      userState.complaint!.image_url = urlData.publicUrl
+    } catch (error) {
+      console.error("[Complaint] Image processing error:", error)
+      // Continue without image
+    }
+  }
+
+  // Either image was processed (or skipped) — create the complaint
+  return await createComplaint(profile, userState, phoneNumber, language)
 }
 
 /**
@@ -170,6 +235,7 @@ async function createComplaint(
           category: complaint.category,
           subcategory: complaint.subcategory,
           description: finalDescription,
+          image_url: complaint.image_url || null,
           group_key: groupKey,
           status: "pending",
         },

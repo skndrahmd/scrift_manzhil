@@ -40,6 +40,7 @@ interface Complaint {
     category: string
     subcategory: string
     description: string | null
+    image_url: string | null
     status: string
     created_at: string
     updated_at: string
@@ -518,6 +519,21 @@ export function ComplaintsTable() {
                                     </p>
                                 </div>
                             </div>
+
+                            {/* Attached Photo */}
+                            {selectedComplaint.image_url && (
+                                <div className="space-y-2">
+                                    <p className="text-xs text-gray-500 uppercase tracking-wide font-medium">Attached Photo</p>
+                                    <a href={selectedComplaint.image_url} target="_blank" rel="noopener noreferrer">
+                                        <img
+                                            src={selectedComplaint.image_url}
+                                            alt="Complaint photo"
+                                            className="w-full rounded-lg border border-gray-200 object-cover max-h-64 hover:opacity-90 transition-opacity cursor-pointer"
+                                        />
+                                    </a>
+                                    <p className="text-xs text-gray-400">Click photo to open full size</p>
+                                </div>
+                            )}
 
                             {/* Timestamps */}
                             <div className="grid grid-cols-2 gap-4 pt-4 border-t border-gray-100">

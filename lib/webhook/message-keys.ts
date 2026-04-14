@@ -24,6 +24,8 @@ export const MSG = {
   COMPLAINT_INVALID_CATEGORY: "complaint.invalid_category",
   COMPLAINT_INVALID_SUBCATEGORY: "complaint.invalid_subcategory",
   COMPLAINT_REGISTERED: "complaint.registered",
+  COMPLAINT_IMAGE_PROMPT: "complaint.image_prompt",
+  COMPLAINT_IMAGE_UPLOAD_ERROR: "complaint.image_upload_error",
   COMPLAINT_CREATION_ERROR: "complaint.creation_error",
   COMPLAINT_FLOW_ERROR: "complaint.flow_error",
   COMPLAINT_NOTIFICATION_FALLBACK: "complaint.notification_fallback",

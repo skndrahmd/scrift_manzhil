@@ -26,6 +26,7 @@ export interface ComplaintData {
   subcategory?: string
   description?: string
   tower?: string
+  image_url?: string
 }
 
 /**

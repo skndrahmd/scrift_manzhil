@@ -1,0 +1,1 @@
+{"nodes": [{"id": "tests_mocks_fixtures_ts", "label": "fixtures.ts", "file_type": "code", "source_file": "tests/mocks/fixtures.ts", "source_location": "L1"}], "edges": [{"source": "tests_mocks_fixtures_ts", "target": "types", "relation": "imports_from", "confidence": "EXTRACTED", "source_file": "tests/mocks/fixtures.ts", "source_location": "L5", "weight": 1.0}]}

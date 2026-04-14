@@ -154,7 +154,7 @@ export async function processMessage(
     // Route to specific flow handlers
     switch (userState.type) {
       case "complaint":
-        return await handleComplaintFlow(trimmedMessage, profile, phoneNumber, userState)
+        return await handleComplaintFlow(trimmedMessage, profile, phoneNumber, userState, mediaInfo)
       case "booking":
         return await handleBookingFlow(trimmedMessage, profile, phoneNumber, userState)
       case "staff":
@@ -276,6 +276,10 @@ async function handleBackCommand(
       messageKey: userState.complaint?.category === "building"
         ? MSG.BACK_COMPLAINT_SUBCATEGORY_BUILDING
         : MSG.BACK_COMPLAINT_SUBCATEGORY_APARTMENT,
+    },
+    complaint_image: {
+      step: "complaint_description",
+      messageKey: MSG.COMPLAINT_DESCRIPTION_PROMPT,
     },
 
     // Staff flow

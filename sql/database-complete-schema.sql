@@ -2,45 +2,52 @@
 -- Manzhil by Scrift - Complete Database Setup
 -- ============================================
 -- This is the SINGLE master SQL file containing ALL database setup:
---   - Schema (32 tables with RLS, indexes, triggers)
+--   - Schema (37 tables with RLS, indexes, triggers)
 --   - Seed data (bot messages, whatsapp templates, label messages, amenities, menu options)
 --
 -- Run this ONCE in your Supabase SQL Editor for a fresh installation.
 -- Everything is idempotent where possible (ON CONFLICT DO NOTHING).
 --
--- Last Updated: 2026-03-02
+-- Last Updated: 2026-04-10
 --
--- Tables (30):
---   1.  units                      - Apartment unit entities (first-class)
---   2.  profiles                   - Resident/user information (FK -> units)
---   3.  maintenance_payments       - Monthly maintenance fee tracking (FK -> profiles, units)
---   4.  booking_settings           - Hall booking configuration
---   5.  bookings                   - Hall booking records (FK -> profiles)
---   6.  complaints                 - Complaint tracking (FK -> profiles)
---   7.  feedback                   - Resident feedback (FK -> profiles)
---   8.  staff                      - Building staff records (FK -> units)
---   9.  daily_reports              - Generated daily PDF reports
---  10.  transactions               - Unified income/expense tracking (FK -> profiles)
---  11.  expense_categories         - Expense category definitions
---  12.  expenses                   - Expense records (FK -> expense_categories)
---  13.  admin_users                - Admin RBAC accounts
---  14.  admin_permissions          - Page-level access control (FK -> admin_users)
---  15.  admin_otp                  - WhatsApp OTP authentication
---  16.  visitor_passes             - Visitor entry tracking (FK -> profiles)
---  17.  parcels                    - Parcel/delivery tracking (FK -> profiles)
---  18.  broadcast_logs             - Broadcast rate limiting & history
---  19.  payment_methods            - Payment method configuration
---  20.  payment_verifications      - Payment receipt verification
---  21.  bot_messages               - Customizable WhatsApp bot messages
---  22.  whatsapp_templates         - Twilio WhatsApp content template management
---  23.  enabled_languages          - Enabled languages for multilingual bot support
---  24.  bot_message_translations   - Per-language translations of bot messages
---  25.  bot_sessions               - WhatsApp bot persistent session state
---  26.  amenities                  - Building amenities with operating hours
---  27.  prayer_times               - 5 daily prayer times
---  28.  prayer_times_settings      - Prayer times master enable/disable toggle
---  29.  menu_options               - Dynamic WhatsApp bot main menu configuration
---  30.  menu_option_translations   - Per-language translations for menu option labels
+-- Tables (37):
+--   1.  units                          - Apartment unit entities (first-class)
+--   2.  profiles                       - Resident/user information (FK -> units)
+--   3.  maintenance_payments           - Monthly maintenance fee tracking (FK -> profiles, units)
+--   4.  booking_settings               - Hall booking configuration
+--   5.  bookings                       - Hall booking records (FK -> profiles)
+--   6.  complaints                     - Complaint tracking (FK -> profiles)
+--   7.  feedback                       - Resident feedback (FK -> profiles)
+--   8.  staff                          - Building staff records (FK -> units)
+--   9.  daily_reports                  - Generated daily PDF reports
+--  10.  transactions                   - Unified income/expense tracking (FK -> profiles)
+--  11.  expense_categories             - Expense category definitions
+--  12.  expenses                       - Expense records (FK -> expense_categories)
+--  13.  admin_users                    - Admin RBAC accounts
+--  14.  admin_permissions              - Page-level access control (FK -> admin_users)
+--  15.  admin_otp                      - WhatsApp OTP authentication
+--  16.  visitor_passes                 - Visitor entry tracking (FK -> profiles)
+--  17.  parcels                        - Parcel/delivery tracking (FK -> profiles)
+--  18.  broadcast_logs                 - Broadcast rate limiting & history
+--  19.  payment_methods                - Payment method configuration
+--  20.  payment_verifications          - Payment receipt verification
+--  21.  bot_messages                   - Customizable WhatsApp bot messages
+--  22.  whatsapp_templates             - Twilio WhatsApp content template management
+--  23.  enabled_languages              - Enabled languages for multilingual bot support
+--  24.  bot_message_translations       - Per-language translations of bot messages
+--  25.  bot_sessions                   - WhatsApp bot persistent session state
+--  26.  amenities                      - Building amenities with operating hours
+--  27.  prayer_times                   - 5 daily prayer times
+--  28.  prayer_times_settings          - Prayer times master enable/disable toggle
+--  29.  menu_options                   - Dynamic WhatsApp bot main menu configuration
+--  30.  menu_option_translations       - Per-language translations for menu option labels
+--  31.  instance_settings              - Instance-level configuration (timezone, currency)
+--  32.  session_windows                - WhatsApp session tracking for cost optimization
+--  33.  prayer_time_translations       - Per-language prayer name translations
+--  34.  amenity_translations           - Per-language amenity name translations
+--  35.  cron_logs                      - Cron job execution tracking
+--  36.  welcome_message_logs           - Welcome message send tracking
+--  37.  maintenance_notification_logs  - Maintenance notification audit trail
 --
 -- ============================================
 
@@ -51,6 +58,13 @@
 -- WARNING: This will DELETE ALL existing data!
 -- Comment out this section if you want to preserve existing data.
 
+DROP TABLE IF EXISTS maintenance_notification_logs CASCADE;
+DROP TABLE IF EXISTS welcome_message_logs CASCADE;
+DROP TABLE IF EXISTS cron_logs CASCADE;
+DROP TABLE IF EXISTS amenity_translations CASCADE;
+DROP TABLE IF EXISTS prayer_time_translations CASCADE;
+DROP TABLE IF EXISTS session_windows CASCADE;
+DROP TABLE IF EXISTS instance_settings CASCADE;
 DROP TABLE IF EXISTS menu_option_translations CASCADE;
 DROP TABLE IF EXISTS menu_options CASCADE;
 DROP TABLE IF EXISTS prayer_times_settings CASCADE;
@@ -171,6 +185,32 @@ CREATE OR REPLACE FUNCTION update_parcels_updated_at()
 RETURNS TRIGGER AS $$
 BEGIN
   NEW.updated_at = NOW();
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- 2.10 Mark prayer time translations stale when prayer name changes
+CREATE OR REPLACE FUNCTION mark_prayer_time_translations_stale()
+RETURNS TRIGGER AS $$
+BEGIN
+  IF OLD.prayer_name IS DISTINCT FROM NEW.prayer_name THEN
+    UPDATE prayer_time_translations
+    SET is_stale = true, updated_at = now()
+    WHERE prayer_time_id = NEW.id;
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- 2.11 Mark amenity translations stale when amenity name changes
+CREATE OR REPLACE FUNCTION mark_amenity_translations_stale()
+RETURNS TRIGGER AS $$
+BEGIN
+  IF OLD.name IS DISTINCT FROM NEW.name THEN
+    UPDATE amenity_translations
+    SET is_stale = true, updated_at = now()
+    WHERE amenity_id = NEW.id;
+  END IF;
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
@@ -308,7 +348,7 @@ CREATE INDEX idx_maintenance_payments_unit_id ON maintenance_payments(unit_id);
 -- --------------------------------------------
 -- 3.4 BOOKING SETTINGS TABLE
 -- Configuration for hall booking system.
--- Default data inserted in PART 8.
+-- Default data inserted in PART 9.
 -- --------------------------------------------
 CREATE TABLE booking_settings (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -397,6 +437,7 @@ CREATE TABLE complaints (
   category TEXT NOT NULL,
   subcategory TEXT NOT NULL,
   description TEXT,
+  image_url TEXT,
   group_key TEXT,
   status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'in-progress', 'completed', 'cancelled')),
   created_at TIMESTAMPTZ DEFAULT NOW(),
@@ -595,7 +636,7 @@ CREATE INDEX idx_transactions_reference ON transactions(reference_id);
 -- --------------------------------------------
 -- 4.2 EXPENSE CATEGORIES TABLE
 -- Expense category definitions with icons and colors.
--- Default data inserted in PART 8.
+-- Default data inserted in PART 9.
 -- --------------------------------------------
 CREATE TABLE expense_categories (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -730,7 +771,7 @@ CREATE INDEX idx_admin_users_payment_notifications ON admin_users(receive_paymen
 -- Page-level access control per admin user.
 -- Page keys: dashboard, residents, units, bookings, complaints,
 --            visitors, parcels, analytics, feedback, accounting,
---            broadcast, settings
+--            broadcast, settings, amenities
 -- --------------------------------------------
 CREATE TABLE admin_permissions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -880,7 +921,7 @@ CREATE INDEX idx_broadcast_logs_sent_at ON broadcast_logs(sent_at);
 COMMENT ON TABLE broadcast_logs IS 'Tracks broadcast messages for rate limiting and usage analytics';
 
 -- --------------------------------------------
--- 6.5 PAYMENT METHODS TABLE
+-- 6.4 PAYMENT METHODS TABLE
 -- Configurable payment methods (JazzCash, EasyPaisa, Bank Transfer)
 -- for the payment receipt system.
 -- --------------------------------------------
@@ -909,7 +950,7 @@ CREATE INDEX idx_payment_methods_sort_order ON payment_methods(sort_order);
 COMMENT ON TABLE payment_methods IS 'Configurable payment methods for the payment receipt system';
 
 -- --------------------------------------------
--- 6.7 PAYMENT VERIFICATIONS TABLE
+-- 6.5 PAYMENT VERIFICATIONS TABLE
 -- Tracks resident-submitted payment receipts for admin verification.
 -- --------------------------------------------
 CREATE TABLE IF NOT EXISTS payment_verifications (
@@ -1062,7 +1103,7 @@ CREATE INDEX idx_translations_language ON bot_message_translations(language_code
 CREATE INDEX idx_translations_key ON bot_message_translations(message_key);
 
 -- --------------------------------------------
--- 2.23 BOT SESSIONS TABLE
+-- 7.5 BOT SESSIONS TABLE
 -- Persistent session state for WhatsApp bot flows.
 -- Stores conversation state across serverless invocations.
 -- --------------------------------------------
@@ -1207,6 +1248,225 @@ CREATE INDEX IF NOT EXISTS idx_menu_opt_trans_lang ON menu_option_translations(l
 CREATE INDEX IF NOT EXISTS idx_menu_opt_trans_option ON menu_option_translations(menu_option_id);
 CREATE INDEX IF NOT EXISTS idx_menu_opt_trans_stale ON menu_option_translations(is_stale);
 
+-- --------------------------------------------
+-- 7.11 INSTANCE SETTINGS TABLE
+-- Instance-level configuration (timezone, currency).
+-- --------------------------------------------
+CREATE TABLE IF NOT EXISTS instance_settings (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  key TEXT NOT NULL UNIQUE,
+  value TEXT NOT NULL,
+  description TEXT,
+  updated_at TIMESTAMPTZ DEFAULT now(),
+  updated_by UUID REFERENCES admin_users(id) ON DELETE SET NULL
+);
+
+ALTER TABLE instance_settings ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Service role full access on instance_settings"
+  ON instance_settings FOR ALL
+  USING (true) WITH CHECK (true);
+
+-- --------------------------------------------
+-- 7.12 SESSION WINDOWS TABLE
+-- WhatsApp conversation session tracking for Twilio cost optimization.
+-- Tracks user-initiated (cheaper) vs business-initiated (expensive) conversations.
+-- --------------------------------------------
+CREATE TABLE IF NOT EXISTS session_windows (
+  phone_number TEXT PRIMARY KEY,
+  last_inbound_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  session_expires_at TIMESTAMPTZ NOT NULL DEFAULT (NOW() + INTERVAL '24 hours')
+);
+
+ALTER TABLE session_windows ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Service role full access on session_windows"
+  ON session_windows FOR ALL
+  USING (true) WITH CHECK (true);
+
+CREATE INDEX IF NOT EXISTS idx_session_windows_expires ON session_windows(session_expires_at);
+
+-- --------------------------------------------
+-- 7.13 PRAYER TIME TRANSLATIONS TABLE
+-- Per-language prayer name translations.
+-- When a new language is added, all prayer names are auto-translated.
+-- When a prayer name is changed, its translations are marked stale.
+-- --------------------------------------------
+CREATE TABLE IF NOT EXISTS prayer_time_translations (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  prayer_time_id UUID NOT NULL REFERENCES prayer_times(id) ON DELETE CASCADE,
+  language_code VARCHAR(10) NOT NULL REFERENCES enabled_languages(language_code) ON DELETE CASCADE,
+  translated_name TEXT NOT NULL,
+  is_stale BOOLEAN DEFAULT false,
+  is_auto_translated BOOLEAN DEFAULT true,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now(),
+  UNIQUE(prayer_time_id, language_code)
+);
+
+ALTER TABLE prayer_time_translations ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Service role full access on prayer_time_translations"
+  ON prayer_time_translations FOR ALL
+  USING (true) WITH CHECK (true);
+
+CREATE INDEX IF NOT EXISTS idx_prayer_trans_lang ON prayer_time_translations(language_code);
+CREATE INDEX IF NOT EXISTS idx_prayer_trans_prayer ON prayer_time_translations(prayer_time_id);
+CREATE INDEX IF NOT EXISTS idx_prayer_trans_stale ON prayer_time_translations(is_stale);
+
+-- --------------------------------------------
+-- 7.14 AMENITY TRANSLATIONS TABLE
+-- Per-language amenity name translations.
+-- When a new language is added, all amenity names are auto-translated.
+-- When an amenity name is changed, its translations are marked stale.
+-- --------------------------------------------
+CREATE TABLE IF NOT EXISTS amenity_translations (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  amenity_id UUID NOT NULL REFERENCES amenities(id) ON DELETE CASCADE,
+  language_code VARCHAR(10) NOT NULL REFERENCES enabled_languages(language_code) ON DELETE CASCADE,
+  translated_name TEXT NOT NULL,
+  is_stale BOOLEAN DEFAULT false,
+  is_auto_translated BOOLEAN DEFAULT true,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now(),
+  UNIQUE(amenity_id, language_code)
+);
+
+ALTER TABLE amenity_translations ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Service role full access on amenity_translations"
+  ON amenity_translations FOR ALL
+  USING (true) WITH CHECK (true);
+
+CREATE INDEX IF NOT EXISTS idx_amenity_trans_lang ON amenity_translations(language_code);
+CREATE INDEX IF NOT EXISTS idx_amenity_trans_amenity ON amenity_translations(amenity_id);
+CREATE INDEX IF NOT EXISTS idx_amenity_trans_stale ON amenity_translations(is_stale);
+
+-- --------------------------------------------
+-- 7.15 CRON LOGS TABLE
+-- Tracks all cron job executions with detailed results.
+-- --------------------------------------------
+CREATE TABLE IF NOT EXISTS cron_logs (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  job_name VARCHAR(100) NOT NULL,
+  status VARCHAR(20) NOT NULL CHECK (status IN ('success', 'partial', 'failed', 'running')),
+  started_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  completed_at TIMESTAMPTZ,
+  duration_ms INTEGER,
+  records_processed INTEGER DEFAULT 0,
+  records_succeeded INTEGER DEFAULT 0,
+  records_failed INTEGER DEFAULT 0,
+  result JSONB,
+  error_message TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE cron_logs ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Service role full access on cron_logs"
+  ON cron_logs FOR ALL
+  USING (true) WITH CHECK (true);
+
+CREATE POLICY "Authenticated users can read cron_logs"
+  ON cron_logs FOR SELECT
+  TO authenticated
+  USING (true);
+
+CREATE INDEX IF NOT EXISTS idx_cron_logs_job_name ON cron_logs(job_name);
+CREATE INDEX IF NOT EXISTS idx_cron_logs_status ON cron_logs(status);
+CREATE INDEX IF NOT EXISTS idx_cron_logs_created_at ON cron_logs(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_cron_logs_started_at ON cron_logs(started_at DESC);
+
+COMMENT ON TABLE cron_logs IS 'Tracks all cron job executions with detailed results';
+COMMENT ON COLUMN cron_logs.job_name IS 'Name of the cron job (e.g., daily-reports, maintenance-reminder)';
+COMMENT ON COLUMN cron_logs.status IS 'Execution status: success, partial, failed, or running';
+COMMENT ON COLUMN cron_logs.result IS 'Detailed JSON result with job-specific data';
+
+-- --------------------------------------------
+-- 7.16 WELCOME MESSAGE LOGS TABLE
+-- Tracks all welcome message attempts (bulk import, manual, resend).
+-- --------------------------------------------
+CREATE TABLE IF NOT EXISTS welcome_message_logs (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  resident_id UUID REFERENCES profiles(id) ON DELETE SET NULL,
+  resident_name VARCHAR(255),
+  phone_number VARCHAR(20) NOT NULL,
+  apartment_number VARCHAR(50),
+  status VARCHAR(20) NOT NULL CHECK (status IN ('sent', 'failed', 'pending')),
+  error_message TEXT,
+  twilio_sid VARCHAR(100),
+  triggered_by VARCHAR(50) NOT NULL CHECK (triggered_by IN ('bulk-import', 'manual', 'resend')),
+  triggered_by_user VARCHAR(255),
+  sent_at TIMESTAMPTZ DEFAULT NOW(),
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE welcome_message_logs ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Service role full access on welcome_message_logs"
+  ON welcome_message_logs FOR ALL
+  USING (true) WITH CHECK (true);
+
+CREATE POLICY "Authenticated users can read welcome_message_logs"
+  ON welcome_message_logs FOR SELECT
+  TO authenticated
+  USING (true);
+
+CREATE INDEX IF NOT EXISTS idx_welcome_logs_status ON welcome_message_logs(status);
+CREATE INDEX IF NOT EXISTS idx_welcome_logs_sent_at ON welcome_message_logs(sent_at DESC);
+CREATE INDEX IF NOT EXISTS idx_welcome_logs_resident ON welcome_message_logs(resident_id);
+CREATE INDEX IF NOT EXISTS idx_welcome_logs_phone ON welcome_message_logs(phone_number);
+CREATE INDEX IF NOT EXISTS idx_welcome_logs_triggered_by ON welcome_message_logs(triggered_by);
+
+COMMENT ON TABLE welcome_message_logs IS 'Tracks all welcome message attempts';
+COMMENT ON COLUMN welcome_message_logs.triggered_by IS 'How the message was triggered: bulk-import, manual, or resend';
+COMMENT ON COLUMN welcome_message_logs.twilio_sid IS 'Twilio message SID for tracking';
+
+-- --------------------------------------------
+-- 7.17 MAINTENANCE NOTIFICATION LOGS TABLE
+-- Tracks all maintenance-related WhatsApp notifications
+-- for auditing and debugging purposes.
+-- --------------------------------------------
+CREATE TABLE IF NOT EXISTS maintenance_notification_logs (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  unit_id UUID REFERENCES units(id) ON DELETE SET NULL,
+  profile_id UUID REFERENCES profiles(id) ON DELETE SET NULL,
+  payment_id UUID REFERENCES maintenance_payments(id) ON DELETE SET NULL,
+  notification_type TEXT NOT NULL CHECK (notification_type IN ('invoice', 'reminder', 'confirmation')),
+  status TEXT NOT NULL CHECK (status IN ('sent', 'failed')),
+  error_message TEXT,
+  phone_number TEXT NOT NULL,
+  recipient_name TEXT,
+  amount NUMERIC,
+  month_year TEXT,
+  triggered_by TEXT NOT NULL CHECK (triggered_by IN ('cron', 'manual')),
+  triggered_by_user TEXT,
+  sent_at TIMESTAMPTZ DEFAULT NOW(),
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE maintenance_notification_logs ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Service role has full access to maintenance_notification_logs"
+  ON maintenance_notification_logs FOR ALL TO service_role
+  USING (true) WITH CHECK (true);
+
+CREATE POLICY "Authenticated users can read maintenance_notification_logs"
+  ON maintenance_notification_logs FOR SELECT TO authenticated
+  USING (true);
+
+CREATE INDEX IF NOT EXISTS idx_maintenance_logs_unit_id ON maintenance_notification_logs(unit_id);
+CREATE INDEX IF NOT EXISTS idx_maintenance_logs_status ON maintenance_notification_logs(status);
+CREATE INDEX IF NOT EXISTS idx_maintenance_logs_notification_type ON maintenance_notification_logs(notification_type);
+CREATE INDEX IF NOT EXISTS idx_maintenance_logs_triggered_by ON maintenance_notification_logs(triggered_by);
+CREATE INDEX IF NOT EXISTS idx_maintenance_logs_sent_at ON maintenance_notification_logs(sent_at DESC);
+CREATE INDEX IF NOT EXISTS idx_maintenance_logs_created_at ON maintenance_notification_logs(created_at DESC);
+
+COMMENT ON TABLE maintenance_notification_logs IS 'Tracks all maintenance-related WhatsApp notifications for auditing and debugging';
+COMMENT ON COLUMN maintenance_notification_logs.notification_type IS 'Type: invoice (new month), reminder (overdue), confirmation (payment received)';
+COMMENT ON COLUMN maintenance_notification_logs.triggered_by IS 'Source: cron (automatic) or manual (admin-triggered)';
+COMMENT ON COLUMN maintenance_notification_logs.triggered_by_user IS 'Admin user ID who triggered the notification (for manual triggers)';
+
 
 -- ============================================
 -- PART 8: TRIGGERS
@@ -1319,6 +1579,29 @@ CREATE TRIGGER set_complaint_id
   BEFORE INSERT ON complaints
   FOR EACH ROW EXECUTE FUNCTION generate_complaint_id();
 
+-- 8.6 Updated_at triggers for translation tables
+CREATE TRIGGER update_prayer_trans_updated_at
+  BEFORE UPDATE ON prayer_time_translations
+  FOR EACH ROW
+  EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_amenity_trans_updated_at
+  BEFORE UPDATE ON amenity_translations
+  FOR EACH ROW
+  EXECUTE FUNCTION update_updated_at_column();
+
+-- 8.7 Mark prayer time translations stale when prayer name changes
+CREATE TRIGGER trigger_mark_prayer_translations_stale
+  AFTER UPDATE OF prayer_name ON prayer_times
+  FOR EACH ROW
+  EXECUTE FUNCTION mark_prayer_time_translations_stale();
+
+-- 8.8 Mark amenity translations stale when amenity name changes
+CREATE TRIGGER trigger_mark_amenity_translations_stale
+  AFTER UPDATE OF name ON amenities
+  FOR EACH ROW
+  EXECUTE FUNCTION mark_amenity_translations_stale();
+
 
 -- ============================================
 -- PART 9: SEED DATA
@@ -1345,7 +1628,16 @@ INSERT INTO expense_categories (name, description, icon, color) VALUES
 ON CONFLICT (name) DO NOTHING;
 
 -- --------------------------------------------
--- 9.3 Bot Messages Seed Data (~115 messages)
+-- 9.3 Instance settings defaults
+-- --------------------------------------------
+INSERT INTO instance_settings (key, value, description) VALUES
+  ('timezone',        'Asia/Karachi',  'IANA timezone identifier'),
+  ('currency_code',   'PKR',           'ISO 4217 currency code'),
+  ('currency_symbol', 'Rs.',           'Currency symbol for display')
+ON CONFLICT (key) DO NOTHING;
+
+-- --------------------------------------------
+-- 9.4 Bot Messages Seed Data (~125 messages)
 -- Populates bot_messages table with all default messages.
 -- Idempotent: uses ON CONFLICT DO NOTHING.
 -- --------------------------------------------
@@ -1361,7 +1653,8 @@ VALUES
 ('menu.emergency_contacts', 'main_menu', 'Emergency Contacts', 'Displays emergency contact numbers', E'🆘 *Emergency Contacts*\n\n{contacts}\n\nReply *0* for menu', '["contacts"]'::jsonb, 5),
 ('menu.invalid_selection', 'main_menu', 'Invalid Menu Selection', 'Shown when user enters invalid main menu option', E'❓ *Invalid Selection*\n\nPlease reply 1-{max_option}.\n\n{menu}', '["menu", "max_option"]'::jsonb, 6),
 ('menu.welcome_unregistered', 'main_menu', 'Unregistered User', 'Shown to unregistered phone numbers', E'👋 Hello! This is Manzhil.\n\n❌ This number is not registered. Please contact administration to register.\n\n📞 Contact Admin', '[]'::jsonb, 7),
-('menu.account_inactive', 'main_menu', 'Account Inactive', 'Shown to deactivated accounts', E'⚠️ *Account Inactive*\n\nPlease contact administration if this is an error.\n\n📞 Contact Admin', '[]'::jsonb, 8)
+('menu.account_inactive', 'main_menu', 'Account Inactive', 'Shown to deactivated accounts', E'⚠️ *Account Inactive*\n\nPlease contact administration if this is an error.\n\n📞 Contact Admin', '[]'::jsonb, 8),
+('menu.session_expired', 'main_menu', 'Session Expired', 'Shown when a user''s session times out after 5 minutes of inactivity', E'⏳ *Session Expired*\n\nYour previous session has timed out due to inactivity.\n\nReply *0* to open the main menu.', '[]'::jsonb, 9)
 ON CONFLICT (message_key) DO NOTHING;
 
 -- === Complaint Flow ===
@@ -1550,7 +1843,8 @@ VALUES
 ('nav.back_hall_menu', 'navigation', 'Back: Hall Menu', 'Navigation back to hall menu', E'🔙 *Going Back*\n\n🏛️ *Community Hall*\n\n1. 📅 New Booking\n2. ❌ Cancel Booking\n3. ✏️ Edit Booking\n4. 📋 View My Bookings\n\nReply 1-4, or *0* for menu', '[]'::jsonb, 8),
 ('nav.back_hall_booking_date', 'navigation', 'Back: Hall Booking Date', 'Navigation back to hall booking date', E'🔙 *Going Back*\n\nEnter the date you''d like to book:\n\n*B* to go back, *0* for menu', '[]'::jsonb, 9),
 ('nav.back_visitor_name', 'navigation', 'Back: Visitor Name', 'Navigation back to visitor name entry', E'🔙 *Going Back*\n\n🎫 *Visitor Entry Pass*\n\nEnter the *visitor''s name* ✍️\n\n*B* to go back, *0* for menu', '[]'::jsonb, 10),
-('nav.back_visitor_car', 'navigation', 'Back: Visitor Car', 'Navigation back to visitor car entry', E'🔙 *Going Back*\n\n🚗 Enter the visitor''s *car number* (license plate).\n\n*B* to go back, *0* for menu', '[]'::jsonb, 11)
+('nav.back_visitor_car', 'navigation', 'Back: Visitor Car', 'Navigation back to visitor car entry', E'🔙 *Going Back*\n\n🚗 Enter the visitor''s *car number* (license plate).\n\n*B* to go back, *0* for menu', '[]'::jsonb, 11),
+('nav.back_payment_type', 'navigation', 'Back to Payment Type', 'Back navigation to payment type selection', E'🔙 *Going Back*\n\n💳 *Submit Payment*\n\nWhat are you paying for?\n\n1. 💰 Maintenance\n2. 🏛️ Hall Booking\n\nReply 1-2, or *0* for menu', '[]'::jsonb, 20)
 ON CONFLICT (message_key) DO NOTHING;
 
 -- === Translatable Labels (used by getLabels() for menus, categories, roles) ===
@@ -1558,7 +1852,7 @@ ON CONFLICT (message_key) DO NOTHING;
 INSERT INTO bot_messages (message_key, flow_group, label, description, default_text, variables, sort_order)
 VALUES
   ('labels.main_menu_options', 'main_menu', 'Main Menu Options', 'Main menu option labels (one per line)',
-   E'Register Complaint\nCheck Complaint Status\nCancel Complaint\nMy Staff Management\nCheck Maintenance Dues\nCommunity Hall\nVisitor Entry Pass\nView My Profile\nSuggestions/Feedback\nEmergency Contacts\nSubmit Payment',
+   E'Register Complaint\nCheck Complaint Status\nCancel Complaint\nMy Staff Management\nCheck Maintenance Dues\nCommunity Hall\nVisitor Entry Pass\nView My Profile\nSuggestions/Feedback\nEmergency Contacts\nSubmit Payment\nAmenities',
    '[]'::jsonb, 100),
 
   ('labels.hall_menu_options', 'booking', 'Hall Menu Options', 'Hall menu option labels (one per line)',
@@ -1607,7 +1901,16 @@ VALUES
 ('amenity.timings', 'amenity', 'Amenity Timings', 'Operating hours for an amenity', E'🏟️ *{name}*\n\n⏰ *Timings*\n{timings}\n\nReply *0* for menu', '["name", "timings"]'::jsonb, 2),
 ('amenity.under_maintenance', 'amenity', 'Amenity Under Maintenance', 'Shown when amenity is under maintenance', E'🏟️ *{name}*\n\n🔧 *Under Maintenance*\n\nThis amenity is currently under maintenance. Please check back later.\n\nReply *0* for menu', '["name"]'::jsonb, 3),
 ('amenity.invalid_selection', 'amenity', 'Invalid Amenity Selection', 'Invalid amenity number selected', E'❓ *Invalid Selection*\n\nPlease choose 1-{max}.\n\nReply *0* for menu', '["max"]'::jsonb, 4),
-('amenity.no_amenities', 'amenity', 'No Amenities Available', 'Shown when no active amenities exist', E'📋 *No Amenities Available*\n\nNo amenities are currently configured.\n\nReply *0* for menu', '[]'::jsonb, 5)
+('amenity.no_amenities', 'amenity', 'No Amenities Available', 'Shown when no active amenities exist', E'📋 *No Amenities Available*\n\nNo amenities are currently configured.\n\nReply *0* for menu', '[]'::jsonb, 5),
+('amenity.prayer_times_label', 'amenity', 'Prayer Times Label', 'Label for Prayer Times option in amenity menu', 'Prayer Times', '[]'::jsonb, 6)
+ON CONFLICT (message_key) DO NOTHING;
+
+-- === Prayer Times Flow ===
+
+INSERT INTO bot_messages (message_key, flow_group, label, description, default_text, variables, sort_order)
+VALUES
+('prayer_times.display', 'prayer_times', 'Prayer Times Display', 'Shows all prayer times', E'🕌 *Prayer Times*\n\n{prayers}\n\nReply *0* for menu', '["prayers"]'::jsonb, 1),
+('prayer_times.disabled', 'prayer_times', 'Prayer Times Disabled', 'Shown when prayer times are disabled', E'🕌 *Prayer Times*\n\nPrayer times are currently unavailable.\n\nReply *0* for menu', '[]'::jsonb, 2)
 ON CONFLICT (message_key) DO NOTHING;
 
 -- === Payment Receipt Flow ===
@@ -1640,38 +1943,8 @@ VALUES
 ('payment.rejected', 'payment', 'Payment Rejected', 'Sent to resident when admin rejects their receipt', E'❌ *Receipt Not Accepted*\n\nYour receipt for {description} was not accepted.\n\n📝 Reason: {reason}\n\nPlease submit a valid receipt again.\n\nReply *0* for menu', '["description", "reason"]'::jsonb, 12)
 ON CONFLICT (message_key) DO NOTHING;
 
--- === Payment Back Navigation ===
-
-INSERT INTO bot_messages (message_key, flow_group, label, description, default_text, variables, sort_order)
-VALUES
-('nav.back_payment_type', 'navigation', 'Back to Payment Type', 'Back navigation to payment type selection', E'🔙 *Going Back*\n\n💳 *Submit Payment*\n\nWhat are you paying for?\n\n1. 💰 Maintenance\n2. 🏛️ Hall Booking\n\nReply 1-2, or *0* for menu', '[]'::jsonb, 20)
-ON CONFLICT (message_key) DO NOTHING;
-
--- === Label Message Fixes (for existing installs) ===
-
--- Fix existing installs where labels.main_menu_options was seeded with fewer items
-UPDATE bot_messages
-SET default_text = E'Register Complaint\nCheck Complaint Status\nCancel Complaint\nMy Staff Management\nCheck Maintenance Dues\nCommunity Hall\nVisitor Entry Pass\nView My Profile\nSuggestions/Feedback\nEmergency Contacts\nSubmit Payment\nAmenities'
-WHERE message_key = 'labels.main_menu_options'
-  AND default_text NOT LIKE '%Amenities%';
-
--- Fix existing installs where menu.main_menu has hardcoded "Reply 1-10" or "Reply 1-11"
-UPDATE bot_messages
-SET default_text = E'👋 Hello {name}!\n\nWelcome to *Manzhil*\n\n{options}\n\nReply 1-{max_option}',
-    variables = '["name", "options", "max_option"]'::jsonb
-WHERE message_key = 'menu.main_menu'
-  AND (default_text LIKE '%Reply 1-10%' OR default_text LIKE '%Reply 1-11%');
-
--- Fix existing installs where menu.invalid_selection has hardcoded "1-10" or "1-11"
-UPDATE bot_messages
-SET default_text = E'❓ *Invalid Selection*\n\nPlease reply 1-{max_option}.\n\n{menu}',
-    variables = '["menu", "max_option"]'::jsonb
-WHERE message_key = 'menu.invalid_selection'
-  AND (default_text LIKE '%1-10%' OR default_text LIKE '%1-11%');
-
 -- --------------------------------------------
--- 9.5 Amenity Seed Data
--- Default amenities, prayer times, and menu options.
+-- 9.5 Amenity, Prayer Times & Menu Options Seed Data
 -- --------------------------------------------
 
 -- Default amenities
@@ -1714,7 +1987,7 @@ INSERT INTO menu_options (action_key, label, emoji, is_enabled, sort_order, hand
 ON CONFLICT (action_key) DO NOTHING;
 
 -- --------------------------------------------
--- 9.6 WhatsApp Templates Seed Data (20 templates)
+-- 9.6 WhatsApp Templates Seed Data (25 templates)
 -- Populates whatsapp_templates table with all template definitions.
 -- Idempotent: uses ON CONFLICT DO NOTHING.
 -- --------------------------------------------
@@ -1761,10 +2034,12 @@ VALUES
   ('complaint_rejected', 'Complaint Rejected', 'Notification sent when a complaint is rejected or cancelled', 'complaint', 'TWILIO_COMPLAINT_REJECTED_TEMPLATE_SID', '[{"key":"1","label":"Resident Name","description":"Full name of the resident","example":"Ahmed Khan"},{"key":"2","label":"Subcategory","description":"Formatted complaint type","example":"Water Leakage"},{"key":"3","label":"Complaint ID","description":"Unique complaint identifier","example":"CMP-001"},{"key":"4","label":"Registered Time","description":"Time when complaint was registered","example":"January 15, 2026 10:30 AM"}]'::jsonb, 'Sent when admin changes complaint status to cancelled/rejected', 'lib/twilio/notifications/complaint.ts', NULL, 4)
 ON CONFLICT (template_key) DO NOTHING;
 
--- Parcel Templates (1)
+-- Parcel Templates (2)
 INSERT INTO whatsapp_templates (template_key, name, description, category, env_var_name, variables, trigger_description, trigger_source, fallback_message, sort_order)
 VALUES
-  ('parcel_arrival', 'Parcel Arrival', 'Notification sent to residents when a parcel/delivery arrives at reception', 'parcel', 'TWILIO_PARCEL_ARRIVAL_TEMPLATE_SID', '[{"key":"1","label":"Resident Name","description":"Full name of the resident","example":"Ahmed Khan"},{"key":"2","label":"Description","description":"Parcel description or Package","example":"Amazon Delivery"},{"key":"3","label":"Image URL","description":"Photo of the parcel","example":"https://storage.supabase.co/parcels/img.jpg"}]'::jsonb, 'Sent when admin registers a new parcel from the parcels page', 'lib/twilio/notifications/parcel.ts', NULL, 1)
+  ('parcel_arrival', 'Parcel Arrival', 'Notification sent to residents when a parcel/delivery arrives at reception', 'parcel', 'TWILIO_PARCEL_ARRIVAL_TEMPLATE_SID', '[{"key":"1","label":"Resident Name","description":"Full name of the resident","example":"Ahmed Khan"},{"key":"2","label":"Description","description":"Parcel description or Package","example":"Amazon Delivery"},{"key":"3","label":"Image URL","description":"Photo of the parcel","example":"https://storage.supabase.co/parcels/img.jpg"}]'::jsonb, 'Sent when admin registers a new parcel from the parcels page', 'lib/twilio/notifications/parcel.ts', NULL, 1),
+
+  ('parcel_collection', 'Parcel Collection', 'Notification sent to residents when someone collects their parcel at reception', 'parcel', 'TWILIO_PARCEL_COLLECTION_TEMPLATE_SID', '[{"key":"1","label":"Resident Name","description":"Full name of the resident","example":"Ahmed Khan"},{"key":"2","label":"Collector Name","description":"Name of the person who collected the parcel","example":"Ali Khan"},{"key":"3","label":"Collector CNIC","description":"CNIC of the collector","example":"42101-1234567-1"},{"key":"4","label":"Collector Phone","description":"Phone number of the collector","example":"+923001234567"}]'::jsonb, 'Sent when admin records parcel collection via the Collect & Notify flow', 'lib/twilio/notifications/parcel.ts', NULL, 2)
 ON CONFLICT (template_key) DO NOTHING;
 
 -- Visitor Templates (1)
@@ -1787,16 +2062,28 @@ VALUES
   ('staff_invitation', 'Staff Invitation', 'Invitation message sent when a new admin/staff member is created', 'auth', 'TWILIO_STAFF_INVITATION_TEMPLATE_SID', '[{"key":"1","label":"Staff Name","description":"Name of the new staff member","example":"Ali Hassan"},{"key":"2","label":"Login URL","description":"URL to the admin login page","example":"https://app.manzhil.com/login"}]'::jsonb, 'Sent when super admin creates a new staff member from the settings page', 'lib/twilio/notifications/account.ts', NULL, 2)
 ON CONFLICT (template_key) DO NOTHING;
 
--- Admin Templates (2)
+-- Admin Templates (4)
 INSERT INTO whatsapp_templates (template_key, name, description, category, env_var_name, variables, trigger_description, trigger_source, fallback_message, sort_order)
 VALUES
   ('daily_report', 'Daily Report', 'Daily summary report sent to admins with 24-hour activity and open complaints overview', 'admin', 'TWILIO_DAILY_REPORT_TEMPLATE_SID', '[{"key":"1","label":"Report Date","description":"Formatted report date","example":"January 15, 2026"},{"key":"2","label":"New Complaints","description":"Number of complaints in last 24h","example":"3"},{"key":"3","label":"New Bookings","description":"Number of bookings in last 24h","example":"2"},{"key":"4","label":"Open Complaints","description":"Total open complaints count","example":"5"},{"key":"5","label":"Pending Count","description":"Number of pending complaints","example":"3"},{"key":"6","label":"In Progress Count","description":"Number of in-progress complaints","example":"2"},{"key":"7","label":"Activity Report Link","description":"URL to 24-hour activity report PDF","example":"https://app.manzhil.com/daily-report/abc123"},{"key":"8","label":"Complaints Report Link","description":"URL to open complaints report PDF","example":"https://app.manzhil.com/daily-report/def456"},{"key":"9","label":"Generation Time","description":"Time when report was generated","example":"5:00 AM"}]'::jsonb, 'Sent daily at 5 AM via daily-reports cron job to admins with receive_daily_reports enabled', 'app/api/cron/daily-reports/route.ts', NULL, 1),
 
-  ('pending_complaint', 'Pending Complaint Alert', 'Alert sent to admin recipients for complaints pending more than 24 hours', 'admin', 'TWILIO_PENDING_COMPLAINT_TEMPLATE_SID', '[{"key":"1","label":"Complaint ID","description":"Unique complaint identifier","example":"CMP-001"},{"key":"2","label":"Resident Name","description":"Name of the complaining resident","example":"Ahmed Khan"},{"key":"3","label":"Apartment","description":"Apartment number","example":"A-101"},{"key":"4","label":"Category","description":"Complaint category text","example":"Building Complaint"},{"key":"5","label":"Subcategory","description":"Formatted complaint type","example":"Water Leakage"},{"key":"6","label":"Description","description":"Sanitized complaint description (max 500 chars)","example":"Water leaking from ceiling in bathroom"},{"key":"7","label":"Registered Date","description":"Formatted registration date","example":"January 14, 2026"},{"key":"8","label":"Hours Pending","description":"Number of hours complaint has been pending","example":"36"},{"key":"9","label":"Admin URL","description":"Link to admin panel","example":"https://app.manzhil.com/admin"}]'::jsonb, 'Sent every 6 hours via pending-complaints cron job to admins with receive_reminder_notifications enabled', 'app/api/cron/pending-complaints/route.ts', NULL, 2)
+  ('pending_complaint', 'Pending Complaint Alert', 'Alert sent to admin recipients for complaints pending more than 24 hours', 'admin', 'TWILIO_PENDING_COMPLAINT_TEMPLATE_SID', '[{"key":"1","label":"Complaint ID","description":"Unique complaint identifier","example":"CMP-001"},{"key":"2","label":"Resident Name","description":"Name of the complaining resident","example":"Ahmed Khan"},{"key":"3","label":"Apartment","description":"Apartment number","example":"A-101"},{"key":"4","label":"Category","description":"Complaint category text","example":"Building Complaint"},{"key":"5","label":"Subcategory","description":"Formatted complaint type","example":"Water Leakage"},{"key":"6","label":"Description","description":"Sanitized complaint description (max 500 chars)","example":"Water leaking from ceiling in bathroom"},{"key":"7","label":"Registered Date","description":"Formatted registration date","example":"January 14, 2026"},{"key":"8","label":"Hours Pending","description":"Number of hours complaint has been pending","example":"36"},{"key":"9","label":"Admin URL","description":"Link to admin panel","example":"https://app.manzhil.com/admin"}]'::jsonb, 'Sent every 6 hours via pending-complaints cron job to admins with receive_reminder_notifications enabled', 'app/api/cron/pending-complaints/route.ts', NULL, 2),
+
+  ('admin_complaint_status_update', 'Admin Complaint Status Update', 'Notification sent to admins when a complaint status is changed', 'admin', 'TWILIO_ADMIN_COMPLAINT_STATUS_UPDATE_TEMPLATE_SID', '[{"key":"1","label":"Admin Name","description":"Name of the admin receiving notification","example":"Ali Hassan"},{"key":"2","label":"Complaint ID","description":"Unique complaint identifier","example":"CMP-001"},{"key":"3","label":"Resident Name","description":"Name of the resident who submitted the complaint","example":"Ahmed Khan"},{"key":"4","label":"Apartment Number","description":"Apartment number of the resident","example":"A-101"},{"key":"5","label":"Complaint Type","description":"Formatted complaint type/subcategory","example":"Water Leakage"},{"key":"6","label":"Old Status","description":"Previous status of the complaint","example":"Pending"},{"key":"7","label":"New Status","description":"New status of the complaint","example":"In Progress"},{"key":"8","label":"Update Time","description":"Time when status was updated","example":"January 15, 2026 2:30 PM"}]'::jsonb, 'Sent when admin changes complaint status to admins with receive_complaint_status_updates enabled', 'lib/services/complaint.ts', NULL, 3),
+
+  ('payment_received_admin', 'Payment Received Admin Notification', 'Notification sent to admins when a resident submits a payment receipt for verification', 'admin', 'TWILIO_PAYMENT_RECEIVED_ADMIN_TEMPLATE_SID', '[{"key":"1","label":"Admin Name","description":"Name of the admin receiving notification","example":"Ali Hassan"},{"key":"2","label":"Resident Name","description":"Name of the resident who submitted the payment","example":"Ahmed Khan"},{"key":"3","label":"Apartment Number","description":"Apartment number of the resident","example":"A-101"},{"key":"4","label":"Payment Description","description":"Description of the payment (e.g. Maintenance - January 2026)","example":"Maintenance - January 2026"},{"key":"5","label":"Amount","description":"Formatted payment amount","example":"5,000"},{"key":"6","label":"Admin URL","description":"Link to admin panel","example":"https://app.manzhil.com/admin"}]'::jsonb, 'Sent when a resident submits a payment receipt via WhatsApp bot to admins with receive_payment_notifications enabled', 'lib/webhook/handlers/payment.ts', E'Hello, this is Manzhil by Scrift.\n\nHi {{1}}, a new payment receipt has been submitted.\n\nResident: {{2}} (Apt {{3}})\nPayment: {{4}}\nAmount: Rs. {{5}}\n\nPlease review and verify the payment.\n\nAdmin Panel: {{6}}', 4)
+ON CONFLICT (template_key) DO NOTHING;
+
+-- Payment Templates (2)
+INSERT INTO whatsapp_templates (template_key, name, description, category, env_var_name, variables, trigger_description, trigger_source, fallback_message, sort_order)
+VALUES
+  ('payment_approved', 'Payment Approved', 'Confirmation sent to resident when admin approves a payment receipt', 'payment', 'TWILIO_PAYMENT_APPROVED_TEMPLATE_SID', '[{"key":"1","label":"Resident Name","description":"Full name of the resident","example":"Ahmed Khan"},{"key":"2","label":"Description","description":"Payment description (e.g. Maintenance - January 2026)","example":"Maintenance - January 2026"},{"key":"3","label":"Amount","description":"Formatted payment amount","example":"5,000"}]'::jsonb, 'Sent when admin approves a payment receipt from the Accounting > Verifications tab', 'lib/services/payment-verification.ts', E'Hello, this is Manzhil by Scrift.\n\nHi {{1}}, your payment for {{2}} (Rs. {{3}}) has been verified and marked as paid.\n\nThank you for your timely payment.', 1),
+
+  ('payment_rejected', 'Payment Rejected', 'Notification sent to resident when admin rejects a payment receipt', 'payment', 'TWILIO_PAYMENT_REJECTED_TEMPLATE_SID', '[{"key":"1","label":"Resident Name","description":"Full name of the resident","example":"Ahmed Khan"},{"key":"2","label":"Description","description":"Payment description (e.g. Maintenance - January 2026)","example":"Maintenance - January 2026"},{"key":"3","label":"Reason","description":"Reason for rejection provided by admin","example":"Receipt image is unclear"}]'::jsonb, 'Sent when admin rejects a payment receipt from the Accounting > Verifications tab', 'lib/services/payment-verification.ts', E'Hello, this is Manzhil by Scrift.\n\nHi {{1}}, your receipt for {{2}} was not accepted.\n\nReason: {{3}}\n\nPlease submit a valid receipt again.', 2)
 ON CONFLICT (template_key) DO NOTHING;
 
 -- --------------------------------------------
--- 9.5 Suggested Template Bodies (message_body_draft)
+-- 9.7 Suggested Template Bodies (message_body_draft)
 -- Only updates rows where message_body_draft IS NULL.
 -- These are the suggested message bodies admins can copy when creating
 -- templates in the Twilio Console for Meta approval.
@@ -1845,9 +2132,12 @@ WHERE template_key = 'complaint_completed' AND message_body_draft IS NULL;
 UPDATE whatsapp_templates SET message_body_draft = E'Hello, this is Manzhil by Scrift.\n\nHi {{1}}, your complaint has been cancelled.\n\nType: {{2}}\nComplaint ID: {{3}}\nRegistered: {{4}}\n\nIf you believe this was done in error, please contact your building management.'
 WHERE template_key = 'complaint_rejected' AND message_body_draft IS NULL;
 
--- Parcel Template
+-- Parcel Templates
 UPDATE whatsapp_templates SET message_body_draft = E'Hello, this is Manzhil by Scrift.\n\nHi {{1}}, a parcel has arrived for you at reception.\n\nDescription: {{2}}\n\nPhoto: {{3}}\n\nPlease collect it at your earliest convenience.'
 WHERE template_key = 'parcel_arrival' AND message_body_draft IS NULL;
+
+UPDATE whatsapp_templates SET message_body_draft = E'Hello, this is Manzhil by Scrift.\n\nHi {{1}}, your parcel has been collected by {{2}} (CNIC: {{3}}, Phone: {{4}}).\n\nIf you did not authorize this collection, please contact building management immediately.'
+WHERE template_key = 'parcel_collection' AND message_body_draft IS NULL;
 
 -- Visitor Template
 UPDATE whatsapp_templates SET message_body_draft = E'Hello, this is Manzhil by Scrift.\n\nHi {{1}}, a visitor has arrived for you.\n\nApartment: {{2}}\nDate: {{3}}\n\nPlease confirm at reception.'
@@ -1870,6 +2160,19 @@ WHERE template_key = 'daily_report' AND message_body_draft IS NULL;
 
 UPDATE whatsapp_templates SET message_body_draft = E'Hello, this is Manzhil by Scrift.\n\nPending Complaint Alert\n\nComplaint ID: {{1}}\nResident: {{2}} (Apt {{3}})\nCategory: {{4}}\nType: {{5}}\nDescription: {{6}}\n\nRegistered: {{7}}\nPending for: {{8}} hours\n\nView in admin panel:\n{{9}}'
 WHERE template_key = 'pending_complaint' AND message_body_draft IS NULL;
+
+UPDATE whatsapp_templates SET message_body_draft = E'Hello, this is Manzhil by Scrift.\n\nHi {{1}}, a complaint status has been updated.\n\nComplaint ID: {{2}}\nResident: {{3}} (Apt {{4}})\nType: {{5}}\n\nStatus: {{6}} → {{7}}\nUpdated: {{8}}'
+WHERE template_key = 'admin_complaint_status_update' AND message_body_draft IS NULL;
+
+UPDATE whatsapp_templates SET message_body_draft = E'Hello, this is Manzhil by Scrift.\n\nHi {{1}}, a new payment receipt has been submitted.\n\nResident: {{2}} (Apt {{3}})\nPayment: {{4}}\nAmount: Rs. {{5}}\n\nPlease review and verify the payment.\n\nAdmin Panel: {{6}}'
+WHERE template_key = 'payment_received_admin' AND message_body_draft IS NULL;
+
+-- Payment Templates
+UPDATE whatsapp_templates SET message_body_draft = E'Hello, this is Manzhil by Scrift.\n\nHi {{1}}, your payment for {{2}} (Rs. {{3}}) has been verified and marked as paid.\n\nThank you for your timely payment.'
+WHERE template_key = 'payment_approved' AND message_body_draft IS NULL;
+
+UPDATE whatsapp_templates SET message_body_draft = E'Hello, this is Manzhil by Scrift.\n\nHi {{1}}, your receipt for {{2}} was not accepted.\n\nReason: {{3}}\n\nPlease submit a valid receipt again.'
+WHERE template_key = 'payment_rejected' AND message_body_draft IS NULL;
 
 
 -- ============================================
@@ -1910,13 +2213,23 @@ ALTER PUBLICATION supabase_realtime ADD TABLE broadcast_logs;
 --   - Public bucket: Yes
 --   - Allowed MIME types: image/*
 --   - Used for visitor CNIC image uploads
+--
+-- Bucket 3: "payment_receipts"
+--   - Public bucket: Yes
+--   - Allowed MIME types: image/*
+--   - Used for payment receipt screenshot uploads
+--
+-- Bucket 4: "complaints"
+--   - Public bucket: Yes
+--   - Allowed MIME types: image/*
+--   - Used for optional complaint photos submitted via WhatsApp bot
 
 
 -- ============================================
 -- PART 12: VERIFICATION
 -- ============================================
 
--- Verify all 30 tables were created
+-- Verify all 37 tables were created
 SELECT
   table_name,
   (SELECT COUNT(*) FROM information_schema.columns c WHERE c.table_name = t.table_name AND c.table_schema = 'public') as column_count
@@ -1934,11 +2247,14 @@ WHERE table_schema = 'public'
     'enabled_languages', 'bot_message_translations',
     'bot_sessions',
     'amenities', 'prayer_times', 'prayer_times_settings',
-    'menu_options', 'menu_option_translations'
+    'menu_options', 'menu_option_translations',
+    'instance_settings', 'session_windows',
+    'prayer_time_translations', 'amenity_translations',
+    'cron_logs', 'welcome_message_logs', 'maintenance_notification_logs'
   )
 ORDER BY table_name;
 
--- Verify RLS is enabled on all 30 tables
+-- Verify RLS is enabled on all 37 tables
 SELECT
   schemaname,
   tablename,
@@ -1957,7 +2273,9 @@ WHERE schemaname = 'public'
     'bot_sessions',
     'amenities', 'prayer_times', 'prayer_times_settings',
     'menu_options', 'menu_option_translations',
-    'instance_settings'
+    'instance_settings', 'session_windows',
+    'prayer_time_translations', 'amenity_translations',
+    'cron_logs', 'welcome_message_logs', 'maintenance_notification_logs'
   )
 ORDER BY tablename;
 
@@ -1974,51 +2292,12 @@ SELECT 'amenities', COUNT(*) FROM amenities
 UNION ALL
 SELECT 'prayer_times', COUNT(*) FROM prayer_times
 UNION ALL
-SELECT 'menu_options', COUNT(*) FROM menu_options;
-
--- ============================================================================
--- 31. Instance Settings (timezone, currency configuration)
--- ============================================================================
-
-CREATE TABLE IF NOT EXISTS instance_settings (
-  id          uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  key         text NOT NULL UNIQUE,
-  value       text NOT NULL,
-  description text,
-  updated_at  timestamptz DEFAULT now(),
-  updated_by  uuid REFERENCES admin_users(id) ON DELETE SET NULL
-);
-
-ALTER TABLE instance_settings ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "Service role full access" ON instance_settings
-  FOR ALL USING (true) WITH CHECK (true);
-
-INSERT INTO instance_settings (key, value, description) VALUES
-  ('timezone',        'Asia/Karachi',  'IANA timezone identifier'),
-  ('currency_code',   'PKR',           'ISO 4217 currency code'),
-  ('currency_symbol', 'Rs.',           'Currency symbol for display')
-ON CONFLICT (key) DO NOTHING;
-
--- ============================================================================
--- 32. Session Windows (WhatsApp session tracking for cost optimization)
--- ============================================================================
-
-CREATE TABLE IF NOT EXISTS session_windows (
-  phone_number TEXT PRIMARY KEY,
-  last_inbound_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  session_expires_at TIMESTAMPTZ NOT NULL DEFAULT (NOW() + INTERVAL '24 hours')
-);
-
-CREATE INDEX IF NOT EXISTS idx_session_windows_expires ON session_windows(session_expires_at);
-
-ALTER TABLE session_windows ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "Service role full access" ON session_windows
-  FOR ALL USING (true) WITH CHECK (true);
+SELECT 'menu_options', COUNT(*) FROM menu_options
+UNION ALL
+SELECT 'instance_settings', COUNT(*) FROM instance_settings;
 
 -- Final status
 SELECT
   'Manzhil by Scrift - Database setup complete!' as status,
-  '32 tables created with RLS, triggers, and seed data' as summary,
+  '37 tables created with RLS, triggers, and seed data' as summary,
   NOW() as completed_at;

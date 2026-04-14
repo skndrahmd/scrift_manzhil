@@ -121,6 +121,20 @@ Your complaint has been forwarded to maintenance. We'll notify you of updates.
 
 Reply *0* for menu`,
 
+  "complaint.image_prompt": `📷 *Attach a Photo (Optional)*
+
+Send a photo of the issue to help us understand better.
+
+Or type anything to skip.
+
+*0* for menu`,
+
+  "complaint.image_upload_error": `⚠️ *Photo Upload Failed*
+
+We couldn't save your photo. Your complaint has been submitted without it.
+
+Reply *0* for menu`,
+
   "complaint.creation_error": `❌ *Unable to Register Complaint*
 
 We couldn't register your complaint. Please try again.
