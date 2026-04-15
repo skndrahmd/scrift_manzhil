@@ -7,6 +7,12 @@ import { sendWithFallback } from "../send"
 import { getTemplateSid } from "../templates"
 import type { TwilioResult, BroadcastAnnouncementParams } from "../types"
 
+export interface UtilityBillParams {
+  phone: string
+  houseNo: string
+  billUrl: string
+}
+
 /**
  * Send broadcast announcement to resident
  * Used for sending announcements to multiple residents
@@ -34,6 +40,36 @@ This is Manzhil by Scrift.
 Title: ${variable1 || "Announcement"}
 
 Body: ${variable2 || ""}
+
+Best regards,
+Manzhil`
+
+  return sendWithFallback(phone, templateSid, templateVariables, fallbackMessage)
+}
+
+/**
+ * Send utility bill link to a resident via WhatsApp.
+ * Reuses the broadcast_announcement template with the bill URL in variable2.
+ */
+export async function sendUtilityBillMessage(
+  params: UtilityBillParams
+): Promise<TwilioResult> {
+  const { phone, houseNo, billUrl } = params
+
+  const templateSid = await getTemplateSid("broadcast_announcement")
+  const templateVariables: Record<string, string> = {
+    "1": `Utility Bill - ${houseNo}`,
+    "2": `Your bill is ready. Tap to view: ${billUrl}`,
+  }
+
+  const fallbackMessage = `Hello!
+
+This is Manzhil by Scrift.
+
+Utility Bill - ${houseNo}
+
+Your bill is ready. Tap to view:
+${billUrl}
 
 Best regards,
 Manzhil`
