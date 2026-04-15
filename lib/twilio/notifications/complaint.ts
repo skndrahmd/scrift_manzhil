@@ -46,7 +46,7 @@ Hi ${name || "Resident"}, your complaint has been submitted. We'll address it sh
 export async function sendComplaintInProgress(
   params: ComplaintStatusParams
 ): Promise<TwilioResult> {
-  const { phone, name, complaintId, subcategory, registeredTime } = params
+  const { phone, name, complaintId, subcategory, registeredTime, comment } = params
   const subcategoryDisplay = formatSubcategory(subcategory)
 
   const templateSid = await getTemplateSid("complaint_in_progress")
@@ -55,13 +55,14 @@ export async function sendComplaintInProgress(
     "2": subcategoryDisplay,
     "3": complaintId,
     "4": registeredTime,
+    "5": comment || "",
   }
 
   const fallbackMessage = `🔧 *Complaint In Progress*
 
 📋 ID: ${complaintId}
 🔧 Type: ${subcategoryDisplay}
-📅 Registered: ${registeredTime}
+📅 Registered: ${registeredTime}${comment ? `\n💬 Note: ${comment}` : ""}
 
 Hi ${name || "Resident"}, your complaint is now being worked on.
 
@@ -77,7 +78,7 @@ Hi ${name || "Resident"}, your complaint is now being worked on.
 export async function sendComplaintCompleted(
   params: ComplaintStatusParams
 ): Promise<TwilioResult> {
-  const { phone, name, complaintId, subcategory, registeredTime, resolvedTime } = params
+  const { phone, name, complaintId, subcategory, registeredTime, resolvedTime, comment } = params
   const subcategoryDisplay = formatSubcategory(subcategory)
 
   const templateSid = await getTemplateSid("complaint_completed")
@@ -87,6 +88,7 @@ export async function sendComplaintCompleted(
     "3": complaintId,
     "4": registeredTime,
     "5": resolvedTime || new Date().toLocaleString(),
+    "6": comment || "",
   }
 
   const fallbackMessage = `✅ *Complaint Resolved*
@@ -94,7 +96,7 @@ export async function sendComplaintCompleted(
 📋 ID: ${complaintId}
 🔧 Type: ${subcategoryDisplay}
 📅 Registered: ${registeredTime}
-✅ Resolved: ${resolvedTime || "Now"}
+✅ Resolved: ${resolvedTime || "Now"}${comment ? `\n💬 Note: ${comment}` : ""}
 
 Hi ${name || "Resident"}, your complaint has been resolved. Contact us if you need further help.
 
@@ -110,7 +112,7 @@ Hi ${name || "Resident"}, your complaint has been resolved. Contact us if you ne
 export async function sendComplaintRejected(
   params: ComplaintStatusParams
 ): Promise<TwilioResult> {
-  const { phone, name, complaintId, subcategory, registeredTime } = params
+  const { phone, name, complaintId, subcategory, registeredTime, comment } = params
   const subcategoryDisplay = formatSubcategory(subcategory)
 
   const templateSid = await getTemplateSid("complaint_rejected")
@@ -119,13 +121,14 @@ export async function sendComplaintRejected(
     "2": subcategoryDisplay,
     "3": complaintId,
     "4": registeredTime,
+    "5": comment || "",
   }
 
   const fallbackMessage = `❌ *Complaint Cancelled*
 
 📋 ID: ${complaintId}
 🔧 Type: ${subcategoryDisplay}
-📅 Registered: ${registeredTime}
+📅 Registered: ${registeredTime}${comment ? `\n💬 Note: ${comment}` : ""}
 
 Hi ${name || "Resident"}, your complaint has been cancelled. Contact us if this was unexpected.
 
@@ -141,7 +144,7 @@ Hi ${name || "Resident"}, your complaint has been cancelled. Contact us if this 
 export async function sendComplaintPending(
   params: ComplaintStatusParams
 ): Promise<TwilioResult> {
-  const { phone, name, complaintId, subcategory, registeredTime } = params
+  const { phone, name, complaintId, subcategory, registeredTime, comment } = params
   const subcategoryDisplay = formatSubcategory(subcategory)
 
   const fallbackMessage = `⏳ *Complaint Status Update*
@@ -149,7 +152,7 @@ export async function sendComplaintPending(
 📋 ID: ${complaintId}
 🔧 Type: ${subcategoryDisplay}
 📅 Registered: ${registeredTime}
-📊 Status: Pending Review
+📊 Status: Pending Review${comment ? `\n💬 Note: ${comment}` : ""}
 
 Hi ${name || "Resident"}, your complaint is pending review. We'll address it shortly.
 

@@ -101,6 +101,7 @@ export interface ComplaintStatusParams extends BaseNotificationParams {
   subcategory: string
   registeredTime: string
   resolvedTime?: string
+  comment?: string
 }
 
 // Account notification params

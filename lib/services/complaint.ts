@@ -43,9 +43,13 @@ export class ServiceError extends Error {
  * @returns Object with `{ success: true }` on successful update
  * @throws {ServiceError} 400 if payload is invalid, 404 if complaint not found, 409 on concurrent modification
  */
-export async function updateComplaintStatus(complaintId: string, status: string) {
+export async function updateComplaintStatus(complaintId: string, status: string, comment: string) {
   if (!complaintId || !status || !ALLOWED_STATUSES.includes(status as ComplaintStatus)) {
     throw new ServiceError("Invalid request payload", 400)
+  }
+
+  if (!comment || comment.trim().length < 5) {
+    throw new ServiceError("A comment of at least 5 characters is required", 400)
   }
 
   // Fetch complaint data
@@ -91,7 +95,7 @@ export async function updateComplaintStatus(complaintId: string, status: string)
   // Optimistic locking: only update if record hasn't changed since we read it
   const { data: updateResult, error: updateError } = await supabaseAdmin
     .from("complaints")
-    .update({ status, updated_at: await getPakistanISOString() })
+    .update({ status, status_change_comment: comment.trim(), updated_at: await getPakistanISOString() })
     .eq("id", complaintId)
     .eq("updated_at", originalUpdatedAt)
     .select()
@@ -121,6 +125,7 @@ export async function updateComplaintStatus(complaintId: string, status: string)
       subcategory: complaint.subcategory,
       registeredTime: createdTime,
       resolvedTime: resolvedTime,
+      comment: comment.trim(),
     }
 
     try {

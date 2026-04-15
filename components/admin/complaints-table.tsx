@@ -31,7 +31,11 @@ import {
     DialogContent,
     DialogHeader,
     DialogTitle,
+    DialogDescription,
+    DialogFooter,
 } from "@/components/ui/dialog"
+import { Textarea } from "@/components/ui/textarea"
+import { Label } from "@/components/ui/label"
 import { exportToPdf, filterByPeriod, periodLabel, type Period } from "@/lib/pdf"
 
 interface Complaint {
@@ -63,6 +67,15 @@ export function ComplaintsTable() {
     const [updatingComplaintId, setUpdatingComplaintId] = useState<string | null>(null)
     const [selectedComplaint, setSelectedComplaint] = useState<Complaint | null>(null)
     const [isViewModalOpen, setIsViewModalOpen] = useState(false)
+
+    // Status change dialog state
+    const [pendingStatusChange, setPendingStatusChange] = useState<{
+        complaintId: string
+        newStatus: string
+        complaint: Complaint
+    } | null>(null)
+    const [statusChangeComment, setStatusChangeComment] = useState("")
+    const [isStatusDialogOpen, setIsStatusDialogOpen] = useState(false)
 
     const itemsPerPage = 10
 
@@ -107,13 +120,29 @@ export function ComplaintsTable() {
     }, [searchTerm, statusFilter, complaintsPeriod])
 
     // Actions
-    const updateComplaintStatus = async (complaintId: string, newStatus: string) => {
+    const openStatusChangeDialog = (complaint: Complaint, newStatus: string) => {
+        if (newStatus === complaint.status) return
+        setPendingStatusChange({ complaintId: complaint.id, newStatus, complaint })
+        setStatusChangeComment("")
+        setIsStatusDialogOpen(true)
+    }
+
+    const confirmStatusChange = async () => {
+        if (!pendingStatusChange) return
+        if (statusChangeComment.trim().length < 5) {
+            toast({ title: "Comment required", description: "Please provide at least 5 characters explaining the status change.", variant: "destructive" })
+            return
+        }
+
+        const { complaintId, newStatus } = pendingStatusChange
+        setIsStatusDialogOpen(false)
         setUpdatingComplaintId(complaintId)
+
         try {
             const response = await fetch("/api/complaints/update-status", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ complaintId, status: newStatus }),
+                body: JSON.stringify({ complaintId, status: newStatus, comment: statusChangeComment.trim() }),
             })
 
             if (!response.ok) throw new Error("Failed to update complaint status")
@@ -122,13 +151,20 @@ export function ComplaintsTable() {
                 title: "Success",
                 description: newStatus === "completed"
                     ? "Complaint marked as completed and resident notified"
-                    : "Complaint status updated",
+                    : "Complaint status updated and resident notified",
             })
             fetchComplaints()
+
+            // Update selected complaint if details modal is open
+            if (selectedComplaint && selectedComplaint.id === complaintId) {
+                setSelectedComplaint({ ...selectedComplaint, status: newStatus })
+            }
         } catch (error) {
             toast({ title: "Error", description: "Failed to update complaint status", variant: "destructive" })
         } finally {
             setUpdatingComplaintId(null)
+            setPendingStatusChange(null)
+            setStatusChangeComment("")
         }
     }
 
@@ -307,7 +343,7 @@ export function ComplaintsTable() {
                                                     </Button>
                                                     <Select
                                                         value={complaint.status}
-                                                        onValueChange={(value) => updateComplaintStatus(complaint.id, value)}
+                                                        onValueChange={(value) => openStatusChangeDialog(complaint, value)}
                                                         disabled={updatingComplaintId === complaint.id}
                                                     >
                                                         <SelectTrigger className="w-[130px] h-8">
@@ -391,7 +427,7 @@ export function ComplaintsTable() {
                                             <span className="text-gray-500 block text-xs mb-2">Update Status</span>
                                             <Select
                                                 value={complaint.status}
-                                                onValueChange={(value) => updateComplaintStatus(complaint.id, value)}
+                                                onValueChange={(value) => openStatusChangeDialog(complaint, value)}
                                                 disabled={updatingComplaintId === complaint.id}
                                             >
                                                 <SelectTrigger className="w-full h-9">
@@ -449,6 +485,69 @@ export function ComplaintsTable() {
                     )}
                 </CardContent>
             </Card>
+
+            {/* Status Change Comment Dialog */}
+            <Dialog open={isStatusDialogOpen} onOpenChange={(open) => {
+                if (!open) {
+                    setIsStatusDialogOpen(false)
+                    setPendingStatusChange(null)
+                    setStatusChangeComment("")
+                }
+            }}>
+                <DialogContent className="sm:max-w-[460px]">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2 text-manzhil-dark">
+                            Update Complaint Status
+                        </DialogTitle>
+                        <DialogDescription>
+                            {pendingStatusChange && (
+                                <>
+                                    Changing status from{" "}
+                                    <span className="font-medium capitalize">{pendingStatusChange.complaint.status}</span>
+                                    {" "}to{" "}
+                                    <span className="font-medium capitalize">{pendingStatusChange.newStatus}</span>.
+                                    {" "}This message will be sent to the resident via WhatsApp.
+                                </>
+                            )}
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="py-4 space-y-3">
+                        <Label htmlFor="status-comment" className="text-sm font-medium text-gray-700">
+                            Comment / Explanation <span className="text-red-500">*</span>
+                        </Label>
+                        <Textarea
+                            id="status-comment"
+                            placeholder="Explain why you are changing the status (e.g. Issue has been resolved by the plumbing team)..."
+                            value={statusChangeComment}
+                            onChange={(e) => setStatusChangeComment(e.target.value)}
+                            rows={4}
+                            className="resize-none border-manzhil-teal/20 focus:border-manzhil-teal"
+                        />
+                        {statusChangeComment.length > 0 && statusChangeComment.trim().length < 5 && (
+                            <p className="text-xs text-red-500">Comment must be at least 5 characters.</p>
+                        )}
+                    </div>
+                    <DialogFooter className="gap-2">
+                        <Button
+                            variant="outline"
+                            onClick={() => {
+                                setIsStatusDialogOpen(false)
+                                setPendingStatusChange(null)
+                                setStatusChangeComment("")
+                            }}
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            onClick={confirmStatusChange}
+                            disabled={statusChangeComment.trim().length < 5}
+                            className="bg-manzhil-teal hover:bg-manzhil-teal/90 text-white"
+                        >
+                            Confirm & Notify Resident
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
 
             {/* Complaint Details Modal */}
             <Dialog open={isViewModalOpen} onOpenChange={setIsViewModalOpen}>
@@ -551,10 +650,7 @@ export function ComplaintsTable() {
                             <div className="flex gap-3 pt-4">
                                 <Select
                                     value={selectedComplaint.status}
-                                    onValueChange={(value) => {
-                                        updateComplaintStatus(selectedComplaint.id, value)
-                                        setSelectedComplaint({ ...selectedComplaint, status: value })
-                                    }}
+                                    onValueChange={(value) => openStatusChangeDialog(selectedComplaint, value)}
                                     disabled={updatingComplaintId === selectedComplaint.id}
                                 >
                                     <SelectTrigger className="flex-1">
