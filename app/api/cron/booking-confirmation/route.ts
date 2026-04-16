@@ -1,10 +1,6 @@
 import type { NextRequest } from "next/server"
 
-const CRON_KEY = process.env.CRON_SECRET
-
 export async function POST(request: NextRequest) {
-  const provided = request.headers.get("x-cron-key")
-  if (CRON_KEY && provided !== CRON_KEY) return new Response("Unauthorized", { status: 401 })
   try {
     // Note: Booking payment confirmations are now sent immediately when payment status is updated
     // This cron job is kept for backward compatibility but may not find any records to process

@@ -10,8 +10,6 @@ import {
 } from "@/lib/services/maintenance-notification"
 import { startCronJob, endCronJob, logCronError } from "@/lib/cron-logger"
 
-const CRON_KEY = process.env.CRON_SECRET
-
 interface CronResult {
   success: boolean
   dayOfMonth: number
@@ -25,12 +23,7 @@ interface CronResult {
   processedAt: string
 }
 
-async function handleMaintenanceReminder(request: NextRequest): Promise<NextResponse> {
-  const provided = request.headers.get("x-cron-key")
-  if (CRON_KEY && provided !== CRON_KEY) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-  }
-
+async function handleMaintenanceReminder(): Promise<NextResponse> {
   // Start logging
   const cronLog = await startCronJob("maintenance-reminder")
 
@@ -141,10 +134,10 @@ async function handleMaintenanceReminder(request: NextRequest): Promise<NextResp
   }
 }
 
-export async function GET(request: NextRequest) {
-  return handleMaintenanceReminder(request)
+export async function GET() {
+  return handleMaintenanceReminder()
 }
 
-export async function POST(request: NextRequest) {
-  return handleMaintenanceReminder(request)
+export async function POST() {
+  return handleMaintenanceReminder()
 }

@@ -2,7 +2,7 @@
 
 ## IMPORTANT: Start Here
 
-**Before reading any files, read the knowledge graph at `graphify-out/graph.json`.** Use it to understand codebase structure, file locations, and relationships. Only read individual files when explicitly asked. Do not browse the file tree unless the user asks.
+**Before reading any files, read the knowledge graph at `graphify-out/graph.json`.** Use it to understand codebase structure, file locations, and relationships. Only read individual files when explicitly asked. Do not browse the file tree unless the user asks. Always load the /caveman:caveman skill before responding aswell. No exceptions. 
 
 ---
 
@@ -70,7 +70,7 @@ Always use `getPakistanTime()` / `formatDateTimePK()` from `@/lib/date`. **Never
 - Use `unit_id` when creating maintenance payments or profiles.
 
 ### Cron Routes
-All cron routes validate `CRON_SECRET` via `x-cron-key` header — never skip this.
+No auth headers needed — Vercel invokes cron routes internally. Do not add `x-cron-key` or `CRON_SECRET` checks to cron routes.
 
 ### Broadcast Limits
 250 messages/day · soft limit 50 recipients (warning) · hard limit 100 (confirmation required). Constants in `lib/supabase/constants.ts → BROADCAST_LIMITS`.
@@ -88,7 +88,7 @@ Use barrel imports: `@/lib/supabase`, `@/lib/auth`, `@/lib/date`, `@/lib/twilio`
 - Use `new Date()` for date comparisons — use `getPakistanTime()`
 - Use `getSession()` for server-side auth — use `getUser()`
 - Skip `verifyAdminAccess()` on any admin API route
-- Create cron routes without `CRON_SECRET` validation
+- Add `CRON_SECRET`/`x-cron-key` auth checks to cron routes — Vercel handles security internally
 - Add new DB tables without updating `database-complete-schema.sql`
 - Hardcode `Reply 1-N` in bot messages — use `{max_option}`
 - Add flow groups to `bot-messages-editor.tsx` without also adding to `translation-editor.tsx`

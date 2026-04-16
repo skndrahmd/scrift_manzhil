@@ -9,7 +9,6 @@ import {
 } from "@/lib/twilio"
 import { startCronJob, endCronJob, logCronError } from "@/lib/cron-logger"
 
-const CRON_KEY = process.env.CRON_SECRET
 const APP_BASE_URL = (process.env.NEXT_PUBLIC_APP_URL || "https://your-app-url.com").replace(/\/$/, "")
 
 function daysSinceCreation(createdAt: string): number {
@@ -21,9 +20,6 @@ function daysSinceCreation(createdAt: string): number {
 }
 
 export async function POST(request: NextRequest) {
-  const provided = request.headers.get("x-cron-key")
-  if (CRON_KEY && provided !== CRON_KEY) return new Response("Unauthorized", { status: 401 })
-
   // Start logging
   const cronLog = await startCronJob("booking-reminder")
 

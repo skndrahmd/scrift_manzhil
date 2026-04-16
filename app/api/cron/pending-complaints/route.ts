@@ -8,12 +8,6 @@ import { getConfiguredTimezone } from "@/lib/instance-settings"
 const APP_BASE_URL = (process.env.NEXT_PUBLIC_APP_URL || "").replace(/\/$/, "")
 
 export async function POST(request: NextRequest) {
-  const cronKey = process.env.CRON_SECRET
-  const provided = request.headers.get("x-cron-key")
-  if (cronKey && provided !== cronKey) {
-    return new Response("Unauthorized", { status: 401 })
-  }
-
   // Start logging
   const cronLog = await startCronJob("pending-complaints")
 
