@@ -43,12 +43,14 @@ export async function POST(request: NextRequest) {
             )
         }
 
+        const now = await getPakistanISOString()
+
         // Unset current primary for this unit
         const { error: unsetError } = await supabaseAdmin
             .from("profiles")
             .update({
                 is_primary_resident: false,
-                updated_at: getPakistanISOString(),
+                updated_at: now,
             })
             .eq("unit_id", unitId)
             .eq("is_primary_resident", true)
@@ -63,7 +65,7 @@ export async function POST(request: NextRequest) {
             .from("profiles")
             .update({
                 is_primary_resident: true,
-                updated_at: getPakistanISOString(),
+                updated_at: now,
             })
             .eq("id", profileId)
 
@@ -77,7 +79,7 @@ export async function POST(request: NextRequest) {
             .from("maintenance_payments")
             .update({
                 profile_id: profileId,
-                updated_at: getPakistanISOString(),
+                updated_at: now,
             })
             .eq("unit_id", unitId)
 
