@@ -630,15 +630,18 @@ export async function sendUnpaidReminders(
       }
 
       // Progressive throttling: skip if last reminder was sent too recently
-      const lastSentAt = unpaid
-        .map((p) => p.reminder_last_sent_at)
-        .filter(Boolean)
-        .sort()
-        .pop() // most recent reminder timestamp across all unpaid payments
-      if (lastSentAt) {
-        const timeSinceLastReminder = now.getTime() - new Date(lastSentAt).getTime()
-        if (timeSinceLastReminder < reminderIntervalMs) {
-          continue // Skip — reminder sent too recently for this unit
+      // Manual triggers bypass throttling
+      if (triggeredBy !== "manual") {
+        const lastSentAt = unpaid
+          .map((p) => p.reminder_last_sent_at)
+          .filter(Boolean)
+          .sort()
+          .pop() // most recent reminder timestamp across all unpaid payments
+        if (lastSentAt) {
+          const timeSinceLastReminder = now.getTime() - new Date(lastSentAt).getTime()
+          if (timeSinceLastReminder < reminderIntervalMs) {
+            continue // Skip — reminder sent too recently for this unit
+          }
         }
       }
 

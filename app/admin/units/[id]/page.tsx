@@ -500,6 +500,8 @@ export default function UnitDetailPage({ params }: { params: { id: string } }) {
             if (!res.ok) throw new Error(result.error || "Failed to send reminder")
             if (result.sent > 0) {
                 toast({ title: "Reminder Sent", description: `Reminder sent to ${primaryResident?.name || "resident"}` })
+            } else if (result.total === 0 || (result.sent === 0 && result.failed === 0)) {
+                toast({ title: "Nothing to remind", description: "No unpaid payments found for this unit", variant: "destructive" })
             } else {
                 toast({ title: "Failed", description: result.errors?.[0] || "Could not send reminder", variant: "destructive" })
             }
